@@ -3,11 +3,6 @@ from PIL import Image, ImageDraw, ImageFont
 from plugins.base_plugin.base_plugin import BasePlugin
 
 class CalendarCardPlugin(BasePlugin):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.name = "Calendar Card"
-        self.description = "Displays a calendar card with the current day."
-
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
         template_params['style_settings'] = True

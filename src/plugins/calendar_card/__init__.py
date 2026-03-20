@@ -1,1 +1,0 @@
-from .calendar_card import CalendarCardPlugin
