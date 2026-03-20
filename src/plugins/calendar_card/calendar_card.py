@@ -1,13 +1,9 @@
 import datetime
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from plugins.base_plugin.base_plugin import BasePlugin
+from utils.app_utils import get_font
 
 class CalendarCardPlugin(BasePlugin):
-    def generate_settings_template(self):
-        template_params = super().generate_settings_template()
-        template_params['style_settings'] = True
-        return template_params
-
     def generate_image(self, settings, device_config):
         dimensions = device_config.get_resolution()
         width, height = dimensions
@@ -15,51 +11,43 @@ class CalendarCardPlugin(BasePlugin):
         today = datetime.datetime.now()
         month = today.strftime('%B').upper()
         weekday = today.strftime('%A')
-        day = today.day
+        day = str(today.day)
 
         img = Image.new('RGB', (width, height), color=(255, 255, 255))
         draw = ImageDraw.Draw(img)
 
-        fallback_regular = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-
         # Scale font sizes relative to the smallest dimension
-        scale = min(width, height) / 250
-        month_size = int(28 * scale)
-        weekday_size = int(34 * scale)
-        day_size = int(110 * scale)
+        base = min(width, height)
+        font_month = get_font("Jost", int(base * 0.11))
+        font_weekday = get_font("Jost", int(base * 0.14))
+        font_day = get_font("Jost", int(base * 0.44))
 
-        font_month = ImageFont.truetype(fallback_regular, month_size)
-        font_weekday = ImageFont.truetype(fallback_regular, weekday_size)
-        font_day = ImageFont.truetype(fallback_regular, day_size)
-
-        def get_text_size(text, font):
+        def text_size(text, font):
             bbox = font.getbbox(text)
             return bbox[2] - bbox[0], bbox[3] - bbox[1]
 
-        # Visual layout: centered calendar card
-        x_center = width // 2
-
         # Calculate total content height to center vertically
-        _, h_month = get_text_size(month, font_month)
-        _, h_weekday = get_text_size(weekday, font_weekday)
-        _, h_day = get_text_size(str(day), font_day)
-        spacing_1 = int(18 * scale)
-        spacing_2 = int(24 * scale)
-        total_height = h_month + spacing_1 + h_weekday + spacing_2 + h_day
-        y_offset = (height - total_height) // 2
+        _, h_month = text_size(month, font_month)
+        _, h_weekday = text_size(weekday, font_weekday)
+        _, h_day = text_size(day, font_day)
+        gap1 = int(base * 0.04)
+        gap2 = int(base * 0.05)
+        total_h = h_month + gap1 + h_weekday + gap2 + h_day
+        y = (height - total_h) // 2
+        cx = width // 2
 
-        # Month (top, gray)
-        w_month, _ = get_text_size(month, font_month)
-        draw.text((x_center - w_month // 2, y_offset), month, fill=(120, 120, 120), font=font_month)
-        y_offset += h_month + spacing_1
+        # Month (gray)
+        w, _ = text_size(month, font_month)
+        draw.text((cx - w // 2, y), month, fill=(120, 120, 120), font=font_month)
+        y += h_month + gap1
 
-        # Weekday (middle, black)
-        w_weekday, _ = get_text_size(weekday, font_weekday)
-        draw.text((x_center - w_weekday // 2, y_offset), weekday, fill=(0, 0, 0), font=font_weekday)
-        y_offset += h_weekday + spacing_2
+        # Weekday (black)
+        w, _ = text_size(weekday, font_weekday)
+        draw.text((cx - w // 2, y), weekday, fill=(0, 0, 0), font=font_weekday)
+        y += h_weekday + gap2
 
-        # Day (large, red)
-        w_day, _ = get_text_size(str(day), font_day)
-        draw.text((x_center - w_day // 2, y_offset), str(day), fill=(255, 0, 0), font=font_day)
+        # Day (red)
+        w, _ = text_size(day, font_day)
+        draw.text((cx - w // 2, y), day, fill=(255, 0, 0), font=font_day)
 
         return img
