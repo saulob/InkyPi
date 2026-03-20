@@ -1,0 +1,9 @@
+{
+  "display_name": "Calendar Card",
+  "name": "Calendar Card",
+  "id": "calendar_card",
+  "module": "calendar_card",
+  "class": "CalendarCardPlugin",
+  "description": "Displays a calendar card with the current day.",
+  "version": "0.1.0"
+}

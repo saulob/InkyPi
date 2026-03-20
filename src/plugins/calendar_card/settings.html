@@ -1,0 +1,12 @@
+<div class="form-group">
+  <label for="title" class="form-label">Title:</label>
+  <input type="text" id="title" name="title" placeholder="Calendar" required class="form-input">
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof loadPluginSettings !== 'undefined' && loadPluginSettings) {
+      document.getElementById('title').value = pluginSettings.title || 'Calendar';
+    }
+  });
+</script>
