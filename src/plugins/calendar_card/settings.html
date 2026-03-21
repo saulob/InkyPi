@@ -1,0 +1,179 @@
+<div class="form-group">
+    <label for="language" class="form-label">Language:</label>
+    <select id="language" name="language" class="form-input">
+        {% for code, name in locale_map.items() %}
+            <option value="{{ code }}">{{ name }}</option>
+        {% endfor %}
+    </select>
+    <br>
+    <div id="localeSupportInfo" style="display: block; flex-basis: 100%; width: 100%; margin-top: 6px; font-size: 0.9em; line-height: 1.35;"></div>
+</div>
+
+<input type="hidden" id="monthNames" name="monthNames">
+<input type="hidden" id="weekdayNames" name="weekdayNames">
+
+<script>
+    const fallbackMonths = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const fallbackWeekdays = [
+        'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+    ];
+
+    function capitalizeFirstLetter(value, locale = 'en') {
+        const text = String(value || '').trim();
+        if (!text) {
+            return text;
+        }
+
+        const chars = Array.from(text);
+        chars[0] = chars[0].toLocaleUpperCase(locale);
+        return chars.join('');
+    }
+
+    function resolveSupportedLocale(languageCode) {
+        if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
+            return null;
+        }
+
+        const code = (languageCode || '').trim();
+        if (!code) {
+            return null;
+        }
+
+        const candidates = [code];
+        if (code.includes('-')) {
+            candidates.push(code.split('-')[0]);
+        }
+
+        const supported = Intl.DateTimeFormat.supportedLocalesOf(candidates, {
+            localeMatcher: 'lookup'
+        });
+        return supported.length ? supported[0] : null;
+    }
+
+    function validateLocaleOptions(languageSelect) {
+        const info = document.getElementById('localeSupportInfo');
+        if (!languageSelect || !info) {
+            return;
+        }
+
+        if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
+            info.textContent = 'Intl.DateTimeFormat is unavailable in this browser; using English fallback.';
+            return;
+        }
+
+        let unsupportedCount = 0;
+        for (const option of languageSelect.options) {
+            const supportedLocale = resolveSupportedLocale(option.value);
+            if (!supportedLocale) {
+                unsupportedCount += 1;
+                option.dataset.localeSupported = 'false';
+                option.textContent = `${option.textContent} (not supported)`;
+            } else {
+                option.dataset.localeSupported = 'true';
+                option.dataset.effectiveLocale = supportedLocale;
+            }
+        }
+
+        if (unsupportedCount > 0) {
+            info.textContent = `${unsupportedCount} language code(s) are not supported in this browser and will fallback to English.`;
+        } else {
+            info.textContent = 'All language codes in this list are supported by this browser.';
+        }
+    }
+
+    function buildLocalizedNames(languageCode) {
+        if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
+            return { months: fallbackMonths, weekdays: fallbackWeekdays };
+        }
+
+        const locale = resolveSupportedLocale(languageCode) || 'en';
+        try {
+            const monthFormatter = new Intl.DateTimeFormat(locale, {
+                month: 'long',
+                timeZone: 'UTC'
+            });
+            const weekdayFormatter = new Intl.DateTimeFormat(locale, {
+                weekday: 'long',
+                timeZone: 'UTC'
+            });
+
+            const months = [];
+            for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+                months.push(capitalizeFirstLetter(
+                    monthFormatter.format(new Date(Date.UTC(2026, monthIndex, 1))),
+                    locale
+                ));
+            }
+
+            const weekdays = [];
+            for (let dayOffset = 0; dayOffset < 7; dayOffset += 1) {
+                weekdays.push(capitalizeFirstLetter(
+                    weekdayFormatter.format(new Date(Date.UTC(2026, 0, 5 + dayOffset))),
+                    locale
+                ));
+            }
+
+            return { months, weekdays };
+        } catch (error) {
+            return { months: fallbackMonths, weekdays: fallbackWeekdays };
+        }
+    }
+
+    function syncCalendarCardLocaleFields() {
+        const languageSelect = document.getElementById('language');
+        const monthNamesInput = document.getElementById('monthNames');
+        const weekdayNamesInput = document.getElementById('weekdayNames');
+
+        if (!languageSelect || !monthNamesInput || !weekdayNamesInput) {
+            return;
+        }
+
+        const localizedNames = buildLocalizedNames(languageSelect.value);
+        monthNamesInput.value = JSON.stringify(localizedNames.months);
+        weekdayNamesInput.value = JSON.stringify(localizedNames.weekdays);
+
+        // Keep the most recent choice locally as a UI fallback.
+        try {
+            localStorage.setItem('calendar_card_language', languageSelect.value);
+        } catch (error) {
+            // Ignore storage errors (private mode, blocked storage, etc).
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const languageSelect = document.getElementById('language');
+        if (!languageSelect) {
+            return;
+        }
+
+        validateLocaleOptions(languageSelect);
+
+        let selectedLanguage = 'en';
+        if (typeof loadPluginSettings !== 'undefined' && loadPluginSettings &&
+            typeof pluginSettings !== 'undefined' && pluginSettings && pluginSettings.language) {
+            selectedLanguage = pluginSettings.language;
+        } else {
+            try {
+                const storedLanguage = localStorage.getItem('calendar_card_language');
+                if (storedLanguage) {
+                    selectedLanguage = storedLanguage;
+                }
+            } catch (error) {
+                // Ignore storage errors and keep default language.
+            }
+        }
+
+        languageSelect.value = selectedLanguage;
+
+        const selectedOption = languageSelect.options[languageSelect.selectedIndex];
+        if (selectedOption && selectedOption.dataset.localeSupported === 'false') {
+            languageSelect.value = 'en';
+        }
+
+        syncCalendarCardLocaleFields();
+        languageSelect.addEventListener('change', syncCalendarCardLocaleFields);
+    });
+</script>
