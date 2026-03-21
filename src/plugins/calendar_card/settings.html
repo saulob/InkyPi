@@ -1,18 +1,23 @@
 <div class="form-group">
     <label for="language" class="form-label">Language:</label>
-    <select id="language" name="language" class="form-input">
-        {% for code, name in locale_map.items() %}
-            <option value="{{ code }}">{{ name }}</option>
-        {% endfor %}
-    </select>
+    <select id="language" name="language" class="form-input"></select>
     <br>
     <div id="localeSupportInfo" style="display: block; flex-basis: 100%; width: 100%; margin-top: 6px; font-size: 0.9em; line-height: 1.35;"></div>
+    <div id="localeMissingInfo" style="display: block; flex-basis: 100%; width: 100%; margin-top: 4px; font-size: 0.85em; color: #b00; font-style: italic;">
+        Unfortunately, not all languages are supported by the plugin font or your browser. Only supported languages are shown. If your language is missing, please use English.
+    </div>
 </div>
 
 <input type="hidden" id="monthNames" name="monthNames">
 <input type="hidden" id="weekdayNames" name="weekdayNames">
+<script id="calendarCardFontUnsupportedLocales" type="application/json">{{ font_unsupported_locales_json | safe }}</script>
 
 <script>
+    const unsupportedLabel = 'not supported';
+    const fontUnsupportedLocales = new Set(JSON.parse(
+        document.getElementById('calendarCardFontUnsupportedLocales')?.textContent || '[]'
+    ));
+    const localeMap = JSON.parse('{{ locale_map | tojson | safe }}');
     const fallbackMonths = [
         'January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'
@@ -53,43 +58,73 @@
         return supported.length ? supported[0] : null;
     }
 
-    function validateLocaleOptions(languageSelect) {
+    function populateSupportedLocales(languageSelect) {
+        if (!languageSelect) return;
+        languageSelect.innerHTML = '';
+        for (const [code, name] of Object.entries(localeMap)) {
+            const browserSupported = Boolean(resolveSupportedLocale(code));
+            const fontSupported = !fontUnsupportedLocales.has(code);
+            if (browserSupported && fontSupported) {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = name;
+                languageSelect.appendChild(opt);
+            }
+        }
+    }
+
+    function updateLocaleSupportInfo(languageSelect) {
         const info = document.getElementById('localeSupportInfo');
         if (!languageSelect || !info) {
             return;
         }
 
-        if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
-            info.textContent = 'Intl.DateTimeFormat is unavailable in this browser; using English fallback.';
+        const selectedOption = languageSelect.options[languageSelect.selectedIndex];
+        if (!selectedOption) {
+            info.textContent = '';
             return;
         }
 
-        let unsupportedCount = 0;
-        for (const option of languageSelect.options) {
-            const supportedLocale = resolveSupportedLocale(option.value);
-            if (!supportedLocale) {
-                unsupportedCount += 1;
-                option.dataset.localeSupported = 'false';
-                option.textContent = `${option.textContent} (not supported)`;
-            } else {
-                option.dataset.localeSupported = 'true';
-                option.dataset.effectiveLocale = supportedLocale;
-            }
+        const browserSupported = selectedOption.dataset.browserSupported !== 'false';
+        const fontSupported = selectedOption.dataset.fontSupported !== 'false';
+        const browserUnsupportedCount = Number(languageSelect.dataset.browserUnsupportedCount || 0);
+        const fontUnsupportedCount = Number(languageSelect.dataset.fontUnsupportedCount || 0);
+
+        if (!browserSupported) {
+            info.textContent = 'This language is not supported by this browser and will show not supported.';
+            return;
         }
 
-        if (unsupportedCount > 0) {
-            info.textContent = `${unsupportedCount} language code(s) are not supported in this browser and will fallback to English.`;
-        } else {
-            info.textContent = 'All language codes in this list are supported by this browser.';
+        if (!fontSupported) {
+            info.textContent = 'This language is not supported by the plugin font and will show not supported.';
+            return;
         }
+
+        if (browserUnsupportedCount > 0 || fontUnsupportedCount > 0) {
+            info.textContent = 'Some languages are unavailable and are marked as not supported in the list.';
+            return;
+        }
+
+        info.textContent = '';
+    }
+
+    function buildUnsupportedNames() {
+        return {
+            months: Array(12).fill(unsupportedLabel),
+            weekdays: Array(7).fill(unsupportedLabel)
+        };
     }
 
     function buildLocalizedNames(languageCode) {
         if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
-            return { months: fallbackMonths, weekdays: fallbackWeekdays };
+            return buildUnsupportedNames();
         }
 
-        const locale = resolveSupportedLocale(languageCode) || 'en';
+        const locale = resolveSupportedLocale(languageCode);
+        if (!locale) {
+            return buildUnsupportedNames();
+        }
+
         try {
             const monthFormatter = new Intl.DateTimeFormat(locale, {
                 month: 'long',
@@ -118,7 +153,7 @@
 
             return { months, weekdays };
         } catch (error) {
-            return { months: fallbackMonths, weekdays: fallbackWeekdays };
+            return buildUnsupportedNames();
         }
     }
 
@@ -131,7 +166,11 @@
             return;
         }
 
-        const localizedNames = buildLocalizedNames(languageSelect.value);
+        let localizedNames = buildLocalizedNames(languageSelect.value);
+        const hasBlank = arr => !Array.isArray(arr) || arr.some(v => !v || String(v).trim() === '');
+        if (hasBlank(localizedNames.months) || hasBlank(localizedNames.weekdays)) {
+            localizedNames = buildUnsupportedNames();
+        }
         monthNamesInput.value = JSON.stringify(localizedNames.months);
         weekdayNamesInput.value = JSON.stringify(localizedNames.weekdays);
 
@@ -145,12 +184,8 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         const languageSelect = document.getElementById('language');
-        if (!languageSelect) {
-            return;
-        }
-
-        validateLocaleOptions(languageSelect);
-
+        if (!languageSelect) return;
+        populateSupportedLocales(languageSelect);
         let selectedLanguage = 'en';
         if (typeof loadPluginSettings !== 'undefined' && loadPluginSettings &&
             typeof pluginSettings !== 'undefined' && pluginSettings && pluginSettings.language) {
@@ -158,22 +193,20 @@
         } else {
             try {
                 const storedLanguage = localStorage.getItem('calendar_card_language');
-                if (storedLanguage) {
+                if (storedLanguage && languageSelect.querySelector(`[value="${storedLanguage}"]`)) {
                     selectedLanguage = storedLanguage;
                 }
-            } catch (error) {
-                // Ignore storage errors and keep default language.
-            }
+            } catch (error) {}
         }
-
+        if (!languageSelect.querySelector(`[value="${selectedLanguage}"]`)) {
+            selectedLanguage = 'en';
+        }
         languageSelect.value = selectedLanguage;
-
-        const selectedOption = languageSelect.options[languageSelect.selectedIndex];
-        if (selectedOption && selectedOption.dataset.localeSupported === 'false') {
-            languageSelect.value = 'en';
-        }
-
         syncCalendarCardLocaleFields();
-        languageSelect.addEventListener('change', syncCalendarCardLocaleFields);
+        updateLocaleSupportInfo(languageSelect);
+        languageSelect.addEventListener('change', () => {
+            syncCalendarCardLocaleFields();
+            updateLocaleSupportInfo(languageSelect);
+        });
     });
 </script>
