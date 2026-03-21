@@ -173,13 +173,6 @@
         }
         monthNamesInput.value = JSON.stringify(localizedNames.months);
         weekdayNamesInput.value = JSON.stringify(localizedNames.weekdays);
-
-        // Keep the most recent choice locally as a UI fallback.
-        try {
-            localStorage.setItem('calendar_card_language', languageSelect.value);
-        } catch (error) {
-            // Ignore storage errors (private mode, blocked storage, etc).
-        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -190,13 +183,6 @@
         if (typeof loadPluginSettings !== 'undefined' && loadPluginSettings &&
             typeof pluginSettings !== 'undefined' && pluginSettings && pluginSettings.language) {
             selectedLanguage = pluginSettings.language;
-        } else {
-            try {
-                const storedLanguage = localStorage.getItem('calendar_card_language');
-                if (storedLanguage && languageSelect.querySelector(`[value="${storedLanguage}"]`)) {
-                    selectedLanguage = storedLanguage;
-                }
-            } catch (error) {}
         }
         if (!languageSelect.querySelector(`[value="${selectedLanguage}"]`)) {
             selectedLanguage = 'en';

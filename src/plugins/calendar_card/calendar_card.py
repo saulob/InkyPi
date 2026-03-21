@@ -104,6 +104,8 @@ class CalendarCardPlugin(BasePlugin):
 
     def generate_image(self, settings, device_config):
         dimensions = device_config.get_resolution()
+        if device_config.get_config("orientation") == "vertical":
+            dimensions = dimensions[::-1]
         width, height = dimensions
 
         today = datetime.datetime.now()
