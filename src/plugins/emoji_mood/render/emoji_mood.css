@@ -1,0 +1,23 @@
+.emoji-mood-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: "Jost", sans-serif;
+    height: 100%;
+    width: 100%;
+    text-align: center;
+}
+
+.emoji {
+    font-size: min(36dvh, 36dvw);
+    line-height: 1.1;
+}
+
+.caption {
+    margin-top: 2dvh;
+    font-size: min(6dvh, 6dvw);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    text-transform: lowercase;
+}
