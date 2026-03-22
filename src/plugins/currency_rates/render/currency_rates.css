@@ -1,0 +1,61 @@
+.currency-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: "Jost";
+    height: 100%;
+    width: 100%;
+    padding: 2dvh 4dvw;
+}
+
+.title {
+    font-size: min(10dvh, 8dvw);
+    font-weight: 700;
+    margin-bottom: 4dvh;
+    text-align: center;
+    line-height: 1;
+}
+
+.currency-block {
+    width: 80%;
+    margin-bottom: 4dvh;
+}
+
+.currency-label {
+    font-size: min(5dvh, 4dvw);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: #4a7c59;
+    margin-bottom: 0.5dvh;
+}
+
+.currency-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2dvw;
+}
+
+.currency-value {
+    font-size: min(16dvh, 13dvw);
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.badge {
+    font-size: min(4.5dvh, 3.5dvw);
+    font-weight: 600;
+    padding: 0.6dvh 1.5dvw;
+    border-radius: 1dvh;
+    white-space: nowrap;
+}
+
+.badge-positive {
+    background-color: #2e7d32;
+    color: #ffffff;
+}
+
+.badge-negative {
+    background-color: #c62828;
+    color: #ffffff;
+}

@@ -1,0 +1,23 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+
+<div class="currency-container">
+    <h1 class="title">{{ title }}</h1>
+
+    {% for currency in currencies %}
+    <div class="currency-block">
+        <div class="currency-label">{{ currency.label }}</div>
+        <div class="currency-row">
+            <span class="currency-value">{{ currency.value }}</span>
+            {% if currency.percentage %}
+            <span class="badge {% if currency.positive %}badge-positive{% else %}badge-negative{% endif %}">
+                {{ currency.percentage }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
