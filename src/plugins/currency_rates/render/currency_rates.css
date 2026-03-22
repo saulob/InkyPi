@@ -93,43 +93,43 @@
     color: #ffffff;
 }
 
- (orientation: portrait) {
+@media (orientation: portrait) {
     .currency-shell {
-        padding: 0 4dvw 1.2dvh;
+        padding: 0 4dvw 0.6dvh;
     }
 
     .title {
-        margin-top: -3.2dvh;
-        margin-bottom: 2.6dvh;
+        margin-top: -6dvh;
+        margin-bottom: 1.8dvh;
     }
 
     .currency-content {
-        transform: translateY(0.2dvh);
+        transform: translateY(0);
     }
 
     .currency-block + .currency-block {
-        margin-top: 3.2dvh;
+        margin-top: 2.2dvh;
     }
 
     .currency-label {
-        font-size: min(4.9dvh, 4.1dvw);
+        font-size: min(4.4dvh, 3.8dvw);
     }
 
     .currency-row {
-        gap: 0.5dvw;
+        gap: 0.45dvw;
     }
 
     .currency-value {
-        font-size: min(24dvh, 19.5dvw);
+        font-size: min(21dvh, 18dvw);
     }
 
     .currency-symbol {
-        font-size: 0.5em;
-        margin-right: 0.05em;
+        font-size: 0.48em;
+        margin-right: 0.04em;
     }
 
     .badge {
-        font-size: min(4.3dvh, 3.2dvw);
-        padding: 0.7dvh 1vw;
+        font-size: min(3.9dvh, 3dvw);
+        padding: 0.6dvh 0.9vw;
     }
 }
