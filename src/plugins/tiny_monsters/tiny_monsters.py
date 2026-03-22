@@ -246,51 +246,216 @@ def _sample_point_in_body(body_geometry, x_span, y_span):
 
 
 # ---------------------------------------------------------------------------
-# Shared drawing primitives
+# Organic / hand-drawn drawing helpers
 # ---------------------------------------------------------------------------
 
-def _simple_eyes(draw, positions, base_r, primary, secondary, line_w,
-                 pupil_offset=True, brow=False, hollow=False):
-    """Draw eyes at given (x, y) positions with consistent style."""
-    for ex, ey in positions:
-        r = random.randint(int(base_r * 0.88), int(base_r * 1.12))
-        draw.ellipse(
-            [ex - r, ey - r, ex + r, ey + r],
-            fill=secondary, outline=primary, width=line_w,
-        )
-        if hollow:
-            inner_r = max(r - line_w * 2, 2)
-            draw.ellipse(
-                [ex - inner_r, ey - inner_r, ex + inner_r, ey + inner_r],
-                fill=secondary, outline=primary, width=max(line_w - 1, 1),
-            )
+def _wobbly_line(draw, pts, width, fill):
+    """Draw a polyline through *pts* with slight hand-drawn wobble."""
+    for i in range(len(pts) - 1):
+        x1, y1 = pts[i]
+        x2, y2 = pts[i + 1]
+        draw.line([(x1, y1), (x2, y2)], fill=fill, width=width)
+
+
+def _bezier_pts(p0, p1, p2, steps=12):
+    """Return a list of points along a quadratic Bézier curve."""
+    out = []
+    for i in range(steps + 1):
+        t = i / steps
+        u = 1 - t
+        x = u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0]
+        y = u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]
+        out.append((x, y))
+    return out
+
+
+def _cubic_bezier_pts(p0, p1, p2, p3, steps=16):
+    """Return a list of points along a cubic Bézier curve."""
+    out = []
+    for i in range(steps + 1):
+        t = i / steps
+        u = 1 - t
+        x = u**3*p0[0] + 3*u**2*t*p1[0] + 3*u*t**2*p2[0] + t**3*p3[0]
+        y = u**3*p0[1] + 3*u**2*t*p1[1] + 3*u*t**2*p2[1] + t**3*p3[1]
+        out.append((x, y))
+    return out
+
+
+def _draw_thick_curve(draw, pts, width, fill):
+    """Draw a smooth curve through *pts* with consistent width."""
+    for i in range(len(pts) - 1):
+        draw.line([pts[i], pts[i + 1]], fill=fill, width=width)
+
+
+def _organic_blob(cx, cy, rx, ry, num_points=40, wobble=0.08):
+    """Generate an organic closed shape — like a hand-drawn circle."""
+    pts = []
+    for i in range(num_points):
+        a = 2 * math.pi * i / num_points
+        r_jitter = 1.0 + random.uniform(-wobble, wobble)
+        pts.append((cx + rx * r_jitter * math.cos(a),
+                     cy + ry * r_jitter * math.sin(a)))
+    return pts
+
+
+def _draw_filled_blob(draw, cx, cy, rx, ry, fill, outline, line_w, wobble=0.08):
+    """Draw an organic filled blob shape."""
+    pts = _organic_blob(cx, cy, rx, ry, wobble=wobble)
+    draw.polygon(pts, fill=fill, outline=outline, width=line_w)
+    return pts
+
+
+def _draw_organic_limb(draw, x1, y1, x2, y2, thickness, fill, taper=0.7):
+    """Draw a thick organic limb using a Bézier with tapering."""
+    mx = (x1 + x2) / 2 + random.uniform(-thickness, thickness) * 0.4
+    my = (y1 + y2) / 2 + random.uniform(-thickness, thickness) * 0.3
+    pts = _bezier_pts((x1, y1), (mx, my), (x2, y2), steps=10)
+    for i in range(len(pts) - 1):
+        t = i / max(len(pts) - 1, 1)
+        w = max(int(thickness * (1.0 - t * (1.0 - taper))), 2)
+        draw.line([pts[i], pts[i + 1]], fill=fill, width=w)
+
+
+def _draw_organic_leg(draw, x1, y1, x2, y2, thickness, fill, foot_r=0):
+    """Draw a thick cartoon leg with optional round foot."""
+    _draw_organic_limb(draw, x1, y1, x2, y2, thickness, fill, taper=0.85)
+    if foot_r > 0:
+        pts = _organic_blob(x2, y2 + foot_r * 0.3, foot_r, foot_r * 0.6, wobble=0.06)
+        draw.polygon(pts, fill=fill)
+
+
+def _draw_expressive_eyes(draw, positions, base_r, primary, secondary, line_w,
+                           style="normal", look_dir=0):
+    """Draw cartoon eyes at positions. style: normal|sleepy|angry|cute|hollow."""
+    for i, (ex, ey) in enumerate(positions):
+        r = base_r + random.randint(-1, 1)
+        # outer eye with slight wobble
+        eye_pts = _organic_blob(ex, ey, r, r, wobble=0.04)
+        draw.polygon(eye_pts, fill=secondary, outline=primary, width=line_w)
+
+        if style == "hollow":
+            inner = max(r - line_w * 2, 2)
+            draw.ellipse([ex - inner, ey - inner, ex + inner, ey + inner],
+                         fill=secondary, outline=primary, width=max(line_w - 1, 1))
         else:
+            # pupil
             pr = max(r // 3, 2)
-            if pupil_offset:
-                off = max(pr // 2, 1)
-                px = ex + random.randint(-off, off)
-                py = ey + random.randint(-off, off)
-            else:
-                px, py = ex, ey
+            px = ex + int(look_dir * pr * 0.5)
+            py = ey + random.randint(-1, 1)
             draw.ellipse([px - pr, py - pr, px + pr, py + pr], fill=primary)
-        if brow:
-            by = ey - r - line_w * 2
-            tilt = r // 3
-            if ex < positions[0][0] + 1 and len(positions) > 1:
-                draw.line([(ex - r, by + tilt), (ex + r, by)], fill=primary, width=max(line_w, 2))
-            else:
-                draw.line([(ex - r, by), (ex + r, by + tilt)], fill=primary, width=max(line_w, 2))
+            # highlight
+            hr = max(pr // 2, 1)
+            draw.ellipse([px - hr - 1, py - hr - 1, px - hr + hr, py - hr + hr],
+                         fill=secondary)
+
+        # sleepy = half-closed lid
+        if style == "sleepy":
+            draw.rectangle([ex - r - 1, ey - r - 1, ex + r + 1, ey - r * 0.2],
+                           fill=secondary)
+            draw.line([(ex - r, ey - r * 0.2), (ex + r, ey - r * 0.1)],
+                      fill=primary, width=line_w)
+
+        # angry = angled brow
+        if style == "angry":
+            brow_y = ey - r - line_w * 2
+            side = -1 if i == 0 else 1
+            draw.line([(ex - r * 0.8, brow_y - r * 0.3 * side),
+                       (ex + r * 0.8, brow_y + r * 0.3 * side)],
+                      fill=primary, width=max(line_w + 1, 3))
+
+        # cute = simple dot brow
+        if style == "cute":
+            brow_y = ey - r - line_w * 2
+            draw.line([(ex - r * 0.4, brow_y), (ex + r * 0.4, brow_y - 2)],
+                      fill=primary, width=max(line_w, 2))
 
 
-def _draw_claws(draw, hx, hy, angle, count, length, primary, line_w):
-    """Draw claw fingers radiating from a hand position."""
-    spread = math.pi * 0.5
-    start = angle - spread / 2
-    for i in range(count):
-        a = start + (spread / max(count - 1, 1)) * i if count > 1 else angle
-        tx = hx + length * math.cos(a)
-        ty = hy + length * math.sin(a)
-        draw.line([(hx, hy), (tx, ty)], fill=primary, width=line_w)
+def _draw_mouth(draw, cx, cy, width, primary, secondary, line_w,
+                style="smile"):
+    """Draw a cartoon mouth. Styles: smile|grin|open|confused|teeth|sleepy."""
+    hw = width // 2
+    if style == "smile":
+        pts = _bezier_pts((cx - hw, cy), (cx, cy + hw * 0.7), (cx + hw, cy), steps=10)
+        _draw_thick_curve(draw, pts, line_w, primary)
+    elif style == "grin":
+        pts = _bezier_pts((cx - hw, cy), (cx, cy + hw * 0.8), (cx + hw, cy), steps=10)
+        _draw_thick_curve(draw, pts, line_w, primary)
+        # teeth line
+        draw.line([(cx - hw + 3, cy + 1), (cx + hw - 3, cy + 1)],
+                  fill=primary, width=max(line_w - 1, 1))
+        # individual teeth
+        n_teeth = random.randint(2, 5)
+        tw = max(hw * 2 // (n_teeth + 1), 3)
+        for i in range(n_teeth):
+            tx = cx - hw + 3 + i * (tw + 1)
+            draw.line([(tx, cy + 1), (tx, cy + tw * 0.6)],
+                      fill=secondary, width=max(line_w - 1, 1))
+    elif style == "open":
+        mr = max(hw // 2, 4)
+        pts = _organic_blob(cx, cy + 2, mr, int(mr * 0.7), wobble=0.06)
+        draw.polygon(pts, fill=primary)
+    elif style == "confused":
+        pts = _bezier_pts((cx - hw * 0.5, cy + 2),
+                          (cx, cy - hw * 0.3),
+                          (cx + hw * 0.5, cy + 2), steps=8)
+        _draw_thick_curve(draw, pts, line_w, primary)
+    elif style == "teeth":
+        draw.line([(cx - hw, cy), (cx + hw, cy)], fill=primary, width=line_w)
+        n_teeth = random.randint(2, 5)
+        tw = max(hw * 2 // (n_teeth + 1), 3)
+        th = max(tw, 3)
+        total = n_teeth * tw + (n_teeth - 1) * 2
+        sx = cx - total // 2
+        for i in range(n_teeth):
+            if random.random() < 0.25:
+                continue
+            tx = sx + i * (tw + 2)
+            draw.polygon(
+                [(tx, cy), (tx + tw, cy), (tx + tw // 2, cy + th)],
+                fill=secondary, outline=primary, width=max(line_w - 1, 1))
+    elif style == "sleepy":
+        pts = _bezier_pts((cx - hw * 0.4, cy),
+                          (cx, cy + hw * 0.2),
+                          (cx + hw * 0.4, cy), steps=6)
+        _draw_thick_curve(draw, pts, line_w, primary)
+
+
+def _draw_simple_spikes(draw, pts_along_curve, spike_h_range, spike_w, fill):
+    """Draw triangular spikes along a series of points."""
+    for x, y in pts_along_curve:
+        sh = random.randint(*spike_h_range)
+        sw = spike_w + random.randint(-1, 1)
+        draw.polygon([(x, y - sh), (x - sw, y + 2), (x + sw, y + 2)], fill=fill)
+
+
+def _draw_fur_edge(draw, pts, tuft_len_range, fill, line_w):
+    """Draw small fur tufts along an outline."""
+    step = max(len(pts) // random.randint(6, 14), 1)
+    for i in range(0, len(pts), step):
+        px, py = pts[i]
+        # direction away from center
+        tl = random.randint(*tuft_len_range)
+        angle = random.uniform(0, 2 * math.pi)
+        tx = px + tl * math.cos(angle)
+        ty = py + tl * math.sin(angle)
+        draw.line([(px, py), (tx, ty)], fill=fill, width=line_w)
+
+
+def _draw_stitches(draw, cx, cy, hw, hh, count, primary, line_w):
+    """Draw cross-shaped stitches scattered on a body."""
+    for _ in range(count):
+        sx = cx + random.randint(int(-hw * 0.6), int(hw * 0.6))
+        sy = cy + random.randint(int(-hh * 0.5), int(hh * 0.5))
+        sl = random.randint(max(int(hw * 0.06), 4), max(int(hw * 0.18), 6))
+        angle = random.uniform(-0.5, 0.5)
+        x2 = sx + sl * math.cos(angle)
+        y2 = sy + sl * math.sin(angle)
+        draw.line([(sx, sy), (x2, y2)], fill=primary, width=line_w)
+        mid_x, mid_y = (sx + x2) / 2, (sy + y2) / 2
+        cl = sl * 0.35
+        draw.line([(mid_x - cl * math.sin(angle), mid_y + cl * math.cos(angle)),
+                   (mid_x + cl * math.sin(angle), mid_y - cl * math.cos(angle))],
+                  fill=primary, width=line_w)
 
 
 def _curvy_tentacle(draw, sx, sy, length, sway_range, tent_w, primary):
@@ -316,705 +481,405 @@ def _draw_polygon_body(draw, points, fill, outline, line_w):
 
 
 # ---------------------------------------------------------------------------
-# Archetype drawing templates
+# Archetype drawing templates — cartoon doodle style
 # ---------------------------------------------------------------------------
 
-def _draw_spider_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Spider: central body + head, 6-8 jointed legs with wide variation."""
-    # --- body size: small vs medium vs large ---
-    body_tier = random.choice(["small", "medium", "large"])
-    if body_tier == "small":
-        abd_rx = int(zone_w * random.uniform(0.045, 0.065))
-        abd_ry = int(zone_h * random.uniform(0.06, 0.08))
-    elif body_tier == "medium":
-        abd_rx = int(zone_w * random.uniform(0.07, 0.09))
-        abd_ry = int(zone_h * random.uniform(0.09, 0.12))
-    else:
-        abd_rx = int(zone_w * random.uniform(0.10, 0.13))
-        abd_ry = int(zone_h * random.uniform(0.12, 0.16))
-    # slight asymmetry
-    abd_rx += random.randint(-3, 3)
-    abd_ry += random.randint(-3, 3)
-
-    # --- head size relative to abdomen ---
-    head_ratio = random.uniform(0.38, 0.72)
-    head_r = max(int(min(abd_rx, abd_ry) * head_ratio), 8)
-    head_gap = random.uniform(0.15, 0.50)
-    head_cy = cy - abd_ry - int(head_r * (1 - head_gap))
-
-    # --- leg count: 3, 4 pairs (6, 7, or 8 total) ---
-    num_pairs = random.choice([3, 3, 4, 4, 4])
-    odd_extra = random.random() < 0.15  # 15% chance of one extra leg on one side
-
-    # --- leg style ---
-    leg_style = random.choice(["bent", "straight", "spindly"])
-    leg_length_tier = random.choice(["short", "medium", "long"])
-    if leg_length_tier == "short":
-        seg1 = int(zone_w * random.uniform(0.07, 0.10))
-        seg2 = int(zone_w * random.uniform(0.05, 0.08))
-    elif leg_length_tier == "medium":
-        seg1 = int(zone_w * random.uniform(0.11, 0.16))
-        seg2 = int(zone_w * random.uniform(0.08, 0.12))
-    else:
-        seg1 = int(zone_w * random.uniform(0.17, 0.24))
-        seg2 = int(zone_w * random.uniform(0.12, 0.18))
-    leg_w = line_w + random.choice([0, 1, 2])
-
-    # --- leg spread: compact vs wide ---
-    spread = random.choice(["compact", "wide"])
-    if spread == "compact":
-        base_upper = [0.35, 0.15, -0.05, -0.25][:num_pairs]
-        base_lower = [0.40, 0.55, 0.70, 0.80][:num_pairs]
-    else:
-        base_upper = [0.65, 0.30, -0.05, -0.45][:num_pairs]
-        base_lower = [0.50, 0.75, 0.95, 1.10][:num_pairs]
-
-    total_legs_drawn = 0
-    for i in range(num_pairs):
-        for side in (-1, 1):
-            # slight per-leg jitter for asymmetry
-            jit_angle = random.uniform(-0.08, 0.08)
-            jit_len = random.uniform(0.90, 1.10)
-            ax = cx + side * abd_rx * random.uniform(0.78, 0.92)
-            ay = cy - abd_ry * 0.35 + i * (abd_ry * random.uniform(0.38, 0.52))
-
-            if leg_style == "straight":
-                end_angle = base_upper[i] + jit_angle
-                total_len = (seg1 + seg2) * jit_len
-                foot_x = ax + side * total_len * math.cos(end_angle)
-                foot_y = ay - total_len * math.sin(end_angle) * 0.3 + total_len * 0.7
-                draw.line([(ax, ay), (foot_x, foot_y)], fill=primary, width=leg_w)
-            else:
-                s1 = int(seg1 * jit_len)
-                s2 = int(seg2 * jit_len)
-                knee_x = ax + side * s1 * math.cos(base_upper[i] + jit_angle)
-                knee_y = ay - s1 * math.sin(base_upper[i] + jit_angle)
-                foot_x = knee_x + side * s2 * math.cos(base_lower[i] + jit_angle)
-                foot_y = knee_y + s2 * math.sin(base_lower[i] + jit_angle)
-                draw.line([(ax, ay), (knee_x, knee_y)], fill=primary, width=leg_w)
-                draw.line([(knee_x, knee_y), (foot_x, foot_y)], fill=primary, width=leg_w)
-            total_legs_drawn += 1
-
-    # odd extra leg on one side
-    if odd_extra:
-        side = random.choice([-1, 1])
-        ax = cx + side * abd_rx * 0.6
-        ay = cy + abd_ry * 0.2
-        foot_x = ax + side * seg1 * 0.8
-        foot_y = ay + seg2 * 0.9
-        draw.line([(ax, ay), (foot_x, foot_y)], fill=primary, width=leg_w)
-
-    # draw body
-    draw.ellipse(
-        [cx - abd_rx, cy - abd_ry, cx + abd_rx, cy + abd_ry],
-        fill=secondary, outline=primary, width=line_w,
-    )
-    draw.ellipse(
-        [cx - head_r, head_cy - head_r, cx + head_r, head_cy + head_r],
-        fill=secondary, outline=primary, width=line_w,
-    )
-
-    # --- eyes: 2, 4, 6, or 8 with varying spread ---
-    num_eyes = random.choice([2, 2, 4, 4, 6, 8])
-    eye_r = max(int(head_r * random.uniform(0.16, 0.30)), 3)
-    sp_x = head_r * random.uniform(0.30, 0.55)
-    sp_y = head_r * random.uniform(0.18, 0.35)
-    if num_eyes == 2:
-        positions = [(cx - sp_x, head_cy), (cx + sp_x, head_cy)]
-    elif num_eyes == 4:
-        positions = [
-            (cx - sp_x, head_cy - sp_y), (cx + sp_x, head_cy - sp_y),
-            (cx - sp_x * 0.6, head_cy + sp_y), (cx + sp_x * 0.6, head_cy + sp_y),
-        ]
-    elif num_eyes == 6:
-        positions = [
-            (cx - sp_x, head_cy - sp_y), (cx + sp_x, head_cy - sp_y),
-            (cx - sp_x * 0.7, head_cy), (cx + sp_x * 0.7, head_cy),
-            (cx - sp_x * 0.4, head_cy + sp_y), (cx + sp_x * 0.4, head_cy + sp_y),
-        ]
-    else:
-        positions = [
-            (cx - sp_x, head_cy - sp_y), (cx + sp_x, head_cy - sp_y),
-            (cx - sp_x * 0.8, head_cy - sp_y * 0.3), (cx + sp_x * 0.8, head_cy - sp_y * 0.3),
-            (cx - sp_x * 0.6, head_cy + sp_y * 0.3), (cx + sp_x * 0.6, head_cy + sp_y * 0.3),
-            (cx - sp_x * 0.35, head_cy + sp_y), (cx + sp_x * 0.35, head_cy + sp_y),
-        ]
-    _simple_eyes(draw, positions, eye_r, primary, secondary, line_w)
-
-    # mandibles
-    m_y = head_cy + head_r
-    m_len = max(int(head_r * random.uniform(0.20, 0.50)), 4)
-    m_spread = random.randint(2, max(int(head_r * 0.15), 3))
-    draw.line([(cx - m_spread, m_y), (cx - m_spread - 2, m_y + m_len)], fill=primary, width=line_w)
-    draw.line([(cx + m_spread, m_y), (cx + m_spread + 2, m_y + m_len)], fill=primary, width=line_w)
-
-
 def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Dinosaur: horizontal body, head, tail, arms, back legs — wide proportion variation."""
-    # --- body length: short / medium / long ---
-    body_len_tier = random.choice(["short", "medium", "long"])
-    if body_len_tier == "short":
-        body_rx = int(zone_w * random.uniform(0.08, 0.11))
-    elif body_len_tier == "medium":
+    """Dinosaur: rounded body, curved neck, thick tail, small arms, short legs, back spikes."""
+    # --- pose: slight tilt and offset ---
+    tilt = random.uniform(-0.03, 0.03)
+    lean_x = int(zone_w * random.uniform(-0.02, 0.02))
+    bcx = cx + lean_x
+
+    # --- body proportions ---
+    body_tier = random.choice(["chubby", "normal", "tall"])
+    if body_tier == "chubby":
         body_rx = int(zone_w * random.uniform(0.12, 0.16))
+        body_ry = int(zone_h * random.uniform(0.12, 0.16))
+    elif body_tier == "normal":
+        body_rx = int(zone_w * random.uniform(0.10, 0.14))
+        body_ry = int(zone_h * random.uniform(0.14, 0.20))
     else:
-        body_rx = int(zone_w * random.uniform(0.17, 0.22))
+        body_rx = int(zone_w * random.uniform(0.08, 0.12))
+        body_ry = int(zone_h * random.uniform(0.18, 0.24))
 
-    # --- body height: thin / chunky ---
-    body_height_tier = random.choice(["thin", "normal", "chunky"])
-    if body_height_tier == "thin":
-        body_ry = int(zone_h * random.uniform(0.07, 0.09))
-    elif body_height_tier == "normal":
-        body_ry = int(zone_h * random.uniform(0.10, 0.13))
-    else:
-        body_ry = int(zone_h * random.uniform(0.14, 0.18))
+    body_cy = cy + int(zone_h * 0.04)
 
-    # posture: horizontal or slightly tilted
-    tilt = random.uniform(-0.06, 0.06) * zone_h
-    body_cx = cx - int(zone_w * random.uniform(0.02, 0.06))
-    body_cy = cy + int(tilt)
-
-    # --- head: small / medium / large ---
-    head_tier = random.choice(["small", "medium", "large"])
-    if head_tier == "small":
-        head_r = max(int(body_ry * random.uniform(0.38, 0.48)), 10)
-    elif head_tier == "medium":
-        head_r = max(int(body_ry * random.uniform(0.55, 0.70)), 12)
-    else:
-        head_r = max(int(body_ry * random.uniform(0.75, 0.95)), 14)
-
-    # --- neck: none / short / long ---
+    # --- head: large relative to body (cartoon proportion) ---
+    head_r = max(int(body_rx * random.uniform(0.55, 0.85)), 14)
     neck_tier = random.choice(["none", "short", "long"])
     if neck_tier == "none":
         neck_len = 0
-        head_cx = body_cx + body_rx + int(head_r * 0.55)
+        head_cx = bcx + int(body_rx * 0.4)
+        head_cy = body_cy - body_ry - int(head_r * 0.3)
     elif neck_tier == "short":
-        neck_len = int(body_rx * random.uniform(0.12, 0.22))
-        head_cx = body_cx + body_rx + neck_len + int(head_r * 0.40)
+        neck_len = int(body_ry * random.uniform(0.15, 0.30))
+        head_cx = bcx + int(body_rx * random.uniform(0.2, 0.5))
+        head_cy = body_cy - body_ry - neck_len - int(head_r * 0.2)
     else:
-        neck_len = int(body_rx * random.uniform(0.28, 0.45))
-        head_cx = body_cx + body_rx + neck_len + int(head_r * 0.30)
-    head_cy = body_cy - int(body_ry * random.uniform(0.20, 0.45)) + int(tilt * -0.3)
+        neck_len = int(body_ry * random.uniform(0.35, 0.55))
+        head_cx = bcx + int(body_rx * random.uniform(0.15, 0.45))
+        head_cy = body_cy - body_ry - neck_len - int(head_r * 0.1)
 
-    # --- tail: short / medium / long, straight or curved ---
-    tail_tier = random.choice(["short", "medium", "long"])
-    tail_curve = random.choice(["straight", "curved"])
-    if tail_tier == "short":
-        tail_total = int(zone_w * random.uniform(0.06, 0.10))
-    elif tail_tier == "medium":
-        tail_total = int(zone_w * random.uniform(0.11, 0.16))
-    else:
-        tail_total = int(zone_w * random.uniform(0.17, 0.24))
+    # --- tail: thick, curved ---
+    tail_len = int(zone_w * random.uniform(0.08, 0.18))
+    tail_w = max(line_w + 3, int(body_rx * 0.25))
+    tail_x0 = bcx - body_rx + int(body_rx * 0.15)
+    tail_y0 = body_cy + int(body_ry * random.uniform(0.0, 0.3))
+    tail_ctrl = (tail_x0 - tail_len * 0.5, tail_y0 + tail_len * random.uniform(0.3, 0.7))
+    tail_end = (tail_x0 - tail_len, tail_y0 + int(tail_len * random.uniform(-0.1, 0.3)))
+    tail_pts = _bezier_pts((tail_x0, tail_y0), tail_ctrl, tail_end, steps=10)
+    for i in range(len(tail_pts) - 1):
+        w = max(tail_w - i * 2, line_w)
+        draw.line([tail_pts[i], tail_pts[i + 1]], fill=primary, width=w)
 
-    tail_w = line_w + random.randint(2, 4)
-    tail_x1 = body_cx - body_rx
-    tail_y1 = body_cy + int(body_ry * random.uniform(0.0, 0.25))
-    if tail_curve == "straight":
-        tail_x2 = tail_x1 - tail_total
-        tail_y2 = tail_y1 + int(zone_h * random.uniform(-0.02, 0.04))
-        draw.line([(tail_x1, tail_y1), (tail_x2, tail_y2)], fill=primary, width=tail_w)
-    else:
-        mid_x = tail_x1 - int(tail_total * 0.55)
-        mid_y = tail_y1 + int(zone_h * random.uniform(0.04, 0.10))
-        end_x = mid_x - int(tail_total * 0.45)
-        end_y = mid_y + int(zone_h * random.uniform(-0.03, 0.04))
-        draw.line([(tail_x1, tail_y1), (mid_x, mid_y)], fill=primary, width=tail_w)
-        draw.line([(mid_x, mid_y), (end_x, end_y)], fill=primary, width=max(tail_w - 2, line_w))
-
-    # --- back legs: short / tall ---
-    leg_tier = random.choice(["short", "tall"])
-    if leg_tier == "short":
-        back_leg_h = int(zone_h * random.uniform(0.10, 0.16))
-    else:
-        back_leg_h = int(zone_h * random.uniform(0.20, 0.30))
-    leg_w = line_w + random.randint(2, 4)
-    foot_r = max(leg_w + 2, 6)
-    leg_spread = random.uniform(0.25, 0.45)
-    for x_off in (-leg_spread, leg_spread * random.uniform(0.15, 0.40)):
-        lx = body_cx + int(body_rx * x_off) + random.randint(-3, 3)
+    # --- legs: short, thick (cartoon) ---
+    leg_h = int(zone_h * random.uniform(0.08, 0.15))
+    leg_w = max(line_w + 3, int(body_rx * 0.22))
+    foot_r = max(leg_w, 6)
+    for x_off in (-0.3 + random.uniform(-0.08, 0.08), 0.3 + random.uniform(-0.08, 0.08)):
+        lx = bcx + int(body_rx * x_off)
         ly = body_cy + body_ry
-        draw.line([(lx, ly), (lx, ly + back_leg_h)], fill=primary, width=leg_w)
-        draw.ellipse([lx - foot_r, ly + back_leg_h - foot_r // 2,
-                      lx + foot_r, ly + back_leg_h + foot_r], fill=primary)
+        _draw_organic_leg(draw, lx, ly, lx + random.randint(-3, 3), ly + leg_h,
+                         leg_w, primary, foot_r)
 
-    # draw body
-    draw.ellipse(
-        [body_cx - body_rx, body_cy - body_ry, body_cx + body_rx, body_cy + body_ry],
-        fill=secondary, outline=primary, width=line_w,
-    )
+    # --- small arms ---
+    arm_len = int(body_rx * random.uniform(0.20, 0.40))
+    arm_w = max(line_w + 1, int(body_rx * 0.12))
+    arm_x = bcx + int(body_rx * random.uniform(0.5, 0.8))
+    arm_y = body_cy - int(body_ry * random.uniform(0.0, 0.2))
+    hand_x = arm_x + int(arm_len * random.uniform(0.3, 0.6))
+    hand_y = arm_y + int(arm_len * random.uniform(0.5, 0.9))
+    _draw_organic_limb(draw, arm_x, arm_y, hand_x, hand_y, arm_w, primary)
 
-    # --- spikes: none / few / many ---
+    # --- body silhouette (organic blob) ---
+    body_pts = _draw_filled_blob(draw, bcx, body_cy, body_rx, body_ry,
+                                  secondary, primary, line_w, wobble=0.06)
+
+    # --- back spikes ---
     spike_tier = random.choice(["none", "few", "many"])
-    if spike_tier == "few":
-        num_spines = random.randint(2, 3)
-    elif spike_tier == "many":
-        num_spines = random.randint(5, 8)
-    else:
-        num_spines = 0
-    spike_size = random.choice(["small", "large"])
-    for i in range(num_spines):
-        t = -0.5 + i * (1.0 / max(num_spines - 1, 1))
-        spine_x = body_cx + body_rx * t
-        y_edge = body_cy - body_ry * math.sqrt(max(0, 1 - t * t))
-        if spike_size == "small":
-            spine_h = random.randint(int(body_ry * 0.08), int(body_ry * 0.15))
-        else:
-            spine_h = random.randint(int(body_ry * 0.18), int(body_ry * 0.32))
-        sw = max(3, int(body_rx * random.uniform(0.025, 0.050)))
-        draw.polygon(
-            [(spine_x, y_edge - spine_h), (spine_x - sw, y_edge + 2), (spine_x + sw, y_edge + 2)],
-            fill=primary,
-        )
+    if spike_tier != "none":
+        n_spikes = random.randint(2, 4) if spike_tier == "few" else random.randint(5, 8)
+        spike_size = random.choice(["small", "large"])
+        for i in range(n_spikes):
+            t = -0.5 + i * (1.0 / max(n_spikes - 1, 1))
+            sx = bcx + int(body_rx * t * 0.8)
+            sy = body_cy - body_ry + int(abs(t) * body_ry * 0.15)
+            sh = random.randint(int(body_ry * 0.08), int(body_ry * 0.15)) if spike_size == "small" \
+                else random.randint(int(body_ry * 0.18), int(body_ry * 0.30))
+            sw = max(3, int(body_rx * random.uniform(0.03, 0.06)))
+            draw.polygon([(sx, sy - sh), (sx - sw, sy + 1), (sx + sw, sy + 1)], fill=primary)
 
-    # --- front arms: tiny / slightly larger ---
-    arm_tier = random.choice(["tiny", "bigger"])
-    if arm_tier == "tiny":
-        arm_len = int(body_rx * random.uniform(0.15, 0.25))
-    else:
-        arm_len = int(body_rx * random.uniform(0.30, 0.45))
-    arm_w_s = line_w + 1
-    arm_ax = body_cx + int(body_rx * random.uniform(0.45, 0.65))
-    arm_ay = body_cy - int(body_ry * random.uniform(-0.05, 0.15))
-    hand_x = arm_ax + int(arm_len * random.uniform(0.35, 0.55))
-    hand_y = arm_ay + int(arm_len * random.uniform(0.50, 0.80))
-    draw.line([(arm_ax, arm_ay), (hand_x, hand_y)], fill=primary, width=arm_w_s)
-    _draw_claws(draw, hand_x, hand_y, 0.3, random.randint(2, 3), max(arm_len // 4, 4), primary, line_w)
-
-    # neck connection
+    # --- neck connection (organic curve) ---
     if neck_len > 0:
-        neck_x = body_cx + body_rx - int(body_rx * 0.08)
-        neck_y = body_cy - int(body_ry * 0.20)
-        draw.line([(neck_x, neck_y), (head_cx - int(head_r * 0.30), head_cy + int(head_r * 0.15))],
-                  fill=primary, width=line_w + random.randint(2, 4))
+        neck_base = (bcx + int(body_rx * 0.3), body_cy - body_ry + int(body_ry * 0.1))
+        neck_top = (head_cx - int(head_r * 0.2), head_cy + int(head_r * 0.5))
+        neck_ctrl = ((neck_base[0] + neck_top[0]) / 2 + random.randint(-5, 5),
+                     (neck_base[1] + neck_top[1]) / 2 + random.randint(-8, 0))
+        neck_pts = _bezier_pts(neck_base, neck_ctrl, neck_top, steps=8)
+        neck_w = max(line_w + 2, int(head_r * 0.4))
+        _draw_thick_curve(draw, neck_pts, neck_w, primary)
+        # fill neck with secondary to connect body/head
+        draws_fill = neck_w + 2
+        for p in neck_pts[1:-1]:
+            draw.ellipse([p[0] - draws_fill // 2, p[1] - draws_fill // 2,
+                          p[0] + draws_fill // 2, p[1] + draws_fill // 2], fill=secondary)
+        _draw_thick_curve(draw, neck_pts, neck_w, primary)
+
+    # --- head (organic blob) ---
+    head_pts = _draw_filled_blob(draw, head_cx, head_cy, head_r, int(head_r * 0.9),
+                                  secondary, primary, line_w, wobble=0.05)
+
+    # --- face ---
+    look_dir = random.choice([-1, 0, 1])
+    eye_r = max(int(head_r * random.uniform(0.22, 0.35)), 5)
+    eye_y = head_cy - int(head_r * random.uniform(0.05, 0.20))
+    eye_spread = head_r * random.uniform(0.25, 0.45)
+    eye_style = random.choice(["normal", "cute", "sleepy"])
+    _draw_expressive_eyes(draw,
+                          [(head_cx - eye_spread, eye_y), (head_cx + eye_spread, eye_y)],
+                          eye_r, primary, secondary, line_w,
+                          style=eye_style, look_dir=look_dir)
+
+    mouth_style = random.choice(["smile", "grin", "open", "confused"])
+    mouth_y = head_cy + int(head_r * random.uniform(0.30, 0.50))
+    mouth_w = max(int(head_r * random.uniform(0.40, 0.70)), 8)
+    _draw_mouth(draw, head_cx, mouth_y, mouth_w, primary, secondary, line_w, style=mouth_style)
+
+    # spots/scales detail
+    if random.random() < 0.4:
+        for _ in range(random.randint(2, 5)):
+            dx = bcx + random.randint(int(-body_rx * 0.6), int(body_rx * 0.6))
+            dy = body_cy + random.randint(int(-body_ry * 0.5), int(body_ry * 0.5))
+            dr = random.randint(2, max(int(body_rx * 0.06), 3))
+            draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], fill=primary)
+
+
+def _draw_spider_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
+    """Spider: rounded body, segmented curved legs with joints, big clustered eyes."""
+    # --- body proportions ---
+    body_tier = random.choice(["small", "medium", "large"])
+    if body_tier == "small":
+        abd_rx = int(zone_w * random.uniform(0.05, 0.07))
+        abd_ry = int(zone_h * random.uniform(0.06, 0.08))
+    elif body_tier == "medium":
+        abd_rx = int(zone_w * random.uniform(0.08, 0.11))
+        abd_ry = int(zone_h * random.uniform(0.09, 0.13))
+    else:
+        abd_rx = int(zone_w * random.uniform(0.12, 0.16))
+        abd_ry = int(zone_h * random.uniform(0.13, 0.18))
+
+    # head size (cartoon=bigger head)
+    head_ratio = random.uniform(0.50, 0.80)
+    head_r = max(int(min(abd_rx, abd_ry) * head_ratio), 10)
+    head_gap = random.uniform(0.10, 0.35)
+    head_cy = cy - abd_ry - int(head_r * (1 - head_gap))
+
+    # --- legs: 3-4 pairs, organic curves ---
+    num_pairs = random.choice([3, 3, 4, 4])
+    leg_thickness = max(line_w + 1, int(abd_rx * 0.10))
+    leg_len_tier = random.choice(["short", "medium", "long"])
+    if leg_len_tier == "short":
+        seg1 = int(zone_w * random.uniform(0.07, 0.11))
+        seg2 = int(zone_w * random.uniform(0.05, 0.08))
+    elif leg_len_tier == "medium":
+        seg1 = int(zone_w * random.uniform(0.12, 0.17))
+        seg2 = int(zone_w * random.uniform(0.08, 0.12))
+    else:
+        seg1 = int(zone_w * random.uniform(0.18, 0.25))
+        seg2 = int(zone_w * random.uniform(0.12, 0.18))
+
+    spread_angles = [0.4, 0.15, -0.10, -0.35][:num_pairs]
+    for i in range(num_pairs):
+        for side in (-1, 1):
+            jit = random.uniform(-0.06, 0.06)
+            ax = cx + side * abd_rx * random.uniform(0.7, 0.9)
+            ay = cy - abd_ry * 0.3 + i * (abd_ry * random.uniform(0.35, 0.50))
+            s1 = int(seg1 * random.uniform(0.88, 1.12))
+            s2 = int(seg2 * random.uniform(0.88, 1.12))
+            knee_angle = spread_angles[i] + jit
+            knee_x = ax + side * s1 * math.cos(knee_angle)
+            knee_y = ay - s1 * math.sin(knee_angle) * 0.5
+            foot_angle = knee_angle - random.uniform(0.3, 0.6)
+            foot_x = knee_x + side * s2 * math.cos(foot_angle)
+            foot_y = knee_y + s2 * math.sin(abs(foot_angle) + 0.3)
+            # organic curved segments
+            ctrl1 = (ax + side * s1 * 0.3, ay - random.uniform(2, 8))
+            pts1 = _bezier_pts((ax, ay), ctrl1, (knee_x, knee_y), steps=6)
+            _draw_thick_curve(draw, pts1, leg_thickness, primary)
+            ctrl2 = (knee_x + side * s2 * 0.3, knee_y + random.uniform(2, 8))
+            pts2 = _bezier_pts((knee_x, knee_y), ctrl2, (foot_x, foot_y), steps=6)
+            w2 = max(leg_thickness - 1, 2)
+            _draw_thick_curve(draw, pts2, w2, primary)
+            # joint dot
+            jr = max(leg_thickness - 1, 2)
+            draw.ellipse([knee_x - jr, knee_y - jr, knee_x + jr, knee_y + jr], fill=primary)
+
+    # --- body silhouette ---
+    _draw_filled_blob(draw, cx, cy, abd_rx, abd_ry, secondary, primary, line_w, wobble=0.06)
 
     # head
-    draw.ellipse(
-        [head_cx - head_r, head_cy - head_r, head_cx + head_r, head_cy + head_r],
-        fill=secondary, outline=primary, width=line_w,
-    )
+    _draw_filled_blob(draw, cx, head_cy, head_r, int(head_r * 0.95),
+                       secondary, primary, line_w, wobble=0.05)
 
-    # eye
-    eye_x = head_cx + int(head_r * random.uniform(0.05, 0.25))
-    eye_y = head_cy - int(head_r * random.uniform(0.10, 0.30))
-    eye_r_size = max(int(head_r * random.uniform(0.20, 0.36)), 5)
-    num_head_eyes = random.choice([1, 1, 2])
-    if num_head_eyes == 1:
-        _simple_eyes(draw, [(eye_x, eye_y)], eye_r_size, primary, secondary, line_w)
-    else:
-        _simple_eyes(draw, [(eye_x - int(head_r * 0.15), eye_y),
-                            (eye_x + int(head_r * 0.15), eye_y)],
-                     eye_r_size, primary, secondary, line_w)
-
-    # mouth with teeth
-    mouth_y = head_cy + int(head_r * random.uniform(0.25, 0.45))
-    mouth_w = int(head_r * random.uniform(0.50, 0.80))
-    draw.line([(head_cx - int(mouth_w * 0.1), mouth_y), (head_cx + mouth_w, mouth_y)],
-              fill=primary, width=line_w)
-    num_teeth = random.randint(2, 6)
-    tw = max(mouth_w // (num_teeth + 1), 3)
-    th = max(tw, 3)
-    for i in range(num_teeth):
-        tx = head_cx + int(i * mouth_w / num_teeth)
-        draw.polygon(
-            [(tx, mouth_y), (tx + tw, mouth_y), (tx + tw // 2, mouth_y + th)],
-            fill=secondary, outline=primary, width=max(line_w - 1, 1),
-        )
-
-
-def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Octopus: dome body, curling tentacles from bottom — wide variation."""
-    # --- dome: small / medium / large, and shape ---
-    dome_tier = random.choice(["small", "medium", "large"])
-    dome_shape = random.choice(["round", "oval", "wide"])
-    if dome_tier == "small":
-        base_r = zone_w * random.uniform(0.08, 0.12)
-    elif dome_tier == "medium":
-        base_r = zone_w * random.uniform(0.13, 0.17)
-    else:
-        base_r = zone_w * random.uniform(0.18, 0.23)
-    if dome_shape == "round":
-        dome_rx = int(base_r)
-        dome_ry = int(base_r * random.uniform(0.90, 1.10))
-    elif dome_shape == "oval":
-        dome_rx = int(base_r * random.uniform(0.80, 0.95))
-        dome_ry = int(base_r * random.uniform(1.10, 1.35))
-    else:  # wide
-        dome_rx = int(base_r * random.uniform(1.15, 1.40))
-        dome_ry = int(base_r * random.uniform(0.70, 0.90))
-    dome_cy = cy - int(zone_h * random.uniform(0.05, 0.12))
-
-    # --- tentacles: 4-8, short / medium / long ---
-    num_tentacles = random.randint(4, 8)
-    tent_len_tier = random.choice(["short", "medium", "long"])
-    tent_w = line_w + random.choice([1, 2, 3])
-    tent_spread = dome_rx * random.uniform(1.3, 1.9)
-    tent_step = tent_spread / max(num_tentacles - 1, 1)
-    tent_start_x = cx - tent_spread / 2
-    tent_start_y = dome_cy + dome_ry - line_w
-
-    for i in range(num_tentacles):
-        tx = tent_start_x + i * tent_step + random.uniform(-4, 4)
-        if tent_len_tier == "short":
-            length = int(zone_h * random.uniform(0.12, 0.20))
-        elif tent_len_tier == "medium":
-            length = int(zone_h * random.uniform(0.21, 0.32))
-        else:
-            length = int(zone_h * random.uniform(0.33, 0.45))
-        sway = dome_rx * random.uniform(0.06, 0.22)
-        _curvy_tentacle(draw, tx, tent_start_y, length, sway, tent_w, primary)
-
-    dome_pts = _ellipse_points(cx, dome_cy, dome_rx, dome_ry)
-    _draw_polygon_body(draw, dome_pts, secondary, primary, line_w)
-
-    # eyes: varying size and spread
-    eye_r = max(int(dome_rx * random.uniform(0.12, 0.25)), 5)
-    eye_y = dome_cy - int(dome_ry * random.uniform(0.02, 0.20))
-    spread = dome_rx * random.uniform(0.35, 0.60)
-    num_eyes = random.choice([2, 2, 3])
+    # --- eyes: 2, 4, 6, 8 clustered ---
+    num_eyes = random.choice([2, 2, 4, 6, 8])
+    eye_r = max(int(head_r * random.uniform(0.18, 0.32)), 4)
+    sp_x = head_r * random.uniform(0.25, 0.50)
+    sp_y = head_r * random.uniform(0.15, 0.30)
     if num_eyes == 2:
-        positions = [(cx - spread, eye_y), (cx + spread, eye_y)]
+        positions = [(cx - sp_x, head_cy), (cx + sp_x, head_cy)]
+    elif num_eyes == 4:
+        positions = [(cx - sp_x, head_cy - sp_y), (cx + sp_x, head_cy - sp_y),
+                     (cx - sp_x * 0.6, head_cy + sp_y), (cx + sp_x * 0.6, head_cy + sp_y)]
+    elif num_eyes == 6:
+        positions = [(cx - sp_x, head_cy - sp_y), (cx + sp_x, head_cy - sp_y),
+                     (cx - sp_x * 0.7, head_cy), (cx + sp_x * 0.7, head_cy),
+                     (cx - sp_x * 0.4, head_cy + sp_y), (cx + sp_x * 0.4, head_cy + sp_y)]
     else:
-        positions = [(cx - spread, eye_y), (cx, eye_y - int(eye_r * 0.3)), (cx + spread, eye_y)]
-    _simple_eyes(draw, positions, eye_r, primary, secondary, line_w)
+        positions = [(cx - sp_x, head_cy - sp_y), (cx + sp_x, head_cy - sp_y),
+                     (cx - sp_x * 0.8, head_cy - sp_y * 0.3), (cx + sp_x * 0.8, head_cy - sp_y * 0.3),
+                     (cx - sp_x * 0.6, head_cy + sp_y * 0.3), (cx + sp_x * 0.6, head_cy + sp_y * 0.3),
+                     (cx - sp_x * 0.35, head_cy + sp_y), (cx + sp_x * 0.35, head_cy + sp_y)]
+    _draw_expressive_eyes(draw, positions, eye_r, primary, secondary, line_w,
+                          style=random.choice(["normal", "cute"]))
 
-    # mouth
-    mouth_r = max(int(dome_rx * random.uniform(0.05, 0.12)), 3)
-    mouth_y = dome_cy + int(dome_ry * random.uniform(0.25, 0.45))
-    draw.ellipse([cx - mouth_r, mouth_y - mouth_r, cx + mouth_r, mouth_y + mouth_r],
-                 fill=primary)
-
-
-def _draw_dragon_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Dragon: stocky body, horns, bat wings, tail, legs, teeth — wide variation."""
-    # --- body shape: tall vs wide, different shapes ---
-    body_tier = random.choice(["compact", "wide", "tall"])
-    body_shape = random.choice(["oval", "blob", "rounded_rect", "round"])
-    if body_tier == "compact":
-        body_hw = int(zone_w * random.uniform(0.10, 0.13))
-        body_hh = int(zone_h * random.uniform(0.13, 0.17))
-    elif body_tier == "wide":
-        body_hw = int(zone_w * random.uniform(0.14, 0.19))
-        body_hh = int(zone_h * random.uniform(0.12, 0.16))
-    else:
-        body_hw = int(zone_w * random.uniform(0.10, 0.13))
-        body_hh = int(zone_h * random.uniform(0.18, 0.24))
-    body_geo = _build_body_geometry(cx, cy, body_hw * 2, body_hh * 2, body_shape)
-
-    # --- wings: none / small / large, upward or downward ---
-    wing_tier = random.choice(["none", "small", "small", "large", "large"])
-    wing_dir = random.choice(["up", "down"])
-    if wing_tier != "none":
-        if wing_tier == "small":
-            wing_w = int(zone_w * random.uniform(0.06, 0.10))
-            wing_h = int(zone_h * random.uniform(0.10, 0.16))
-        else:
-            wing_w = int(zone_w * random.uniform(0.13, 0.20))
-            wing_h = int(zone_h * random.uniform(0.18, 0.30))
-        for side in (-1, 1):
-            anchor_y = random.uniform(-0.35, -0.15)
-            wx, wy = _body_side_anchor(body_geo, "left" if side < 0 else "right", anchor_y, inset=line_w)
-            if wing_dir == "up":
-                tip_x = wx + side * wing_w
-                tip_y = wy - wing_h
-                mid_x = wx + side * wing_w * 0.3
-                mid_y = wy + wing_h * 0.12
-            else:
-                tip_x = wx + side * wing_w
-                tip_y = wy + wing_h * 0.3
-                mid_x = wx + side * wing_w * 0.25
-                mid_y = wy - wing_h * 0.15
-            scallop_x = wx + side * wing_w * random.uniform(0.40, 0.65)
-            scallop_y = (wy + tip_y) / 2 + random.uniform(-wing_h * 0.1, wing_h * 0.1)
-            draw.polygon(
-                [(wx, wy), (tip_x, tip_y), (scallop_x, scallop_y), (mid_x, mid_y)],
-                outline=primary, width=line_w,
-            )
-            draw.line([(wx, wy), (tip_x, tip_y)], fill=primary, width=line_w)
-
-    # --- tail: short / long, arrow or rounded tip ---
-    tail_tier = random.choice(["short", "medium", "long"])
-    tail_tip = random.choice(["arrow", "rounded", "none"])
-    tail_side = random.choice([-1, 1])
-    tail_ax, tail_ay = _body_side_anchor(body_geo, "left" if tail_side < 0 else "right",
-                                          random.uniform(0.20, 0.50), inset=line_w)
-    if tail_tier == "short":
-        tail_len = int(zone_w * random.uniform(0.06, 0.10))
-    elif tail_tier == "medium":
-        tail_len = int(zone_w * random.uniform(0.11, 0.16))
-    else:
-        tail_len = int(zone_w * random.uniform(0.17, 0.24))
-    mid_x = tail_ax + tail_side * tail_len * 0.55
-    mid_y = tail_ay + body_hh * random.uniform(0.05, 0.25)
-    end_x = mid_x + tail_side * tail_len * 0.45
-    end_y = mid_y + body_hh * random.uniform(0.0, 0.15)
-    draw.line([(tail_ax, tail_ay), (mid_x, mid_y)], fill=primary, width=line_w + 2)
-    draw.line([(mid_x, mid_y), (end_x, end_y)], fill=primary, width=line_w + 1)
-    if tail_tip == "arrow":
-        tip_w = max(int(tail_len * 0.08), 3)
-        draw.polygon(
-            [(end_x, end_y - tip_w), (end_x + tail_side * tip_w * 2, end_y), (end_x, end_y + tip_w)],
-            fill=primary,
-        )
-    elif tail_tip == "rounded":
-        tr = max(int(tail_len * 0.05), 3)
-        draw.ellipse([end_x - tr, end_y - tr, end_x + tr, end_y + tr], fill=primary)
-
-    # --- legs: 2 or 4 ---
-    num_legs = random.choice([2, 2, 4, 4, 4])
-    leg_w = line_w + random.randint(1, 3)
-    leg_h = int(zone_h * random.uniform(0.10, 0.22))
-    foot_r = max(leg_w + 1, 5)
-    if num_legs == 2:
-        leg_positions = [random.uniform(-0.20, -0.08), random.uniform(0.08, 0.20)]
-    else:
-        leg_positions = [-0.30 + random.uniform(-0.05, 0.05),
-                         -0.10 + random.uniform(-0.05, 0.05),
-                         0.10 + random.uniform(-0.05, 0.05),
-                         0.30 + random.uniform(-0.05, 0.05)]
-    for x_ratio in leg_positions:
-        lx, ly = _body_vertical_anchor(body_geo, "bottom", x_ratio, inset=leg_w)
-        this_leg_h = leg_h + random.randint(-4, 4)
-        draw.line([(lx, ly), (lx, ly + this_leg_h)], fill=primary, width=leg_w)
-        draw.ellipse([lx - foot_r, ly + this_leg_h - foot_r // 2,
-                      lx + foot_r, ly + this_leg_h + foot_r], fill=primary)
-
-    _draw_polygon_body(draw, body_geo["points"], secondary, primary, line_w)
-
-    # --- spikes: none / few / many ---
-    spike_tier = random.choice(["none", "few", "many"])
-    if spike_tier == "few":
-        num_spines = random.randint(2, 3)
-    elif spike_tier == "many":
-        num_spines = random.randint(4, 7)
-    else:
-        num_spines = 0
-    for i in range(num_spines):
-        x_r = -0.35 + i * (0.70 / max(num_spines - 1, 1))
-        sx, sy = _body_vertical_anchor(body_geo, "top", x_r, inset=line_w)
-        spine_h = random.randint(int(body_hh * 0.08), int(body_hh * 0.22))
-        sw = max(3, int(body_hw * random.uniform(0.03, 0.06)))
-        draw.polygon([(sx, sy - spine_h), (sx - sw, sy + 2), (sx + sw, sy + 2)], fill=primary)
-
-    # horns
-    horn_tier = random.choice(["small", "large"])
-    if horn_tier == "small":
-        horn_h = int(body_hh * random.uniform(0.18, 0.28))
-    else:
-        horn_h = int(body_hh * random.uniform(0.32, 0.50))
-    horn_w = max(int(body_hw * random.uniform(0.04, 0.08)), 4)
-    for x_r in (-0.22 + random.uniform(-0.06, 0.06), 0.22 + random.uniform(-0.06, 0.06)):
-        hx, hy = _body_vertical_anchor(body_geo, "top", x_r, inset=line_w)
-        direction = random.choice([-1, 1])
-        draw.polygon(
-            [(hx + direction * horn_w, hy - horn_h), (hx - horn_w, hy + line_w), (hx + horn_w, hy + line_w)],
-            fill=primary,
-        )
-
-    # eyes
-    eye_r = max(int(min(body_hw, body_hh) * random.uniform(0.09, 0.16)), 5)
-    eye_y = cy - int(body_hh * random.uniform(0.15, 0.30))
-    eye_spread = body_hw * random.uniform(0.35, 0.55)
-    _simple_eyes(draw, [(cx - eye_spread, eye_y), (cx + eye_spread, eye_y)],
-                 eye_r, primary, secondary, line_w, brow=True)
-
-    # mouth
-    mouth_y = cy + int(body_hh * random.uniform(0.15, 0.30))
-    mouth_w = int(body_hw * random.uniform(0.30, 0.50))
-    draw.arc([cx - mouth_w, mouth_y - mouth_w // 2, cx + mouth_w, mouth_y + mouth_w // 2],
-             start=0, end=180, fill=primary, width=line_w)
-    num_teeth = random.randint(2, 6)
-    tw = max(mouth_w // (num_teeth + 1), 3)
-    th = max(tw, 3)
-    total_tw = num_teeth * tw + (num_teeth - 1) * 2
-    sx = cx - total_tw // 2
-    for i in range(num_teeth):
-        tx = sx + i * (tw + 2)
-        draw.polygon(
-            [(tx, mouth_y - 1), (tx + tw, mouth_y - 1), (tx + tw // 2, mouth_y + th)],
-            fill=secondary, outline=primary, width=max(line_w - 1, 1),
-        )
+    # mandibles / smile
+    m_y = head_cy + head_r - 2
+    mouth_style = random.choice(["smile", "open", "confused"])
+    _draw_mouth(draw, cx, m_y, max(int(head_r * 0.5), 6), primary, secondary, line_w,
+                style=mouth_style)
 
 
 def _draw_werewolf_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Werewolf: tall upright body, pointed ears, fangs, clawed hands — wide variation."""
-    # --- build: lean / stocky / hulking ---
+    """Werewolf: upright body, fur edges, pointed ears, claws, toothy grin."""
+    # --- pose ---
+    lean = random.uniform(-0.02, 0.02) * zone_w
+    bcx = cx + int(lean)
+
+    # --- body (large torso, cartoon) ---
     build = random.choice(["lean", "stocky", "hulking"])
     if build == "lean":
-        body_hw = int(zone_w * random.uniform(0.08, 0.11))
-        body_hh = int(zone_h * random.uniform(0.22, 0.28))
+        body_hw = int(zone_w * random.uniform(0.08, 0.12))
+        body_hh = int(zone_h * random.uniform(0.20, 0.26))
     elif build == "stocky":
-        body_hw = int(zone_w * random.uniform(0.12, 0.15))
-        body_hh = int(zone_h * random.uniform(0.18, 0.24))
+        body_hw = int(zone_w * random.uniform(0.12, 0.16))
+        body_hh = int(zone_h * random.uniform(0.16, 0.22))
     else:
-        body_hw = int(zone_w * random.uniform(0.14, 0.18))
-        body_hh = int(zone_h * random.uniform(0.22, 0.30))
-    body_shape = random.choice(["blob", "oval", "rounded_rect"])
-    body_geo = _build_body_geometry(cx, cy, body_hw * 2, body_hh * 2, body_shape)
+        body_hw = int(zone_w * random.uniform(0.14, 0.20))
+        body_hh = int(zone_h * random.uniform(0.20, 0.28))
 
-    # --- arms: short / long, raised / lowered, varying claw count ---
-    arm_w = line_w + random.randint(1, 3)
-    arm_tier = random.choice(["short", "long"])
-    if arm_tier == "short":
-        arm_len = int(body_hw * random.uniform(0.40, 0.58))
-    else:
-        arm_len = int(body_hw * random.uniform(0.65, 0.95))
+    body_cy = cy + int(zone_h * 0.02)
+
+    # --- legs (thick, short — cartoon proportions) ---
+    leg_h = int(zone_h * random.uniform(0.08, 0.16))
+    leg_w = max(line_w + 3, int(body_hw * 0.28))
+    foot_r = max(leg_w + 1, 7)
+    for x_off in (-0.28 + random.uniform(-0.06, 0.06), 0.28 + random.uniform(-0.06, 0.06)):
+        lx = bcx + int(body_hw * x_off)
+        ly = body_cy + body_hh
+        _draw_organic_leg(draw, lx, ly, lx + random.randint(-4, 4), ly + leg_h,
+                         leg_w, primary, foot_r)
+
+    # --- arms (thick, with claws) ---
+    arm_w = max(line_w + 2, int(body_hw * 0.18))
+    arm_len = int(body_hw * random.uniform(0.50, 0.90))
     arm_pose = random.choice(["neutral", "raised", "lowered"])
     claw_count = random.choice([2, 3, 4])
-    claw_len = max(arm_len // 4, 6)
     for side_name, side in (("left", -1), ("right", 1)):
-        y_anchor = random.uniform(-0.18, 0.02)
-        ax, ay = _body_side_anchor(body_geo, side_name, y_anchor, inset=arm_w)
+        ax = bcx + side * body_hw
+        ay = body_cy - int(body_hh * random.uniform(0.05, 0.20))
         if arm_pose == "raised":
-            elbow_x = ax + side * arm_len * 0.55
-            elbow_y = ay - arm_len * random.uniform(0.20, 0.45)
+            hand_x = ax + side * arm_len * random.uniform(0.7, 1.0)
+            hand_y = ay - arm_len * random.uniform(0.3, 0.6)
         elif arm_pose == "lowered":
-            elbow_x = ax + side * arm_len * 0.60
-            elbow_y = ay + arm_len * random.uniform(0.30, 0.55)
+            hand_x = ax + side * arm_len * random.uniform(0.6, 0.9)
+            hand_y = ay + arm_len * random.uniform(0.4, 0.7)
         else:
-            elbow_x = ax + side * arm_len * 0.6
-            elbow_y = ay + arm_len * random.uniform(0.15, 0.35)
-        hand_x = elbow_x + side * arm_len * random.uniform(0.30, 0.50)
-        hand_y = elbow_y + arm_len * random.uniform(0.25, 0.55)
-        draw.line([(ax, ay), (elbow_x, elbow_y)], fill=primary, width=arm_w)
-        draw.line([(elbow_x, elbow_y), (hand_x, hand_y)], fill=primary, width=arm_w)
-        angle = math.pi - 0.25 if side < 0 else 0.25
-        _draw_claws(draw, hand_x, hand_y, angle, claw_count, claw_len, primary, line_w)
+            hand_x = ax + side * arm_len * random.uniform(0.6, 0.9)
+            hand_y = ay + arm_len * random.uniform(0.1, 0.3)
+        _draw_organic_limb(draw, ax, ay, hand_x, hand_y, arm_w, primary, taper=0.6)
+        # claws
+        claw_len = max(arm_len // 4, 5)
+        angle = math.atan2(hand_y - ay, hand_x - ax)
+        spread = math.pi * 0.4
+        for ci in range(claw_count):
+            a = angle - spread / 2 + (spread / max(claw_count - 1, 1)) * ci
+            tx = hand_x + claw_len * math.cos(a)
+            ty = hand_y + claw_len * math.sin(a)
+            draw.line([(hand_x, hand_y), (tx, ty)], fill=primary, width=max(line_w, 2))
 
-    # --- legs: short / tall, varying spread ---
-    leg_w = line_w + random.randint(2, 4)
-    leg_tier = random.choice(["short", "tall"])
-    if leg_tier == "short":
-        leg_h = int(zone_h * random.uniform(0.10, 0.15))
-    else:
-        leg_h = int(zone_h * random.uniform(0.17, 0.24))
-    foot_r = max(leg_w + 1, 6)
-    leg_spread = random.uniform(0.18, 0.35)
-    for x_r in (-leg_spread + random.uniform(-0.04, 0.04), leg_spread + random.uniform(-0.04, 0.04)):
-        lx, ly = _body_vertical_anchor(body_geo, "bottom", x_r, inset=leg_w)
-        this_h = leg_h + random.randint(-3, 3)
-        draw.line([(lx, ly), (lx, ly + this_h)], fill=primary, width=leg_w)
-        draw.ellipse([lx - foot_r, ly + this_h - foot_r // 2,
-                      lx + foot_r, ly + this_h + foot_r], fill=primary)
+    # --- body silhouette ---
+    body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
+                                  secondary, primary, line_w, wobble=0.07)
 
-    _draw_polygon_body(draw, body_geo["points"], secondary, primary, line_w)
+    # --- fur tufts along body edge ---
+    _draw_fur_edge(draw, body_pts, (int(body_hw * 0.04), int(body_hw * 0.14)),
+                   primary, line_w)
 
-    # --- ears: small / large, varying angle ---
-    ear_tier = random.choice(["small", "large"])
-    if ear_tier == "small":
-        ear_h = max(int(body_hh * random.uniform(0.10, 0.14)), 10)
-        ear_w = max(int(body_hw * random.uniform(0.08, 0.12)), 6)
-    else:
-        ear_h = max(int(body_hh * random.uniform(0.18, 0.26)), 16)
-        ear_w = max(int(body_hw * random.uniform(0.12, 0.18)), 10)
-    for x_r, direction in ((-0.28 + random.uniform(-0.06, 0.06), -1),
-                           (0.28 + random.uniform(-0.06, 0.06), 1)):
-        ex, ey = _body_vertical_anchor(body_geo, "top", x_r, inset=line_w)
-        tilt_off = random.randint(-int(ear_w * 0.3), int(ear_w * 0.3))
-        points = [
-            (ex + tilt_off, ey - ear_h),
-            (ex - direction * ear_w, ey + line_w),
-            (ex + direction * (ear_w // 3), ey + line_w),
-        ]
-        draw.polygon(points, fill=secondary, outline=primary, width=line_w)
+    # --- ears (pointed, triangular) ---
+    ear_h = max(int(body_hh * random.uniform(0.12, 0.22)), 12)
+    ear_w = max(int(body_hw * random.uniform(0.10, 0.16)), 8)
+    for direction in (-1, 1):
+        ex = bcx + direction * int(body_hw * random.uniform(0.25, 0.40))
+        ey = body_cy - body_hh
+        tilt = random.randint(-int(ear_w * 0.2), int(ear_w * 0.2))
+        pts = [(ex + tilt, ey - ear_h),
+               (ex - direction * ear_w, ey + line_w),
+               (ex + direction * (ear_w // 3), ey + line_w)]
+        draw.polygon(pts, fill=secondary, outline=primary, width=line_w)
 
-    # fur tufts: few or many
-    fur_count = random.randint(3, 12)
-    for _ in range(fur_count):
-        angle = random.uniform(0, 2 * math.pi)
-        edge_x = cx + body_hw * math.cos(angle)
-        edge_y = cy + body_hh * math.sin(angle)
-        tuft_len = random.randint(int(body_hw * 0.04), int(body_hw * 0.16))
-        tx = edge_x + tuft_len * math.cos(angle)
-        ty = edge_y + tuft_len * math.sin(angle)
-        draw.line([(edge_x, edge_y), (tx, ty)], fill=primary, width=line_w)
-
-    eye_r = max(int(min(body_hw, body_hh) * random.uniform(0.07, 0.13)), 5)
-    eye_y = cy - int(body_hh * random.uniform(0.20, 0.32))
+    # --- face ---
+    eye_r = max(int(min(body_hw, body_hh) * random.uniform(0.09, 0.14)), 5)
+    eye_y = body_cy - int(body_hh * random.uniform(0.22, 0.35))
     eye_spread = body_hw * random.uniform(0.30, 0.50)
-    _simple_eyes(draw, [(cx - eye_spread, eye_y), (cx + eye_spread, eye_y)],
-                 eye_r, primary, secondary, line_w, brow=True)
+    eye_style = random.choice(["angry", "normal"])
+    _draw_expressive_eyes(draw,
+                          [(bcx - eye_spread, eye_y), (bcx + eye_spread, eye_y)],
+                          eye_r, primary, secondary, line_w,
+                          style=eye_style)
 
-    mouth_y = cy + int(body_hh * random.uniform(0.05, 0.18))
-    mouth_w = max(int(body_hw * random.uniform(0.25, 0.45)), 8)
-    draw.arc([cx - mouth_w, mouth_y - mouth_w // 2, cx + mouth_w, mouth_y + mouth_w // 2],
-             start=0, end=180, fill=primary, width=line_w)
-    fang_h = max(int(mouth_w * random.uniform(0.35, 0.65)), 5)
-    fang_w = max(int(mouth_w * random.uniform(0.14, 0.24)), 3)
-    for fang_x in (cx - mouth_w + fang_w, cx + mouth_w - fang_w * 2):
-        draw.polygon(
-            [(fang_x, mouth_y - 1), (fang_x + fang_w, mouth_y - 1),
-             (fang_x + fang_w // 2, mouth_y + fang_h)],
-            fill=secondary, outline=primary, width=max(line_w - 1, 1),
-        )
+    # toothy grin
+    mouth_y = body_cy + int(body_hh * random.uniform(0.05, 0.18))
+    mouth_w = max(int(body_hw * random.uniform(0.30, 0.50)), 10)
+    _draw_mouth(draw, bcx, mouth_y, mouth_w, primary, secondary, line_w, style="grin")
 
 
 def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Zombie: asymmetric body, stitches, hanging arms, uneven legs — wide variation."""
-    # --- body: thin / normal / wide ---
+    """Zombie: loose posture, slightly bent limbs, uneven face, stitches."""
+    # --- posture: tilted ---
+    tilt = random.uniform(-0.04, 0.04) * zone_w
+    bcx = cx + int(tilt)
+    body_lean = random.uniform(-0.03, 0.03) * zone_h
+
+    # --- body ---
     body_tier = random.choice(["thin", "normal", "wide"])
     if body_tier == "thin":
         body_hw = int(zone_w * random.uniform(0.08, 0.11))
         body_hh = int(zone_h * random.uniform(0.20, 0.26))
     elif body_tier == "normal":
         body_hw = int(zone_w * random.uniform(0.11, 0.15))
-        body_hh = int(zone_h * random.uniform(0.18, 0.24))
+        body_hh = int(zone_h * random.uniform(0.17, 0.23))
     else:
         body_hw = int(zone_w * random.uniform(0.14, 0.18))
-        body_hh = int(zone_h * random.uniform(0.16, 0.22))
-    tilt = random.uniform(-0.06, 0.06) * zone_w
-    body_cx = cx + tilt
-    body_shape = random.choice(["rounded_rect", "squared", "round", "oval", "blob"])
-    body_geo = _build_body_geometry(body_cx, cy, body_hw * 2, body_hh * 2, body_shape)
+        body_hh = int(zone_h * random.uniform(0.15, 0.21))
 
-    # --- arms: one up one down, varying length, sometimes missing one ---
-    arm_w = line_w + random.randint(1, 3)
-    arm_tier = random.choice(["short", "long"])
-    if arm_tier == "short":
-        arm_len = int(body_hw * random.uniform(0.45, 0.65))
-    else:
-        arm_len = int(body_hw * random.uniform(0.70, 1.0))
-    has_both_arms = random.random() < 0.80
-    arm_data = [("left", -1, random.uniform(-0.05, 0.15)),
-                ("right", 1, random.uniform(-0.15, 0.05))]
-    if not has_both_arms:
-        arm_data = [arm_data[random.randint(0, 1)]]
-    for side_name, side, y_off in arm_data:
-        ax, ay = _body_side_anchor(body_geo, side_name, y_off, inset=arm_w)
-        hand_x = ax + side * arm_len * random.uniform(0.60, 0.90)
-        hand_y = ay + arm_len * random.uniform(0.50, 1.10)
-        draw.line([(ax, ay), (hand_x, hand_y)], fill=primary, width=arm_w)
-        _draw_claws(draw, hand_x, hand_y, math.pi / 2 + side * 0.2, random.randint(2, 3),
-                    max(arm_len // 5, 5), primary, line_w)
+    body_cy = cy + int(body_lean)
 
-    # --- legs: asymmetric heights ---
-    leg_w = line_w + random.randint(2, 4)
-    base_leg_h = int(zone_h * random.uniform(0.12, 0.22))
-    foot_r = max(leg_w + 1, 5)
-    leg_asym = random.uniform(0.06, 0.18) * base_leg_h
-    offsets = [(-0.22 + random.uniform(-0.06, 0.06), -leg_asym),
-               (0.22 + random.uniform(-0.06, 0.06), leg_asym)]
-    for x_r, y_extra in offsets:
-        lx, ly = _body_vertical_anchor(body_geo, "bottom", x_r, inset=leg_w)
-        h = base_leg_h + int(y_extra)
-        draw.line([(lx, ly), (lx + random.randint(-3, 3), ly + h)], fill=primary, width=leg_w)
-        draw.ellipse([lx - foot_r, ly + h - foot_r // 2,
-                      lx + foot_r, ly + h + foot_r], fill=primary)
+    # --- arms (bent, hanging, one sometimes missing) ---
+    arm_w = max(line_w + 2, int(body_hw * 0.16))
+    arm_len = int(body_hw * random.uniform(0.55, 0.95))
+    has_both = random.random() < 0.80
+    arm_sides = [("left", -1), ("right", 1)]
+    if not has_both:
+        arm_sides = [arm_sides[random.randint(0, 1)]]
+    for side_name, side in arm_sides:
+        ax = bcx + side * body_hw
+        ay = body_cy - int(body_hh * random.uniform(0.0, 0.15))
+        # slouching bent arms
+        elbow_x = ax + side * arm_len * random.uniform(0.3, 0.6)
+        elbow_y = ay + arm_len * random.uniform(0.2, 0.5)
+        hand_x = elbow_x + side * arm_len * random.uniform(0.2, 0.5)
+        hand_y = elbow_y + arm_len * random.uniform(0.3, 0.7)
+        _draw_organic_limb(draw, ax, ay, elbow_x, elbow_y, arm_w, primary, taper=0.85)
+        _draw_organic_limb(draw, elbow_x, elbow_y, hand_x, hand_y,
+                          max(arm_w - 1, 2), primary, taper=0.7)
 
-    _draw_polygon_body(draw, body_geo["points"], secondary, primary, line_w)
+    # --- legs (uneven, bent) ---
+    leg_w = max(line_w + 2, int(body_hw * 0.22))
+    leg_h = int(zone_h * random.uniform(0.10, 0.18))
+    foot_r = max(leg_w + 1, 6)
+    asym = random.uniform(0.05, 0.15) * leg_h
+    for idx, x_off in enumerate((-0.25, 0.25)):
+        lx = bcx + int(body_hw * x_off) + random.randint(-3, 3)
+        ly = body_cy + body_hh
+        h = leg_h + int(asym if idx == 0 else -asym)
+        fx = lx + random.randint(-4, 4)
+        _draw_organic_leg(draw, lx, ly, fx, ly + h, leg_w, primary, foot_r)
 
-    # --- eyes: asymmetric sizes and positions ---
-    left_eye_r = max(int(min(body_hw, body_hh) * random.uniform(0.08, 0.15)), 5)
-    right_eye_r = max(int(left_eye_r * random.uniform(0.45, 0.90)), 4)
-    eye_y = cy - int(body_hh * random.uniform(0.18, 0.28))
+    # --- body silhouette ---
+    body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
+                                  secondary, primary, line_w, wobble=0.09)
+
+    # --- stitches ---
+    num_stitches = random.randint(1, 5)
+    _draw_stitches(draw, bcx, body_cy, body_hw, body_hh, num_stitches, primary, line_w)
+
+    # --- face (asymmetric) ---
+    left_eye_r = max(int(min(body_hw, body_hh) * random.uniform(0.09, 0.15)), 5)
+    right_eye_r = max(int(left_eye_r * random.uniform(0.50, 0.90)), 4)
+    eye_y = body_cy - int(body_hh * random.uniform(0.20, 0.30))
     eye_spread = body_hw * random.uniform(0.28, 0.45)
-    left_pos = (body_cx - eye_spread, eye_y + random.randint(-3, 3))
-    right_pos = (body_cx + eye_spread, eye_y + random.randint(0, int(left_eye_r * 0.6)))
 
-    # one eye might be X (dead eye)
-    dead_eye = random.random() < 0.25
-    for idx, (ex, ey, er) in enumerate([(left_pos[0], left_pos[1], left_eye_r),
-                                        (right_pos[0], right_pos[1], right_eye_r)]):
-        draw.ellipse([ex - er, ey - er, ex + er, ey + er], fill=secondary, outline=primary, width=line_w)
+    # one eye might be X (dead)
+    dead_eye = random.random() < 0.30
+    for idx, (ex, ey_off, er) in enumerate([
+        (bcx - eye_spread, random.randint(-2, 2), left_eye_r),
+        (bcx + eye_spread, random.randint(0, 3), right_eye_r),
+    ]):
+        ey = eye_y + ey_off
+        eye_pts = _organic_blob(ex, ey, er, er, wobble=0.05)
+        draw.polygon(eye_pts, fill=secondary, outline=primary, width=line_w)
         if dead_eye and idx == 1:
             cr = max(er - 2, 2)
             draw.line([(ex - cr, ey - cr), (ex + cr, ey + cr)], fill=primary, width=line_w)
@@ -1023,166 +888,358 @@ def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
             pr = max(er // 3, 2)
             draw.ellipse([ex - pr, ey - pr, ex + pr, ey + pr], fill=primary)
 
-    # --- stitches: few or many ---
-    num_stitches = random.randint(1, 6)
-    for _ in range(num_stitches):
-        sx = body_cx + random.randint(int(-body_hw * 0.65), int(body_hw * 0.65))
-        sy = cy + random.randint(int(-body_hh * 0.45), int(body_hh * 0.45))
-        stitch_len = random.randint(int(body_hw * 0.06), int(body_hw * 0.20))
-        angle = random.uniform(-0.5, 0.5)
-        x2 = sx + stitch_len * math.cos(angle)
-        y2 = sy + stitch_len * math.sin(angle)
-        draw.line([(sx, sy), (x2, y2)], fill=primary, width=line_w)
-        mid_x = (sx + x2) / 2
-        mid_y = (sy + y2) / 2
-        cross_len = stitch_len * 0.3
-        draw.line([(mid_x - cross_len * math.sin(angle), mid_y + cross_len * math.cos(angle)),
-                   (mid_x + cross_len * math.sin(angle), mid_y - cross_len * math.cos(angle))],
-                  fill=primary, width=line_w)
-
-    # mouth with missing teeth
-    mouth_y = cy + int(body_hh * random.uniform(0.10, 0.22))
-    mouth_w = max(int(body_hw * random.uniform(0.22, 0.42)), 7)
-    mouth_tilt = random.uniform(-0.08, 0.08) * mouth_w
-    draw.line([(body_cx - mouth_w, mouth_y - mouth_tilt),
-               (body_cx + mouth_w, mouth_y + mouth_tilt)], fill=primary, width=line_w)
-    num_teeth = random.randint(2, 6)
-    tw = max(mouth_w * 2 // (num_teeth + 1), 3)
+    # mouth (crooked line + missing teeth)
+    mouth_y = body_cy + int(body_hh * random.uniform(0.10, 0.22))
+    mouth_w = max(int(body_hw * random.uniform(0.25, 0.45)), 8)
+    mouth_pts = _bezier_pts((bcx - mouth_w, mouth_y + random.randint(-3, 3)),
+                             (bcx, mouth_y + random.randint(-4, 4)),
+                             (bcx + mouth_w, mouth_y + random.randint(-3, 3)), steps=8)
+    _draw_thick_curve(draw, mouth_pts, line_w, primary)
+    # teeth
+    n_teeth = random.randint(2, 5)
+    tw = max(mouth_w * 2 // (n_teeth + 1), 3)
     th = max(tw, 3)
-    total_tw = num_teeth * tw + (num_teeth - 1) * 2
-    start_x = body_cx - total_tw // 2
-    for i in range(num_teeth):
+    total = n_teeth * tw + (n_teeth - 1) * 2
+    sx = bcx - total // 2
+    for i in range(n_teeth):
         if random.random() < 0.35:
             continue
-        tx = start_x + i * (tw + 2)
-        draw.rectangle([tx, mouth_y, tx + tw, mouth_y + th],
-                        fill=secondary, outline=primary, width=max(line_w - 1, 1))
+        tx = sx + i * (tw + 2)
+        draw.polygon([(tx, mouth_y), (tx + tw, mouth_y), (tx + tw // 2, mouth_y + th)],
+                     fill=secondary, outline=primary, width=max(line_w - 1, 1))
+
+    # cracks/damage detail
+    if random.random() < 0.5:
+        for _ in range(random.randint(1, 3)):
+            crack_x = bcx + random.randint(int(-body_hw * 0.4), int(body_hw * 0.4))
+            crack_y = body_cy + random.randint(int(-body_hh * 0.3), int(body_hh * 0.3))
+            crack_len = random.randint(4, max(int(body_hw * 0.12), 6))
+            angle = random.uniform(-0.8, 0.8)
+            draw.line([(crack_x, crack_y),
+                       (crack_x + crack_len * math.cos(angle),
+                        crack_y + crack_len * math.sin(angle))],
+                      fill=primary, width=max(line_w - 1, 1))
+
+
+def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
+    """Octopus: round head/dome, thick curling tentacles, soft curves."""
+    # --- dome ---
+    dome_tier = random.choice(["small", "medium", "large"])
+    if dome_tier == "small":
+        dome_rx = int(zone_w * random.uniform(0.09, 0.13))
+        dome_ry = int(zone_h * random.uniform(0.09, 0.13))
+    elif dome_tier == "medium":
+        dome_rx = int(zone_w * random.uniform(0.13, 0.18))
+        dome_ry = int(zone_h * random.uniform(0.12, 0.17))
+    else:
+        dome_rx = int(zone_w * random.uniform(0.18, 0.24))
+        dome_ry = int(zone_h * random.uniform(0.16, 0.22))
+
+    dome_shape = random.choice(["round", "wide"])
+    if dome_shape == "wide":
+        dome_rx = int(dome_rx * 1.2)
+        dome_ry = int(dome_ry * 0.85)
+
+    dome_cy = cy - int(zone_h * random.uniform(0.04, 0.10))
+
+    # --- tentacles: thick, curling ---
+    n_tentacles = random.randint(4, 8)
+    tent_w = max(line_w + 2, int(dome_rx * 0.15))
+    tent_len_tier = random.choice(["short", "medium", "long"])
+    tent_spread = dome_rx * random.uniform(1.2, 1.8)
+    tent_step = tent_spread / max(n_tentacles - 1, 1)
+    tent_start_y = dome_cy + dome_ry - line_w
+
+    for i in range(n_tentacles):
+        tx = cx - tent_spread / 2 + i * tent_step + random.uniform(-4, 4)
+        if tent_len_tier == "short":
+            length = int(zone_h * random.uniform(0.12, 0.20))
+        elif tent_len_tier == "medium":
+            length = int(zone_h * random.uniform(0.22, 0.34))
+        else:
+            length = int(zone_h * random.uniform(0.35, 0.48))
+        # organic curving tentacle
+        sway = dome_rx * random.uniform(0.08, 0.22)
+        pts = [(tx, tent_start_y)]
+        segs = random.randint(4, 6)
+        seg_len = length / segs
+        for j in range(segs):
+            d = 1 if j % 2 == 0 else -1
+            nx = pts[-1][0] + random.uniform(sway * 0.3, sway) * d
+            ny = pts[-1][1] + seg_len
+            pts.append((nx, ny))
+        for j in range(len(pts) - 1):
+            w = max(tent_w - j, 2)
+            draw.line([pts[j], pts[j + 1]], fill=primary, width=w)
+        # tip dot
+        r = max(2, tent_w // 2)
+        draw.ellipse([pts[-1][0] - r, pts[-1][1] - r, pts[-1][0] + r, pts[-1][1] + r], fill=primary)
+
+    # --- dome silhouette (organic) ---
+    _draw_filled_blob(draw, cx, dome_cy, dome_rx, dome_ry,
+                       secondary, primary, line_w, wobble=0.05)
+
+    # --- face ---
+    eye_r = max(int(dome_rx * random.uniform(0.14, 0.25)), 5)
+    eye_y = dome_cy - int(dome_ry * random.uniform(0.02, 0.18))
+    spread = dome_rx * random.uniform(0.30, 0.55)
+    n_eyes = random.choice([2, 2, 3])
+    if n_eyes == 2:
+        positions = [(cx - spread, eye_y), (cx + spread, eye_y)]
+    else:
+        positions = [(cx - spread, eye_y), (cx, eye_y - int(eye_r * 0.3)), (cx + spread, eye_y)]
+    eye_style = random.choice(["normal", "cute", "sleepy"])
+    _draw_expressive_eyes(draw, positions, eye_r, primary, secondary, line_w, style=eye_style)
+
+    mouth_y = dome_cy + int(dome_ry * random.uniform(0.25, 0.45))
+    mouth_style = random.choice(["smile", "open", "confused"])
+    _draw_mouth(draw, cx, mouth_y, max(int(dome_rx * 0.3), 6), primary, secondary, line_w,
+                style=mouth_style)
+
+    # spots detail
+    if random.random() < 0.35:
+        for _ in range(random.randint(2, 5)):
+            dx = cx + random.randint(int(-dome_rx * 0.5), int(dome_rx * 0.5))
+            dy = dome_cy + random.randint(int(-dome_ry * 0.4), int(dome_ry * 0.4))
+            dr = random.randint(2, max(int(dome_rx * 0.06), 3))
+            draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], fill=primary)
+
+
+def _draw_dragon_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
+    """Dragon: curved body, simple membrane wings, tail, spikes, expressive face."""
+    lean = random.uniform(-0.02, 0.02) * zone_w
+    bcx = cx + int(lean)
+
+    # --- body ---
+    body_tier = random.choice(["compact", "wide", "tall"])
+    if body_tier == "compact":
+        body_hw = int(zone_w * random.uniform(0.10, 0.14))
+        body_hh = int(zone_h * random.uniform(0.13, 0.18))
+    elif body_tier == "wide":
+        body_hw = int(zone_w * random.uniform(0.14, 0.20))
+        body_hh = int(zone_h * random.uniform(0.12, 0.16))
+    else:
+        body_hw = int(zone_w * random.uniform(0.10, 0.14))
+        body_hh = int(zone_h * random.uniform(0.18, 0.25))
+
+    body_cy = cy + int(zone_h * 0.02)
+
+    # --- wings (membrane with curves) ---
+    wing_tier = random.choice(["none", "small", "large", "large"])
+    if wing_tier != "none":
+        if wing_tier == "small":
+            wing_w = int(zone_w * random.uniform(0.07, 0.12))
+            wing_h = int(zone_h * random.uniform(0.10, 0.16))
+        else:
+            wing_w = int(zone_w * random.uniform(0.14, 0.22))
+            wing_h = int(zone_h * random.uniform(0.18, 0.30))
+        for side in (-1, 1):
+            wx = bcx + side * body_hw
+            wy = body_cy - int(body_hh * random.uniform(0.2, 0.4))
+            tip = (wx + side * wing_w, wy - wing_h)
+            bot = (wx + side * int(wing_w * 0.3), wy + int(wing_h * 0.15))
+            # membrane with curved edge
+            curve_pts = _bezier_pts((wx, wy), tip, bot, steps=10)
+            # fill wing
+            wing_poly = [(wx, wy)] + curve_pts + [bot]
+            draw.polygon(wing_poly, fill=secondary, outline=primary, width=line_w)
+            # membrane ribs
+            n_ribs = random.randint(1, 3)
+            for ri in range(n_ribs):
+                t = (ri + 1) / (n_ribs + 1)
+                rib_end = curve_pts[int(t * (len(curve_pts) - 1))]
+                draw.line([(wx, wy), rib_end], fill=primary, width=max(line_w - 1, 1))
+
+    # --- tail (curved) ---
+    tail_len = int(zone_w * random.uniform(0.08, 0.20))
+    tail_w = max(line_w + 2, int(body_hw * 0.18))
+    tail_side = random.choice([-1, 1])
+    tail_x0 = bcx + tail_side * body_hw
+    tail_y0 = body_cy + int(body_hh * random.uniform(0.2, 0.5))
+    tail_ctrl = (tail_x0 + tail_side * tail_len * 0.5,
+                 tail_y0 + tail_len * random.uniform(0.2, 0.5))
+    tail_end = (tail_x0 + tail_side * tail_len,
+                tail_y0 + int(tail_len * random.uniform(-0.1, 0.2)))
+    tail_pts = _bezier_pts((tail_x0, tail_y0), tail_ctrl, tail_end, steps=10)
+    for i in range(len(tail_pts) - 1):
+        w = max(tail_w - i, line_w)
+        draw.line([tail_pts[i], tail_pts[i + 1]], fill=primary, width=w)
+    # tail tip
+    tip_style = random.choice(["arrow", "round", "none"])
+    ex, ey = tail_pts[-1]
+    if tip_style == "arrow":
+        tw = max(int(tail_len * 0.08), 3)
+        draw.polygon([(ex, ey - tw), (ex + tail_side * tw * 2, ey), (ex, ey + tw)], fill=primary)
+    elif tip_style == "round":
+        tr = max(int(tail_len * 0.05), 3)
+        draw.ellipse([ex - tr, ey - tr, ex + tr, ey + tr], fill=primary)
+
+    # --- legs ---
+    leg_h = int(zone_h * random.uniform(0.08, 0.15))
+    leg_w = max(line_w + 2, int(body_hw * 0.20))
+    foot_r = max(leg_w, 5)
+    n_legs = random.choice([2, 2, 4])
+    if n_legs == 2:
+        leg_xs = [-0.20, 0.20]
+    else:
+        leg_xs = [-0.32, -0.10, 0.10, 0.32]
+    for x_off in leg_xs:
+        lx = bcx + int(body_hw * x_off) + random.randint(-2, 2)
+        ly = body_cy + body_hh
+        _draw_organic_leg(draw, lx, ly, lx + random.randint(-3, 3), ly + leg_h,
+                         leg_w, primary, foot_r)
+
+    # --- body silhouette ---
+    body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
+                                  secondary, primary, line_w, wobble=0.06)
+
+    # --- spikes on back ---
+    spike_tier = random.choice(["none", "few", "many"])
+    if spike_tier != "none":
+        n_sp = random.randint(2, 4) if spike_tier == "few" else random.randint(5, 8)
+        for i in range(n_sp):
+            t = -0.4 + i * (0.8 / max(n_sp - 1, 1))
+            sx = bcx + int(body_hw * t)
+            sy = body_cy - body_hh + int(abs(t) * body_hh * 0.12)
+            sh = random.randint(int(body_hh * 0.08), int(body_hh * 0.25))
+            sw = max(3, int(body_hw * 0.04))
+            draw.polygon([(sx, sy - sh), (sx - sw, sy + 1), (sx + sw, sy + 1)], fill=primary)
+
+    # --- horns ---
+    horn_h = int(body_hh * random.uniform(0.15, 0.40))
+    horn_w = max(int(body_hw * 0.05), 4)
+    for x_r in (-0.22, 0.22):
+        hx = bcx + int(body_hw * x_r) + random.randint(-3, 3)
+        hy = body_cy - body_hh
+        d = random.choice([-1, 1])
+        draw.polygon([(hx + d * horn_w, hy - horn_h), (hx - horn_w, hy + 2), (hx + horn_w, hy + 2)],
+                     fill=primary)
+
+    # --- face ---
+    eye_r = max(int(min(body_hw, body_hh) * random.uniform(0.10, 0.16)), 5)
+    eye_y = body_cy - int(body_hh * random.uniform(0.18, 0.32))
+    eye_spread = body_hw * random.uniform(0.30, 0.50)
+    eye_style = random.choice(["normal", "angry", "cute"])
+    _draw_expressive_eyes(draw,
+                          [(bcx - eye_spread, eye_y), (bcx + eye_spread, eye_y)],
+                          eye_r, primary, secondary, line_w, style=eye_style)
+
+    mouth_y = body_cy + int(body_hh * random.uniform(0.12, 0.28))
+    mouth_w = max(int(body_hw * random.uniform(0.30, 0.50)), 8)
+    mouth_style = random.choice(["grin", "teeth", "smile"])
+    _draw_mouth(draw, bcx, mouth_y, mouth_w, primary, secondary, line_w, style=mouth_style)
 
 
 def _draw_cthulhu_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Cthulhu: huge head, narrow body, face tentacles, optional wings — wide variation."""
-    # --- head size: large / very large ---
+    """Cthulhu: large head, tentacles from mouth, soft flowing shapes, compact body."""
+    # --- head (oversized, cartoon) ---
     head_tier = random.choice(["large", "very_large"])
     if head_tier == "large":
-        head_rx = int(zone_w * random.uniform(0.12, 0.16))
-        head_ry = int(zone_h * random.uniform(0.14, 0.19))
+        head_rx = int(zone_w * random.uniform(0.13, 0.18))
+        head_ry = int(zone_h * random.uniform(0.15, 0.20))
     else:
-        head_rx = int(zone_w * random.uniform(0.17, 0.22))
-        head_ry = int(zone_h * random.uniform(0.20, 0.26))
+        head_rx = int(zone_w * random.uniform(0.19, 0.24))
+        head_ry = int(zone_h * random.uniform(0.21, 0.28))
     head_cy = cy - int(zone_h * random.uniform(0.04, 0.10))
-    head_shape = random.choice(["blob", "oval", "round"])
-    if head_shape == "blob":
-        head_pts = _smooth_blob_points(cx, head_cy, head_rx, head_ry)
-    elif head_shape == "round":
-        r = min(head_rx, head_ry)
-        head_pts = _ellipse_points(cx, head_cy, r, r)
-    else:
-        head_pts = _ellipse_points(cx, head_cy, head_rx, head_ry)
 
-    # --- body size: small / medium ---
-    body_tier = random.choice(["small", "medium"])
-    if body_tier == "small":
-        body_hw = int(head_rx * random.uniform(0.35, 0.50))
-        body_hh = int(head_ry * random.uniform(0.40, 0.55))
-    else:
-        body_hw = int(head_rx * random.uniform(0.55, 0.72))
-        body_hh = int(head_ry * random.uniform(0.58, 0.75))
-    body_cy = head_cy + head_ry + body_hh - int(body_hh * random.uniform(0.15, 0.35))
-    body_pts = _ellipse_points(cx, body_cy, body_hw, body_hh)
+    # --- body (compact, beneath head) ---
+    body_hw = int(head_rx * random.uniform(0.40, 0.65))
+    body_hh = int(head_ry * random.uniform(0.40, 0.60))
+    body_cy = head_cy + head_ry + body_hh - int(body_hh * random.uniform(0.10, 0.25))
 
-    # --- wings: none / small ---
-    has_wings = random.random() < 0.60
-    if has_wings:
+    # --- wings (small, optional) ---
+    if random.random() < 0.55:
         wing_w = int(zone_w * random.uniform(0.05, 0.12))
-        wing_h = int(zone_h * random.uniform(0.08, 0.18))
+        wing_h = int(zone_h * random.uniform(0.08, 0.16))
         for side in (-1, 1):
-            wx = cx + side * body_hw * random.uniform(0.85, 1.05)
-            wy = body_cy - int(body_hh * random.uniform(0.1, 0.35))
-            tip_x = wx + side * wing_w
-            tip_y = wy - wing_h
-            bot_x = wx + side * int(wing_w * random.uniform(0.2, 0.4))
-            bot_y = wy + int(wing_h * random.uniform(0.10, 0.20))
-            draw.polygon([(wx, wy), (tip_x, tip_y), (bot_x, bot_y)], outline=primary, width=line_w)
+            wx = cx + side * body_hw
+            wy = body_cy - int(body_hh * random.uniform(0.1, 0.3))
+            tip = (wx + side * wing_w, wy - wing_h)
+            bot = (wx + side * int(wing_w * 0.25), wy + int(wing_h * 0.15))
+            draw.polygon([(wx, wy), tip, bot], fill=secondary, outline=primary, width=line_w)
 
-    # arms with slight asymmetry
-    arm_w = line_w + 1
+    # --- small arms ---
+    arm_w = max(line_w + 1, int(body_hw * 0.15))
     arm_len = int(body_hw * random.uniform(0.45, 0.80))
     for side in (-1, 1):
-        ax = cx + side * body_hw * random.uniform(0.80, 1.0)
-        ay = body_cy + random.randint(-3, 3)
-        hand_x = ax + side * arm_len * random.uniform(0.80, 1.10)
-        hand_y = ay + arm_len * random.uniform(0.35, 0.65)
-        draw.line([(ax, ay), (hand_x, hand_y)], fill=primary, width=arm_w)
-        _draw_claws(draw, hand_x, hand_y, math.pi - 0.2 if side < 0 else 0.2,
-                    random.randint(2, 4), max(arm_len // 3, 5), primary, line_w)
+        ax = cx + side * body_hw
+        ay = body_cy
+        hand_x = ax + side * arm_len * random.uniform(0.7, 1.1)
+        hand_y = ay + arm_len * random.uniform(0.3, 0.6)
+        _draw_organic_limb(draw, ax, ay, hand_x, hand_y, arm_w, primary)
 
-    _draw_polygon_body(draw, body_pts, secondary, primary, line_w)
-    _draw_polygon_body(draw, head_pts, secondary, primary, line_w)
+    # --- body silhouette ---
+    _draw_filled_blob(draw, cx, body_cy, body_hw, body_hh,
+                       secondary, primary, line_w, wobble=0.06)
 
-    # horns
-    horn_h = int(head_ry * random.uniform(0.15, 0.38))
-    horn_w_px = max(int(head_rx * random.uniform(0.04, 0.07)), 3)
-    for x_off in (-0.25 + random.uniform(-0.08, 0.08), 0.25 + random.uniform(-0.08, 0.08)):
-        hx = cx + head_rx * x_off
-        hy = head_cy - head_ry * random.uniform(0.82, 0.95)
-        draw.polygon([(hx, hy - horn_h), (hx - horn_w_px, hy + 2), (hx + horn_w_px, hy + 2)],
-                     fill=primary)
+    # --- head silhouette (organic, large) ---
+    _draw_filled_blob(draw, cx, head_cy, head_rx, head_ry,
+                       secondary, primary, line_w, wobble=0.07)
 
-    # eyes
-    eye_r = max(int(head_rx * random.uniform(0.09, 0.16)), 5)
-    eye_y = head_cy - int(head_ry * random.uniform(0.08, 0.22))
-    eye_spread = head_rx * random.uniform(0.35, 0.55)
-    num_eyes = random.choice([2, 2, 3, 4])
-    if num_eyes == 2:
+    # --- horns ---
+    horn_h = int(head_ry * random.uniform(0.18, 0.38))
+    horn_w = max(int(head_rx * 0.05), 3)
+    for x_off in (-0.25, 0.25):
+        hx = cx + int(head_rx * x_off) + random.randint(-3, 3)
+        hy = head_cy - head_ry
+        draw.polygon([(hx, hy - horn_h), (hx - horn_w, hy + 2), (hx + horn_w, hy + 2)], fill=primary)
+
+    # --- face ---
+    eye_r = max(int(head_rx * random.uniform(0.10, 0.17)), 5)
+    eye_y = head_cy - int(head_ry * random.uniform(0.08, 0.25))
+    eye_spread = head_rx * random.uniform(0.30, 0.50)
+    n_eyes = random.choice([2, 2, 3, 4])
+    if n_eyes == 2:
         positions = [(cx - eye_spread, eye_y), (cx + eye_spread, eye_y)]
-    elif num_eyes == 3:
-        positions = [(cx - eye_spread, eye_y), (cx, eye_y - int(eye_r * 0.5)), (cx + eye_spread, eye_y)]
+    elif n_eyes == 3:
+        positions = [(cx - eye_spread, eye_y), (cx, eye_y - int(eye_r * 0.4)), (cx + eye_spread, eye_y)]
     else:
-        positions = [
-            (cx - eye_spread, eye_y - int(eye_r * 0.3)), (cx + eye_spread, eye_y - int(eye_r * 0.3)),
-            (cx - eye_spread * 0.5, eye_y + int(eye_r * 0.4)),
-            (cx + eye_spread * 0.5, eye_y + int(eye_r * 0.4)),
-        ]
-    _simple_eyes(draw, positions, eye_r, primary, secondary, line_w, brow=True)
+        positions = [(cx - eye_spread, eye_y - int(eye_r * 0.2)),
+                     (cx + eye_spread, eye_y - int(eye_r * 0.2)),
+                     (cx - eye_spread * 0.5, eye_y + int(eye_r * 0.3)),
+                     (cx + eye_spread * 0.5, eye_y + int(eye_r * 0.3))]
+    _draw_expressive_eyes(draw, positions, eye_r, primary, secondary, line_w,
+                          style=random.choice(["normal", "angry", "sleepy"]))
 
-    # --- tentacles: 3-7, short or long, varying sway ---
+    # --- mouth tentacles ---
     tent_total = random.randint(3, 7)
-    tent_len_tier = random.choice(["short", "long"])
-    tent_spread = head_rx * random.uniform(0.7, 1.2)
+    tent_spread = head_rx * random.uniform(0.6, 1.0)
     tent_step = tent_spread / max(tent_total - 1, 1)
-    tent_start_x = cx - tent_spread / 2
-    tent_start_y = head_cy + int(head_ry * random.uniform(0.45, 0.65))
-    tent_w = line_w + random.choice([0, 1, 2])
+    tent_start_y = head_cy + int(head_ry * random.uniform(0.35, 0.55))
+    tent_w = max(line_w + 1, int(head_rx * 0.06))
+    tent_len_tier = random.choice(["short", "long"])
     for i in range(tent_total):
-        tx = tent_start_x + i * tent_step + random.uniform(-3, 3)
+        tx = cx - tent_spread / 2 + i * tent_step + random.uniform(-2, 2)
         if tent_len_tier == "short":
-            length = int(head_ry * random.uniform(0.30, 0.50))
+            length = int(head_ry * random.uniform(0.25, 0.45))
         else:
-            length = int(head_ry * random.uniform(0.55, 0.95))
-        sway = head_rx * random.uniform(0.06, 0.18)
+            length = int(head_ry * random.uniform(0.50, 0.85))
+        sway = head_rx * random.uniform(0.05, 0.15)
         _curvy_tentacle(draw, tx, tent_start_y, length, sway, tent_w, primary)
 
 
 def _draw_ghost_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Ghost: dome top, wavy bottom, hollow eyes, small mouth — wide variation."""
-    # --- size tier: small / medium / large ---
+    """Ghost: soft rounded top, wavy bottom, floating shape, simple expressive face."""
+    # --- size ---
     size_tier = random.choice(["small", "medium", "large"])
     if size_tier == "small":
         body_w = int(zone_w * random.uniform(0.18, 0.24))
-        body_h = int(zone_h * random.uniform(0.42, 0.52))
+        body_h = int(zone_h * random.uniform(0.40, 0.50))
     elif size_tier == "medium":
         body_w = int(zone_w * random.uniform(0.24, 0.32))
-        body_h = int(zone_h * random.uniform(0.52, 0.66))
+        body_h = int(zone_h * random.uniform(0.50, 0.65))
     else:
         body_w = int(zone_w * random.uniform(0.30, 0.38))
-        body_h = int(zone_h * random.uniform(0.60, 0.72))
+        body_h = int(zone_h * random.uniform(0.58, 0.72))
+
+    # --- ghost outline (dome top, wavy bottom) ---
     ghost_pts = _ghost_outline_points(cx, cy, body_w, body_h)
     body_geo = _build_body_geometry(cx, cy, body_w, body_h, "ghost")
 
-    # --- arms: none / short stubs / long reaching / one only ---
+    # --- arms (organic curves) ---
     arm_style = random.choice(["none", "stubs", "reaching", "one_only"])
     if arm_style != "none":
-        arm_w = line_w + random.randint(1, 2)
+        arm_w = max(line_w + 1, int(body_w * 0.06))
         if arm_style == "stubs":
             arm_len = int(body_w * random.uniform(0.10, 0.18))
         else:
@@ -1193,175 +1250,152 @@ def _draw_ghost_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line
         for side_name, side in sides:
             y_off = random.uniform(-0.12, 0.05)
             ax, ay = _body_side_anchor(body_geo, side_name, y_off, inset=arm_w)
-            arm_angle = random.uniform(-0.6, 0.3)
             hand_x = ax + side * arm_len
-            hand_y = ay + arm_len * arm_angle
-            draw.line([(ax, ay), (hand_x, hand_y)], fill=primary, width=arm_w)
+            hand_y = ay + arm_len * random.uniform(-0.4, 0.2)
+            _draw_organic_limb(draw, ax, ay, hand_x, hand_y, arm_w, primary, taper=0.5)
 
+    # --- body fill ---
     _draw_polygon_body(draw, ghost_pts, secondary, primary, line_w)
 
-    # --- eyes: 1 / 2 / 3, hollow or filled, size variation ---
-    num_eyes = random.choices([1, 2, 3], weights=[15, 60, 25])[0]
+    # --- face ---
+    n_eyes = random.choices([1, 2, 3], weights=[15, 60, 25])[0]
     eye_r = max(int(min(body_w, body_h) * random.uniform(0.05, 0.10)), 5)
     eye_y = cy - int(body_h * random.uniform(0.10, 0.22))
-    hollow = random.random() < 0.65
-    if num_eyes == 1:
+    hollow = random.random() < 0.55
+    if n_eyes == 1:
         positions = [(cx, eye_y)]
     else:
-        eye_spread = body_w * random.uniform(0.18, 0.30)
-        if num_eyes == 2:
-            positions = [(cx - eye_spread, eye_y + random.randint(-2, 2)),
-                         (cx + eye_spread, eye_y + random.randint(-2, 2))]
+        spread = body_w * random.uniform(0.18, 0.30)
+        if n_eyes == 2:
+            positions = [(cx - spread, eye_y + random.randint(-2, 2)),
+                         (cx + spread, eye_y + random.randint(-2, 2))]
         else:
-            positions = [(cx - eye_spread, eye_y + random.randint(-3, 3)),
-                         (cx, eye_y - int(eye_r * 0.6)),
-                         (cx + eye_spread, eye_y + random.randint(-3, 3))]
-    _simple_eyes(draw, positions, eye_r, primary, secondary, line_w, hollow=hollow)
+            positions = [(cx - spread, eye_y + random.randint(-2, 2)),
+                         (cx, eye_y - int(eye_r * 0.5)),
+                         (cx + spread, eye_y + random.randint(-2, 2))]
+    _draw_expressive_eyes(draw, positions, eye_r, primary, secondary, line_w,
+                          style="hollow" if hollow else random.choice(["normal", "sleepy", "cute"]))
 
-    # --- mouth: circle / oval / wide open / none ---
-    mouth_style = random.choice(["circle", "oval", "wide", "none"])
+    # mouth
+    mouth_style = random.choice(["open", "confused", "smile", "none"])
     if mouth_style != "none":
         mouth_y = cy + int(body_h * random.uniform(0.03, 0.12))
-        if mouth_style == "circle":
-            mouth_r = max(int(body_w * random.uniform(0.04, 0.08)), 4)
-            draw.ellipse([cx - mouth_r, mouth_y - mouth_r, cx + mouth_r, mouth_y + mouth_r],
-                         outline=primary, width=line_w)
-        elif mouth_style == "oval":
-            mouth_r = max(int(body_w * random.uniform(0.04, 0.07)), 4)
-            draw.ellipse([cx - mouth_r, mouth_y - int(mouth_r * 1.5),
-                          cx + mouth_r, mouth_y + int(mouth_r * 1.5)],
-                         outline=primary, width=line_w)
-        else:
-            mouth_r = max(int(body_w * random.uniform(0.06, 0.12)), 5)
-            draw.ellipse([cx - mouth_r, mouth_y - int(mouth_r * 0.8),
-                          cx + mouth_r, mouth_y + int(mouth_r * 0.8)],
-                         fill=primary)
+        _draw_mouth(draw, cx, mouth_y, max(int(body_w * 0.15), 6),
+                    primary, secondary, line_w, style=mouth_style)
 
 
 def _draw_default_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Default: fully random monster with random body, limbs, and features."""
-    body_hw = int(zone_w * random.uniform(0.12, 0.18))
-    body_hh = int(zone_h * random.uniform(0.16, 0.24))
-    body_shape = random.choice(["round", "oval", "blob", "rounded_rect", "squared"])
-    body_geo = _build_body_geometry(cx, cy, body_hw * 2, body_hh * 2, body_shape)
+    """Default: randomized organic creature with various features."""
+    lean = random.uniform(-0.02, 0.02) * zone_w
+    bcx = cx + int(lean)
+
+    body_hw = int(zone_w * random.uniform(0.10, 0.18))
+    body_hh = int(zone_h * random.uniform(0.14, 0.24))
 
     use_tentacles = random.random() < 0.25
     use_arms = random.random() < 0.75
     use_wings = random.random() < 0.20
     use_tail = random.random() < 0.25
     use_horns = random.random() < 0.30
-    num_legs = 0 if use_tentacles else random.choices([2, 3, 4], weights=[60, 20, 20])[0]
+    n_legs = 0 if use_tentacles else random.choices([2, 3, 4], weights=[60, 20, 20])[0]
 
+    body_cy = cy + int(zone_h * 0.02)
+
+    # wings
     if use_wings:
-        wing_w = int(body_hw * random.uniform(0.35, 0.55))
-        wing_h = int(body_hh * random.uniform(0.45, 0.65))
-        for side_name, side in (("left", -1), ("right", 1)):
-            wx, wy = _body_side_anchor(body_geo, side_name, -0.15, inset=line_w)
-            draw.polygon(
-                [(wx, wy),
-                 (wx + side * wing_w, wy - wing_h),
-                 (wx + side * int(wing_w * 0.3), wy + int(wing_h * 0.15))],
-                outline=primary, width=line_w,
-            )
+        wing_w = int(body_hw * random.uniform(0.35, 0.60))
+        wing_h = int(body_hh * random.uniform(0.45, 0.70))
+        for side in (-1, 1):
+            wx = bcx + side * body_hw
+            wy = body_cy - int(body_hh * 0.15)
+            tip = (wx + side * wing_w, wy - wing_h)
+            bot = (wx + side * int(wing_w * 0.3), wy + int(wing_h * 0.12))
+            draw.polygon([(wx, wy), tip, bot], fill=secondary, outline=primary, width=line_w)
 
+    # tail
     if use_tail:
         tail_side = random.choice([-1, 1])
-        tail_ax, tail_ay = _body_side_anchor(body_geo, "left" if tail_side < 0 else "right", 0.25, inset=line_w)
-        tail_len = int(body_hw * random.uniform(0.40, 0.65))
-        end_x = tail_ax + tail_side * tail_len
-        end_y = tail_ay + int(body_hh * 0.15)
-        draw.line([(tail_ax, tail_ay), (end_x, end_y)], fill=primary, width=line_w + 1)
+        tail_len = int(body_hw * random.uniform(0.40, 0.70))
+        tx0 = bcx + tail_side * body_hw
+        ty0 = body_cy + int(body_hh * 0.2)
+        tail_end = (tx0 + tail_side * tail_len, ty0 + int(body_hh * 0.15))
+        tail_ctrl = ((tx0 + tail_end[0]) / 2, ty0 + tail_len * 0.3)
+        pts = _bezier_pts((tx0, ty0), tail_ctrl, tail_end, steps=8)
+        for i in range(len(pts) - 1):
+            w = max(line_w + 1 - i // 3, line_w)
+            draw.line([pts[i], pts[i + 1]], fill=primary, width=w)
 
+    # tentacles or legs
     if use_tentacles:
-        num_t = random.randint(4, 7)
-        tent_w = line_w + 2
+        n_t = random.randint(4, 7)
+        tent_w = max(line_w + 2, int(body_hw * 0.10))
         spread = 0.70
-        step = spread / max(num_t - 1, 1)
-        for i in range(num_t):
+        step = spread / max(n_t - 1, 1)
+        for i in range(n_t):
             x_r = (-spread / 2) + i * step
-            tx, ty = _body_vertical_anchor(body_geo, "bottom", x_r, inset=tent_w)
+            tx = bcx + int(body_hw * x_r)
+            ty = body_cy + body_hh
             length = int(body_hh * random.uniform(0.50, 0.85))
             sway = body_hw * 0.12
             _curvy_tentacle(draw, tx, ty, length, sway, tent_w, primary)
-    else:
-        leg_w = line_w + 3
-        leg_h = int(zone_h * random.uniform(0.10, 0.18))
+    elif n_legs > 0:
+        leg_w = max(line_w + 2, int(body_hw * 0.18))
+        leg_h = int(zone_h * random.uniform(0.08, 0.16))
         foot_r = max(leg_w + 1, 5)
-        if num_legs > 0:
-            spread = 0.50
-            step = spread / max(num_legs - 1, 1) if num_legs > 1 else 0
-            for i in range(num_legs):
-                x_r = (-spread / 2 + i * step) if num_legs > 1 else 0
-                lx, ly = _body_vertical_anchor(body_geo, "bottom", x_r, inset=leg_w)
-                draw.line([(lx, ly), (lx, ly + leg_h)], fill=primary, width=leg_w)
-                draw.ellipse([lx - foot_r, ly + leg_h - foot_r // 2,
-                              lx + foot_r, ly + leg_h + foot_r], fill=primary)
+        spread = 0.50
+        step = spread / max(n_legs - 1, 1) if n_legs > 1 else 0
+        for i in range(n_legs):
+            x_r = (-spread / 2 + i * step) if n_legs > 1 else 0
+            lx = bcx + int(body_hw * x_r)
+            ly = body_cy + body_hh
+            _draw_organic_leg(draw, lx, ly, lx + random.randint(-3, 3), ly + leg_h,
+                             leg_w, primary, foot_r)
 
+    # arms
     if use_arms:
-        arm_w = line_w + 2
-        arm_len = int(body_hw * random.uniform(0.45, 0.70))
-        arm_style = random.choice(["short", "raised", "normal"])
-        for side_name, side in (("left", -1), ("right", 1)):
-            ax, ay = _body_side_anchor(body_geo, side_name, -0.02, inset=arm_w)
-            if arm_style == "short":
-                end_x, end_y = ax + side * arm_len, ay
-            elif arm_style == "raised":
-                end_x, end_y = ax + side * arm_len, ay - arm_len * 0.65
-            else:
-                end_x, end_y = ax + side * arm_len, ay + arm_len * 0.30
-            draw.line([(ax, ay), (end_x, end_y)], fill=primary, width=arm_w)
-            finger_len = max(arm_len // 4, 5)
-            angle = math.atan2(end_y - ay, end_x - ax)
-            _draw_claws(draw, end_x, end_y, angle, random.randint(2, 3), finger_len, primary, line_w)
+        arm_w = max(line_w + 1, int(body_hw * 0.12))
+        arm_len = int(body_hw * random.uniform(0.45, 0.75))
+        for side in (-1, 1):
+            ax = bcx + side * body_hw
+            ay = body_cy - int(body_hh * random.uniform(-0.05, 0.10))
+            hand_x = ax + side * arm_len * random.uniform(0.7, 1.0)
+            hand_y = ay + arm_len * random.uniform(0.1, 0.5)
+            _draw_organic_limb(draw, ax, ay, hand_x, hand_y, arm_w, primary)
 
-    _draw_polygon_body(draw, body_geo["points"], secondary, primary, line_w)
+    # body
+    body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
+                                  secondary, primary, line_w, wobble=0.08)
 
+    # horns
     if use_horns:
         horn_count = random.choice([1, 2])
-        horn_h = int(body_hh * random.uniform(0.20, 0.35))
-        horn_w_px = max(int(body_hw * 0.05), 4)
+        horn_h = int(body_hh * random.uniform(0.18, 0.35))
+        horn_w = max(int(body_hw * 0.05), 4)
         ratios = [0.0] if horn_count == 1 else [-0.20, 0.20]
         for x_r in ratios:
-            hx, hy = _body_vertical_anchor(body_geo, "top", x_r, inset=line_w)
-            draw.polygon([(hx, hy - horn_h), (hx - horn_w_px, hy + 2), (hx + horn_w_px, hy + 2)],
+            hx = bcx + int(body_hw * x_r)
+            hy = body_cy - body_hh
+            draw.polygon([(hx, hy - horn_h), (hx - horn_w, hy + 2), (hx + horn_w, hy + 2)],
                          fill=primary)
 
-    num_eyes = random.choices([1, 2, 3], weights=[20, 55, 25])[0]
+    # face
+    n_eyes = random.choices([1, 2, 3], weights=[20, 55, 25])[0]
     eye_r = max(int(min(body_hw, body_hh) * 0.10), 5)
-    eye_y = cy - int(body_hh * 0.18)
+    eye_y = body_cy - int(body_hh * 0.18)
     eye_zone_w = body_hw * 0.50
-    if num_eyes == 1:
-        positions = [(cx, eye_y)]
+    if n_eyes == 1:
+        positions = [(bcx, eye_y)]
     else:
-        spacing = eye_zone_w / max(num_eyes - 1, 1)
-        start_x = cx - eye_zone_w / 2
-        positions = [(start_x + i * spacing, eye_y) for i in range(num_eyes)]
-    _simple_eyes(draw, positions, eye_r, primary, secondary, line_w)
+        spacing = eye_zone_w / max(n_eyes - 1, 1)
+        sx = bcx - eye_zone_w / 2
+        positions = [(sx + i * spacing, eye_y) for i in range(n_eyes)]
+    _draw_expressive_eyes(draw, positions, eye_r, primary, secondary, line_w,
+                          style=random.choice(["normal", "cute", "sleepy"]))
 
-    mouth_y = cy + int(body_hh * 0.22)
-    mouth_w = max(int(body_hw * random.uniform(0.15, 0.30)), 6)
-    style = random.choice(["smile", "open", "small", "teeth"])
-    if style == "smile":
-        draw.arc([cx - mouth_w, mouth_y - mouth_w // 2, cx + mouth_w, mouth_y + mouth_w // 2],
-                 start=0, end=180, fill=primary, width=line_w)
-    elif style == "open":
-        ry = max(mouth_w * 2 // 3, 5)
-        draw.ellipse([cx - mouth_w, mouth_y - ry, cx + mouth_w, mouth_y + ry], fill=primary)
-    elif style == "small":
-        sr = max(mouth_w // 3, 4)
-        draw.ellipse([cx - sr, mouth_y - sr, cx + sr, mouth_y + sr], fill=primary)
-    elif style == "teeth":
-        draw.arc([cx - mouth_w, mouth_y - mouth_w // 2, cx + mouth_w, mouth_y + mouth_w // 2],
-                 start=0, end=180, fill=primary, width=line_w)
-        num_teeth = random.randint(2, 4)
-        tw = max(mouth_w // (num_teeth + 1), 3)
-        th = max(tw, 3)
-        total_tw = num_teeth * tw + (num_teeth - 1) * 2
-        sx = cx - total_tw // 2
-        for i in range(num_teeth):
-            tx = sx + i * (tw + 2)
-            draw.rectangle([tx, mouth_y - 1, tx + tw, mouth_y + th],
-                            fill=secondary, outline=primary, width=max(line_w - 1, 1))
+    mouth_y = body_cy + int(body_hh * 0.22)
+    mouth_w = max(int(body_hw * random.uniform(0.15, 0.35)), 6)
+    _draw_mouth(draw, bcx, mouth_y, mouth_w, primary, secondary, line_w,
+                style=random.choice(["smile", "open", "confused", "grin"]))
 
 
 # ---------------------------------------------------------------------------
