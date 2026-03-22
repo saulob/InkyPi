@@ -10,7 +10,7 @@
         <div class="currency-block">
             <div class="currency-label">{{ currency.label }}</div>
             <div class="currency-row">
-                <span class="currency-value">{{ currency.value }}</span>
+                <span class="currency-value"><span class="currency-symbol">{{ currency.symbol }}</span>{{ currency.value }}</span>
                 {% if currency.percentage %}
                 <span class="badge {% if currency.positive %}badge-positive{% else %}badge-negative{% endif %}">
                     {{ currency.percentage }}

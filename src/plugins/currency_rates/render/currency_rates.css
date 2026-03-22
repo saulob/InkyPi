@@ -34,7 +34,7 @@
 }
 
 .currency-block + .currency-block {
-    margin-top: 3dvh;
+    margin-top: 5dvh;
 }
 
 .currency-label {
@@ -53,11 +53,22 @@
 }
 
 .currency-value {
+    display: inline-flex;
+    align-items: center;
     color: #1f1f1f;
     font-size: min(28dvh, 22.5dvw);
     font-weight: 700;
-    line-height: 0.92;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.currency-symbol {
+    display: inline-block;
+    font-size: 0.50em;
+    line-height: 1;
+    margin-right: 0.06em;
+    vertical-align: baseline;
 }
 
 .badge {
@@ -80,4 +91,45 @@
 .badge-negative {
     background-color: #c62828;
     color: #ffffff;
+}
+
+ (orientation: portrait) {
+    .currency-shell {
+        padding: 0 4dvw 1.2dvh;
+    }
+
+    .title {
+        margin-top: -3.2dvh;
+        margin-bottom: 2.6dvh;
+    }
+
+    .currency-content {
+        transform: translateY(0.2dvh);
+    }
+
+    .currency-block + .currency-block {
+        margin-top: 3.2dvh;
+    }
+
+    .currency-label {
+        font-size: min(4.9dvh, 4.1dvw);
+    }
+
+    .currency-row {
+        gap: 0.5dvw;
+    }
+
+    .currency-value {
+        font-size: min(24dvh, 19.5dvw);
+    }
+
+    .currency-symbol {
+        font-size: 0.5em;
+        margin-right: 0.05em;
+    }
+
+    .badge {
+        font-size: min(4.3dvh, 3.2dvw);
+        padding: 0.7dvh 1vw;
+    }
 }

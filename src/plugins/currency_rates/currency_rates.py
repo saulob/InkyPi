@@ -22,6 +22,18 @@ FALLBACK_CURRENCIES = {
     "CNY": "Chinese Renminbi Yuan",
 }
 
+CURRENCY_SYMBOLS = {
+    "BRL": "R$",
+    "USD": "$",
+    "EUR": "€",
+    "GBP": "£",
+    "JPY": "¥",
+    "AUD": "A$",
+    "CAD": "C$",
+    "CHF": "CHF",
+    "CNY": "¥",
+}
+
 
 def fetch_supported_currencies():
     """Fetch supported currencies from the API, with local fallback."""
@@ -93,6 +105,11 @@ def format_percentage(value):
     return f"{sign}{value:.2f}%"
 
 
+def get_currency_symbol(currency_code):
+    """Get the symbol for a currency code, fallback to code if not found."""
+    return CURRENCY_SYMBOLS.get(currency_code, currency_code)
+
+
 class CurrencyRates(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -126,6 +143,7 @@ class CurrencyRates(BasePlugin):
             base = pair["from"]
             target = pair["to"]
             label = f"{base}/{target}"
+            symbol = get_currency_symbol(target)
             try:
                 current, previous = fetch_recent_rates(base, target)
                 if current is None:
@@ -134,6 +152,7 @@ class CurrencyRates(BasePlugin):
                 currency_data.append({
                     "label": label,
                     "value": format_value(current),
+                    "symbol": symbol,
                     "percentage": format_percentage(pct),
                     "positive": pct is not None and pct >= 0,
                 })
@@ -142,6 +161,7 @@ class CurrencyRates(BasePlugin):
                 currency_data.append({
                     "label": label,
                     "value": "—",
+                    "symbol": symbol,
                     "percentage": None,
                     "positive": True,
                 })
