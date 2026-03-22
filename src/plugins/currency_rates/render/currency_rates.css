@@ -1,52 +1,74 @@
-.currency-container {
+.currency-shell {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    font-family: "Jost";
-    height: 100%;
     width: 100%;
-    padding: 2dvh 4dvw;
+    height: 100%;
+    font-family: "Jost";
+    padding: 0 4dvw;
 }
 
 .title {
-    font-size: min(10dvh, 8dvw);
-    font-weight: 700;
-    margin-bottom: 4dvh;
-    text-align: center;
+    flex: 0 0 auto;
+    color: #2e2e2e;
+    font-size: min(7.4dvh, 6dvw);
+    font-weight: 600;
     line-height: 1;
+    text-align: center;
+    margin-top: -5dvh;
+    margin-bottom: 5dvh;
+}
+
+.currency-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateY(0.8dvh);
 }
 
 .currency-block {
-    width: 80%;
-    margin-bottom: 4dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.currency-block + .currency-block {
+    margin-top: 3dvh;
 }
 
 .currency-label {
-    font-size: min(5dvh, 4dvw);
+    color: #5f7f73;
+    font-size: min(5.8dvh, 4.7dvw);
     font-weight: 600;
-    letter-spacing: 0.1em;
-    color: #4a7c59;
-    margin-bottom: 0.5dvh;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0;
 }
 
 .currency-row {
     display: flex;
-    align-items: baseline;
-    gap: 2dvw;
+    align-items: center;
+    gap: 0.6dvw;
 }
 
 .currency-value {
-    font-size: min(16dvh, 13dvw);
+    color: #1f1f1f;
+    font-size: min(28dvh, 22.5dvw);
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 0.92;
+    font-variant-numeric: tabular-nums;
 }
 
 .badge {
-    font-size: min(4.5dvh, 3.5dvw);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: min(5dvh, 3.8dvw);
     font-weight: 600;
-    padding: 0.6dvh 1.5dvw;
-    border-radius: 1dvh;
+    line-height: 1;
+    padding: 0.9dvh 1.2vw;
+    border-radius: 1.1dvh;
     white-space: nowrap;
 }
 
