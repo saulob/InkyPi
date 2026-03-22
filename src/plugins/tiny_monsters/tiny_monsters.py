@@ -1,16 +1,14 @@
-import random
-import math
 import logging
+import math
+import random
+
+from PIL import Image, ImageColor, ImageDraw
 
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font
-from PIL import Image, ImageColor, ImageDraw
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Name generation – short 1-3 syllable playful names
-# ---------------------------------------------------------------------------
 SYLLABLES = [
     "zo", "ki", "mu", "bo", "lu", "ga", "ri", "po", "ne", "da",
     "fi", "to", "bi", "go", "nu", "ka", "mi", "ro", "le", "su",
@@ -19,443 +17,815 @@ SYLLABLES = [
     "bru", "cho", "qui", "shi", "whi", "thu", "ska", "twi", "fra", "slo",
 ]
 
+BODY_SHAPES = ["round", "oval", "blob", "rounded_rect", "squared"]
+MOUTH_STYLES = ["smile", "open", "small", "big", "teeth"]
+HORN_SHAPES = ["triangle", "curved"]
+ARCHETYPE_ORDER = [
+    "zombie",
+    "werewolf",
+    "octopus",
+    "dragon",
+    "spider",
+    "dinosaur",
+    "cthulhu",
+    "ghost",
+    "default",
+]
+
+ARCHETYPES = {
+    "zombie": {
+        "body_shapes": ["round", "rounded_rect", "squared"],
+        "eyes": [1, 2],
+        "mouth_styles": ["open", "small"],
+        "horns": [0],
+        "arm_styles": ["normal", "short"],
+        "body_width": (0.40, 0.48),
+        "body_height": (0.52, 0.62),
+        "extras": [],
+    },
+    "werewolf": {
+        "body_shapes": ["oval", "blob"],
+        "eyes": [2],
+        "mouth_styles": ["teeth"],
+        "horns": [0],
+        "arm_styles": ["raised", "normal"],
+        "body_width": (0.38, 0.46),
+        "body_height": (0.54, 0.64),
+        "extras": ["ears"],
+    },
+    "octopus": {
+        "body_shapes": ["round", "blob"],
+        "eyes": [1, 2, 3],
+        "mouth_styles": ["smile", "small", "open"],
+        "horns": [0],
+        "arm_styles": ["none"],
+        "body_width": (0.36, 0.46),
+        "body_height": (0.44, 0.54),
+        "extras": ["tentacles_only"],
+    },
+    "dragon": {
+        "body_shapes": ["oval", "rounded_rect", "blob"],
+        "eyes": [1, 2],
+        "mouth_styles": ["smile", "open", "teeth"],
+        "horns": [1, 2],
+        "arm_styles": ["short", "normal"],
+        "body_width": (0.42, 0.52),
+        "body_height": (0.50, 0.60),
+        "extras": ["wings", "tail"],
+    },
+    "spider": {
+        "body_shapes": ["round", "oval"],
+        "eyes": [2, 3],
+        "mouth_styles": ["small", "open"],
+        "horns": [0],
+        "arm_styles": ["none"],
+        "body_width": (0.26, 0.34),
+        "body_height": (0.28, 0.38),
+        "extras": ["spider_legs"],
+    },
+    "dinosaur": {
+        "body_shapes": ["oval", "rounded_rect", "blob"],
+        "eyes": [1, 2],
+        "mouth_styles": ["smile", "open"],
+        "horns": [0, 1],
+        "arm_styles": ["short"],
+        "body_width": (0.44, 0.54),
+        "body_height": (0.50, 0.62),
+        "extras": ["tail"],
+    },
+    "cthulhu": {
+        "body_shapes": ["blob", "oval"],
+        "eyes": [2, 3],
+        "mouth_styles": ["small", "open"],
+        "horns": [0, 1],
+        "arm_styles": ["normal"],
+        "body_width": (0.40, 0.50),
+        "body_height": (0.52, 0.62),
+        "extras": ["face_tentacles", "dots"],
+    },
+    "ghost": {
+        "body_shapes": ["ghost"],
+        "eyes": [1, 2],
+        "mouth_styles": ["small", "open", "smile"],
+        "horns": [0],
+        "arm_styles": ["short", "raised"],
+        "body_width": (0.36, 0.46),
+        "body_height": (0.56, 0.66),
+        "extras": [],
+    },
+    "default": {
+        "body_shapes": BODY_SHAPES,
+        "eyes": [1, 2, 3],
+        "mouth_styles": MOUTH_STYLES,
+        "horns": [0, 1, 2],
+        "arm_styles": ["short", "raised", "normal"],
+        "body_width": (0.38, 0.50),
+        "body_height": (0.52, 0.65),
+        "extras": ["wings", "tail", "spots", "dots"],
+    },
+}
+
 
 def generate_monster_name():
     """Generate a short playful monster name (1-3 syllables)."""
     count = random.choices([1, 2, 3], weights=[25, 50, 25])[0]
     parts = random.sample(SYLLABLES, count)
-    name = "".join(parts).capitalize()
-    return name
+    return "".join(parts).capitalize()
 
 
-# ---------------------------------------------------------------------------
-# Body shapes
-# ---------------------------------------------------------------------------
-BODY_SHAPES = ["round", "oval", "blob", "rounded_rect", "squared"]
-MOUTH_STYLES = ["smile", "open", "small", "big", "teeth"]
-HORN_SHAPES = ["triangle", "curved"]
-
-
-def _smooth_blob_points(cx, cy, rx, ry, num_points=48):
-    """Generate smooth blob outline with gentle deformation."""
-    # Pre-generate deformation offsets and smooth them
-    raw = [random.uniform(0.90, 1.10) for _ in range(num_points)]
-    # Simple averaging pass for smoothness
+def _smooth_blob_points(cx, cy, rx, ry, num_points=48, low=0.90, high=1.10):
+    raw = [random.uniform(low, high) for _ in range(num_points)]
     smoothed = [
-        (raw[(i - 1) % num_points] + raw[i] + raw[(i + 1) % num_points]) / 3
-        for i in range(num_points)
+        (raw[(index - 1) % num_points] + raw[index] + raw[(index + 1) % num_points]) / 3
+        for index in range(num_points)
     ]
     points = []
-    for i in range(num_points):
-        angle = (2 * math.pi * i) / num_points
-        r_x = rx * smoothed[i]
-        r_y = ry * smoothed[i]
-        points.append((cx + r_x * math.cos(angle), cy + r_y * math.sin(angle)))
+    for index in range(num_points):
+        angle = (2 * math.pi * index) / num_points
+        points.append(
+            (
+                cx + rx * smoothed[index] * math.cos(angle),
+                cy + ry * smoothed[index] * math.sin(angle),
+            )
+        )
     return points
 
 
-def _draw_body(draw, cx, cy, body_w, body_h, shape, fill, outline, line_w):
-    """Draw the monster body – always the central anchor."""
-    hw, hh = body_w // 2, body_h // 2
+def _ellipse_points(cx, cy, rx, ry, num_points=72):
+    return [
+        (
+            cx + rx * math.cos((2 * math.pi * index) / num_points),
+            cy + ry * math.sin((2 * math.pi * index) / num_points),
+        )
+        for index in range(num_points)
+    ]
+
+
+def _rounded_rect_points(cx, cy, half_w, half_h, radius, arc_points=10):
+    radius = max(0, min(radius, half_w, half_h))
+    if radius == 0:
+        return [
+            (cx - half_w, cy - half_h),
+            (cx + half_w, cy - half_h),
+            (cx + half_w, cy + half_h),
+            (cx - half_w, cy + half_h),
+        ]
+
+    centers = [
+        (cx + half_w - radius, cy - half_h + radius, -math.pi / 2, 0),
+        (cx + half_w - radius, cy + half_h - radius, 0, math.pi / 2),
+        (cx - half_w + radius, cy + half_h - radius, math.pi / 2, math.pi),
+        (cx - half_w + radius, cy - half_h + radius, math.pi, 3 * math.pi / 2),
+    ]
+    points = []
+    for arc_cx, arc_cy, start_angle, end_angle in centers:
+        for step in range(arc_points + 1):
+            angle = start_angle + ((end_angle - start_angle) * step / arc_points)
+            points.append((arc_cx + radius * math.cos(angle), arc_cy + radius * math.sin(angle)))
+    return points
+
+
+def _ghost_outline_points(cx, cy, body_w, body_h):
+    half_w = body_w / 2
+    half_h = body_h / 2
+    left_x = cx - half_w
+    right_x = cx + half_w
+    top_y = cy - half_h
+    bottom_y = cy + half_h
+    top_h = body_h * 0.72
+    side_bottom_y = top_y + top_h * 0.82
+    cap_center_y = top_y + top_h * 0.46
+    cap_radius_y = max(top_h * 0.46, 1)
+
+    points = [(left_x, side_bottom_y)]
+    for step in range(24):
+        angle = math.pi - (math.pi * step / 23)
+        points.append((cx + half_w * math.cos(angle), cap_center_y - cap_radius_y * math.sin(angle)))
+    points.append((right_x, side_bottom_y))
+
+    wave_count = 4
+    step = body_w / wave_count
+    for index in range(wave_count, -1, -1):
+        wave_x = left_x + index * step
+        wave_y = bottom_y - (body_h * 0.10 if index % 2 == 0 else 0)
+        points.append((wave_x, wave_y))
+    return points
+
+
+def _build_body_geometry(cx, cy, body_w, body_h, shape):
+    half_w = body_w / 2
+    half_h = body_h / 2
+
     if shape == "round":
-        r = min(hw, hh)
-        draw.ellipse([cx - r, cy - r, cx + r, cy + r],
-                     fill=fill, outline=outline, width=line_w)
+        radius = min(half_w, half_h)
+        points = _ellipse_points(cx, cy, radius, radius)
     elif shape == "oval":
-        draw.ellipse([cx - hw, cy - hh, cx + hw, cy + hh],
-                     fill=fill, outline=outline, width=line_w)
+        points = _ellipse_points(cx, cy, half_w, half_h)
     elif shape == "blob":
-        pts = _smooth_blob_points(cx, cy, hw, hh)
-        draw.polygon(pts, fill=fill, outline=outline, width=line_w)
+        points = _smooth_blob_points(cx, cy, half_w, half_h)
     elif shape == "rounded_rect":
-        corner_r = min(hw, hh) // 3
-        draw.rounded_rectangle([cx - hw, cy - hh, cx + hw, cy + hh],
-                               radius=corner_r, fill=fill, outline=outline, width=line_w)
+        points = _rounded_rect_points(cx, cy, half_w, half_h, min(half_w, half_h) / 3)
     elif shape == "squared":
-        corner_r = min(hw, hh) // 8
-        draw.rounded_rectangle([cx - hw, cy - hh, cx + hw, cy + hh],
-                               radius=corner_r, fill=fill, outline=outline, width=line_w)
+        points = _rounded_rect_points(cx, cy, half_w, half_h, min(half_w, half_h) / 8)
+    elif shape == "ghost":
+        points = _ghost_outline_points(cx, cy, body_w, body_h)
+    else:
+        points = _ellipse_points(cx, cy, half_w, half_h)
+
+    xs = [point[0] for point in points]
+    ys = [point[1] for point in points]
+    return {
+        "cx": cx,
+        "cy": cy,
+        "body_w": body_w,
+        "body_h": body_h,
+        "shape": shape,
+        "points": points,
+        "left": min(xs),
+        "right": max(xs),
+        "top": min(ys),
+        "bottom": max(ys),
+    }
 
 
-# ---------------------------------------------------------------------------
-# Eyes – always inside the body
-# ---------------------------------------------------------------------------
-def _draw_eyes(draw, cx, cy, body_w, body_h, num_eyes, primary, secondary, line_w):
-    eye_zone_y = cy - int(body_h * 0.15)
-    eye_zone_w = body_w * 0.55
+def _polygon_edges(points):
+    for index in range(len(points)):
+        yield points[index], points[(index + 1) % len(points)]
 
-    # Consistent base eye size for this monster
-    base_r = int(min(body_w, body_h) * 0.10)
-    base_r = max(base_r, 6)
+
+def _dedupe_sorted(values, epsilon=0.5):
+    result = []
+    for value in sorted(values):
+        if not result or abs(value - result[-1]) > epsilon:
+            result.append(value)
+    return result
+
+
+def _horizontal_intersections(points, y):
+    intersections = []
+    for (x1, y1), (x2, y2) in _polygon_edges(points):
+        if abs(y2 - y1) < 1e-6:
+            if abs(y - y1) < 0.5:
+                intersections.extend([x1, x2])
+            continue
+        if y < min(y1, y2) or y > max(y1, y2):
+            continue
+        ratio = (y - y1) / (y2 - y1)
+        if 0 <= ratio <= 1:
+            intersections.append(x1 + ratio * (x2 - x1))
+    return _dedupe_sorted(intersections)
+
+
+def _vertical_intersections(points, x):
+    intersections = []
+    for (x1, y1), (x2, y2) in _polygon_edges(points):
+        if abs(x2 - x1) < 1e-6:
+            if abs(x - x1) < 0.5:
+                intersections.extend([y1, y2])
+            continue
+        if x < min(x1, x2) or x > max(x1, x2):
+            continue
+        ratio = (x - x1) / (x2 - x1)
+        if 0 <= ratio <= 1:
+            intersections.append(y1 + ratio * (y2 - y1))
+    return _dedupe_sorted(intersections)
+
+
+def _move_toward_center(body_geometry, point, inset):
+    if inset <= 0:
+        return point
+    dx = body_geometry["cx"] - point[0]
+    dy = body_geometry["cy"] - point[1]
+    distance = math.hypot(dx, dy)
+    if distance == 0:
+        return point
+    scale = min(inset, distance) / distance
+    return (point[0] + dx * scale, point[1] + dy * scale)
+
+
+def _body_side_anchor(body_geometry, side, y_ratio, inset=0):
+    target_y = body_geometry["cy"] + max(min(y_ratio, 0.95), -0.95) * (body_geometry["body_h"] / 2)
+    xs = _horizontal_intersections(body_geometry["points"], target_y)
+    if xs:
+        point = (min(xs), target_y) if side == "left" else (max(xs), target_y)
+    else:
+        fallback_x = body_geometry["left"] if side == "left" else body_geometry["right"]
+        point = (fallback_x, target_y)
+    return _move_toward_center(body_geometry, point, inset)
+
+
+def _body_vertical_anchor(body_geometry, edge, x_ratio, inset=0):
+    target_x = body_geometry["cx"] + max(min(x_ratio, 0.95), -0.95) * (body_geometry["body_w"] / 2)
+    ys = _vertical_intersections(body_geometry["points"], target_x)
+    if ys:
+        point = (target_x, min(ys)) if edge == "top" else (target_x, max(ys))
+    else:
+        fallback_y = body_geometry["top"] if edge == "top" else body_geometry["bottom"]
+        point = (target_x, fallback_y)
+    return _move_toward_center(body_geometry, point, inset)
+
+
+def _point_in_polygon(point, polygon):
+    px, py = point
+    inside = False
+    for (x1, y1), (x2, y2) in _polygon_edges(polygon):
+        crosses = ((y1 > py) != (y2 > py)) and (px < (x2 - x1) * (py - y1) / ((y2 - y1) or 1e-6) + x1)
+        if crosses:
+            inside = not inside
+    return inside
+
+
+def _sample_point_in_body(body_geometry, x_span, y_span):
+    for _ in range(24):
+        x = body_geometry["cx"] + random.uniform(*x_span) * (body_geometry["body_w"] / 2)
+        y = body_geometry["cy"] + random.uniform(*y_span) * (body_geometry["body_h"] / 2)
+        if _point_in_polygon((x, y), body_geometry["points"]):
+            return x, y
+    return body_geometry["cx"], body_geometry["cy"]
+
+
+def _draw_body(draw, body_geometry, fill, outline, line_w):
+    draw.polygon(body_geometry["points"], fill=fill, outline=outline, width=line_w)
+
+
+def _draw_eyes(draw, cx, cy, body_w, body_h, num_eyes, primary, secondary, line_w, archetype):
+    eye_zone_y = cy - int(body_h * 0.16)
+    eye_zone_w = body_w * (0.48 if archetype == "spider" else 0.52)
+    base_radius = max(int(min(body_w, body_h) * 0.08), 6)
 
     if num_eyes == 1:
         positions = [(cx, eye_zone_y)]
     else:
         spacing = eye_zone_w / max(num_eyes - 1, 1)
         start_x = cx - eye_zone_w / 2
-        positions = [(start_x + i * spacing, eye_zone_y) for i in range(num_eyes)]
+        positions = [(start_x + index * spacing, eye_zone_y) for index in range(num_eyes)]
 
     for ex, ey in positions:
-        er = random.randint(int(base_r * 0.8), int(base_r * 1.2))
-        # Eye sclera
-        draw.ellipse([ex - er, ey - er, ex + er, ey + er],
-                     fill=secondary, outline=primary, width=line_w)
-        # Pupil
-        pr = max(er // 3, 2)
-        px = ex + random.randint(-pr // 2, pr // 2)
-        py = ey + random.randint(-pr // 2, pr // 2)
-        draw.ellipse([px - pr, py - pr, px + pr, py + pr], fill=primary)
+        if archetype == "spider":
+            radius = max(int(base_radius * 0.72), 5)
+        elif archetype == "zombie":
+            radius = random.randint(int(base_radius * 0.80), int(base_radius * 1.20))
+        else:
+            radius = random.randint(int(base_radius * 0.85), int(base_radius * 1.15))
+        draw.ellipse([ex - radius, ey - radius, ex + radius, ey + radius], fill=secondary, outline=primary, width=line_w)
+        pupil_radius = max(radius // 3, 2)
+        offset_range = 0 if archetype == "zombie" else max(pupil_radius // 2, 1)
+        px = ex + random.randint(-offset_range, offset_range)
+        py = ey + random.randint(-offset_range, offset_range)
+        draw.ellipse([px - pupil_radius, py - pupil_radius, px + pupil_radius, py + pupil_radius], fill=primary)
+
+        if archetype in {"werewolf", "dragon", "cthulhu"}:
+            brow_y = ey - radius - line_w
+            tilt = radius // 2
+            if ex < cx:
+                draw.line([(ex - radius, brow_y + tilt), (ex + radius, brow_y)], fill=primary, width=max(line_w, 2))
+            else:
+                draw.line([(ex - radius, brow_y), (ex + radius, brow_y + tilt)], fill=primary, width=max(line_w, 2))
+        elif archetype == "ghost":
+            draw.arc([ex - radius, ey - radius - 2, ex + radius, ey + radius], start=200, end=340, fill=primary, width=max(line_w - 1, 1))
 
 
-# ---------------------------------------------------------------------------
-# Mouth – always centered on body
-# ---------------------------------------------------------------------------
-def _draw_mouth(draw, cx, cy, body_w, body_h, style, primary, secondary, line_w):
-    mouth_y = cy + int(body_h * 0.18)
-    mouth_w = random.randint(int(body_w * 0.10), int(body_w * 0.22))
-    mouth_w = max(mouth_w, 6)
+def _draw_mouth(draw, cx, cy, body_w, body_h, style, primary, secondary, line_w, archetype):
+    mouth_y = cy + int(body_h * (0.16 if archetype == "spider" else 0.20))
+    mouth_w = max(random.randint(int(body_w * 0.10), int(body_w * 0.20)), 7)
+
+    if archetype == "zombie":
+        style = "open"
+    elif archetype == "werewolf":
+        style = "teeth"
+    elif archetype == "dragon" and style == "smile":
+        style = random.choice(["open", "teeth"])
+    elif archetype == "ghost" and style == "open":
+        style = random.choice(["small", "smile"])
+    elif archetype == "spider":
+        style = "small"
 
     if style == "smile":
-        draw.arc([cx - mouth_w, mouth_y - mouth_w // 2,
-                  cx + mouth_w, mouth_y + mouth_w // 2],
-                 start=0, end=180, fill=primary, width=line_w)
+        draw.arc([cx - mouth_w, mouth_y - mouth_w // 2, cx + mouth_w, mouth_y + mouth_w // 2], start=0, end=180, fill=primary, width=line_w)
     elif style == "open":
-        ry = max(mouth_w * 2 // 3, 4)
-        draw.ellipse([cx - mouth_w, mouth_y - ry, cx + mouth_w, mouth_y + ry],
-                     fill=primary)
+        radius_y = max(mouth_w * 2 // 3, 5)
+        draw.ellipse([cx - mouth_w, mouth_y - radius_y, cx + mouth_w, mouth_y + radius_y], fill=primary)
     elif style == "small":
-        r = max(mouth_w // 3, 4)
-        draw.ellipse([cx - r, mouth_y - r, cx + r, mouth_y + r], fill=primary)
+        radius = max(mouth_w // 3, 4)
+        draw.ellipse([cx - radius, mouth_y - radius, cx + radius, mouth_y + radius], fill=primary)
     elif style == "big":
-        draw.arc([cx - mouth_w, mouth_y - mouth_w,
-                  cx + mouth_w, mouth_y + mouth_w],
-                 start=0, end=180, fill=primary, width=line_w + 1)
+        draw.arc([cx - mouth_w, mouth_y - mouth_w, cx + mouth_w, mouth_y + mouth_w], start=0, end=180, fill=primary, width=line_w + 1)
     elif style == "teeth":
-        draw.arc([cx - mouth_w, mouth_y - mouth_w // 2,
-                  cx + mouth_w, mouth_y + mouth_w // 2],
-                 start=0, end=180, fill=primary, width=line_w)
+        draw.arc([cx - mouth_w, mouth_y - mouth_w // 2, cx + mouth_w, mouth_y + mouth_w // 2], start=0, end=180, fill=primary, width=line_w)
         tooth_w = max(mouth_w // 3, 4)
         tooth_h = max(mouth_w // 4, 3)
-        num_teeth = random.randint(2, 4)
-        total_tw = num_teeth * tooth_w + (num_teeth - 1) * 2
-        sx = cx - total_tw // 2
-        for i in range(num_teeth):
-            tx = sx + i * (tooth_w + 2)
-            draw.rectangle([tx, mouth_y - 1, tx + tooth_w, mouth_y + tooth_h],
-                           fill=secondary, outline=primary, width=max(line_w - 1, 1))
+        total_teeth = 3 if archetype == "werewolf" else random.randint(2, 4)
+        total_width = total_teeth * tooth_w + (total_teeth - 1) * 2
+        start_x = cx - total_width // 2
+        for index in range(total_teeth):
+            tooth_x = start_x + index * (tooth_w + 2)
+            draw.rectangle([tooth_x, mouth_y - 1, tooth_x + tooth_w, mouth_y + tooth_h], fill=secondary, outline=primary, width=max(line_w - 1, 1))
 
 
-# ---------------------------------------------------------------------------
-# Horns – attached to top of body
-# ---------------------------------------------------------------------------
-def _draw_horns(draw, cx, cy, body_w, body_h, num_horns, shape, primary, line_w):
-    if num_horns == 0:
+def _draw_horns(draw, body_geometry, total_horns, shape, primary, line_w):
+    if total_horns <= 0:
         return
-    top_y = cy - body_h // 2
-    horn_h = random.randint(int(body_h * 0.18), int(body_h * 0.30))
 
-    # Evenly spread across top
-    spread = body_w * 0.45
-    if num_horns == 1:
-        positions = [cx]
+    body_h = body_geometry["body_h"]
+    body_w = body_geometry["body_w"]
+    horn_h = random.randint(int(body_h * 0.16), int(body_h * 0.26))
+    horn_w = max(random.randint(int(body_w * 0.04), int(body_w * 0.07)), 4)
+
+    if total_horns == 1:
+        x_ratios = [0.0]
     else:
-        spacing = spread / max(num_horns - 1, 1)
-        positions = [cx - spread / 2 + i * spacing for i in range(num_horns)]
+        spread = 0.42
+        step = spread / max(total_horns - 1, 1)
+        x_ratios = [(-spread / 2) + index * step for index in range(total_horns)]
 
-    hw = random.randint(int(body_w * 0.04), int(body_w * 0.07))
-    hw = max(hw, 4)
-
-    for hx in positions:
+    for x_ratio in x_ratios:
+        anchor_x, anchor_y = _body_vertical_anchor(body_geometry, "top", x_ratio, inset=max(line_w, 2))
         if shape == "triangle":
-            draw.polygon([(hx, top_y - horn_h),
-                          (hx - hw, top_y + line_w),
-                          (hx + hw, top_y + line_w)],
-                         fill=primary)
-        elif shape == "curved":
+            draw.polygon(
+                [(anchor_x, anchor_y - horn_h), (anchor_x - horn_w, anchor_y + line_w), (anchor_x + horn_w, anchor_y + line_w)],
+                fill=primary,
+            )
+        else:
             direction = random.choice([-1, 1])
-            draw.polygon([(hx + direction * hw, top_y - horn_h),
-                          (hx - hw, top_y + line_w),
-                          (hx + hw, top_y + line_w)],
-                         fill=primary)
+            draw.polygon(
+                [
+                    (anchor_x + direction * horn_w, anchor_y - horn_h),
+                    (anchor_x - horn_w, anchor_y + line_w),
+                    (anchor_x + horn_w, anchor_y + line_w),
+                ],
+                fill=primary,
+            )
 
 
-# ---------------------------------------------------------------------------
-# Fingers / claws helper
-# ---------------------------------------------------------------------------
-def _draw_fingers(draw, hx, hy, angle, num_fingers, finger_len, style, primary, line_w):
-    """Draw fingers or claws radiating from hand position."""
-    spread = math.pi * 0.5  # total angular spread
+def _draw_ears(draw, body_geometry, primary, secondary, line_w):
+    body_h = body_geometry["body_h"]
+    body_w = body_geometry["body_w"]
+    ear_h = max(int(body_h * 0.18), 12)
+    ear_w = max(int(body_w * 0.09), 10)
+    for direction, x_ratio in ((-1, -0.24), (1, 0.24)):
+        ear_x, ear_y = _body_vertical_anchor(body_geometry, "top", x_ratio, inset=max(line_w, 2))
+        points = [
+            (ear_x, ear_y - ear_h),
+            (ear_x - direction * ear_w, ear_y + line_w),
+            (ear_x + direction * (ear_w // 3), ear_y + line_w),
+        ]
+        draw.polygon(points, fill=secondary, outline=primary, width=line_w)
+
+
+def _draw_fingers(draw, hand_x, hand_y, angle, total_fingers, finger_len, style, primary, line_w):
+    spread = math.pi * 0.50
     start_angle = angle - spread / 2
-    for i in range(num_fingers):
-        a = start_angle + (spread / max(num_fingers - 1, 1)) * i if num_fingers > 1 else angle
-        fx = hx + finger_len * math.cos(a)
-        fy = hy + finger_len * math.sin(a)
-        draw.line([(hx, hy), (fx, fy)], fill=primary, width=line_w)
+    for index in range(total_fingers):
+        finger_angle = start_angle + (spread / max(total_fingers - 1, 1)) * index if total_fingers > 1 else angle
+        tip_x = hand_x + finger_len * math.cos(finger_angle)
+        tip_y = hand_y + finger_len * math.sin(finger_angle)
+        draw.line([(hand_x, hand_y), (tip_x, tip_y)], fill=primary, width=line_w)
         if style == "rounded":
-            r = max(line_w, 2)
-            draw.ellipse([fx - r, fy - r, fx + r, fy + r], fill=primary)
+            radius = max(line_w, 2)
+            draw.ellipse([tip_x - radius, tip_y - radius, tip_x + radius, tip_y + radius], fill=primary)
 
 
-# ---------------------------------------------------------------------------
-# Arms – attached to body sides, consistent thickness
-# ---------------------------------------------------------------------------
-def _draw_arms(draw, cx, cy, body_w, body_h, arm_style, primary, secondary, line_w):
+def _draw_arms(draw, body_geometry, arm_style, primary, line_w, small=False, finger_style=None):
     if arm_style == "none":
         return
 
-    left_x = cx - body_w // 2
-    right_x = cx + body_w // 2
-    arm_len = random.randint(int(body_w * 0.15), int(body_w * 0.28))
+    body_w = body_geometry["body_w"]
+    arm_len = random.randint(int(body_w * (0.10 if small else 0.16)), int(body_w * (0.16 if small else 0.26)))
     arm_w = line_w + 2
-
-    num_fingers = random.randint(2, 4)
+    finger_style = finger_style or random.choice(["rounded", "claw"])
     finger_len = max(arm_len // 4, 6)
-    finger_style = random.choice(["rounded", "claw"])
+    total_fingers = random.randint(2, 4)
+    y_ratio = -0.02
 
     if arm_style == "short":
-        ends = [(left_x - arm_len, cy, math.pi),
-                (right_x + arm_len, cy, 0)]
-        draw.line([(left_x, cy), (left_x - arm_len, cy)], fill=primary, width=arm_w)
-        draw.line([(right_x, cy), (right_x + arm_len, cy)], fill=primary, width=arm_w)
+        left_anchor = _body_side_anchor(body_geometry, "left", y_ratio, inset=arm_w)
+        right_anchor = _body_side_anchor(body_geometry, "right", y_ratio, inset=arm_w)
+        ends = [(left_anchor[0] - arm_len, left_anchor[1], math.pi), (right_anchor[0] + arm_len, right_anchor[1], 0)]
+        draw.line([left_anchor, ends[0][:2]], fill=primary, width=arm_w)
+        draw.line([right_anchor, ends[1][:2]], fill=primary, width=arm_w)
     elif arm_style == "raised":
-        dy = arm_len * 0.7
-        ends = [(left_x - arm_len, cy - dy, math.pi + 0.5),
-                (right_x + arm_len, cy - dy, -0.5)]
-        draw.line([(left_x, cy), (left_x - arm_len, cy - dy)], fill=primary, width=arm_w)
-        draw.line([(right_x, cy), (right_x + arm_len, cy - dy)], fill=primary, width=arm_w)
-    elif arm_style == "normal":
-        dy = arm_len * 0.35
-        ends = [(left_x - arm_len, cy + dy, math.pi - 0.3),
-                (right_x + arm_len, cy + dy, 0.3)]
-        draw.line([(left_x, cy), (left_x - arm_len, cy + dy)], fill=primary, width=arm_w)
-        draw.line([(right_x, cy), (right_x + arm_len, cy + dy)], fill=primary, width=arm_w)
+        delta_y = arm_len * 0.65
+        left_anchor = _body_side_anchor(body_geometry, "left", y_ratio, inset=arm_w)
+        right_anchor = _body_side_anchor(body_geometry, "right", y_ratio, inset=arm_w)
+        ends = [
+            (left_anchor[0] - arm_len, left_anchor[1] - delta_y, math.pi + 0.45),
+            (right_anchor[0] + arm_len, right_anchor[1] - delta_y, -0.45),
+        ]
+        draw.line([left_anchor, ends[0][:2]], fill=primary, width=arm_w)
+        draw.line([right_anchor, ends[1][:2]], fill=primary, width=arm_w)
     else:
-        return
+        delta_y = arm_len * 0.30
+        left_anchor = _body_side_anchor(body_geometry, "left", y_ratio, inset=arm_w)
+        right_anchor = _body_side_anchor(body_geometry, "right", y_ratio, inset=arm_w)
+        ends = [
+            (left_anchor[0] - arm_len, left_anchor[1] + delta_y, math.pi - 0.25),
+            (right_anchor[0] + arm_len, right_anchor[1] + delta_y, 0.25),
+        ]
+        draw.line([left_anchor, ends[0][:2]], fill=primary, width=arm_w)
+        draw.line([right_anchor, ends[1][:2]], fill=primary, width=arm_w)
 
-    for hx, hy, angle in ends:
-        _draw_fingers(draw, hx, hy, angle, num_fingers, finger_len, finger_style, primary, line_w)
-
-
-# ---------------------------------------------------------------------------
-# Tentacles – optional octopus-style limbs
-# ---------------------------------------------------------------------------
-def _draw_tentacles(draw, cx, cy, body_w, body_h, primary, line_w):
-    num = random.randint(2, 5)
-    bottom_y = cy + body_h // 2
-    spread = body_w * 0.7
-    spacing = spread / max(num - 1, 1)
-    start_x = cx - spread / 2
-    tent_w = line_w + 2
-
-    for i in range(num):
-        tx = start_x + i * spacing
-        length = random.randint(int(body_h * 0.25), int(body_h * 0.40))
-        # Smooth S-curve via 3 segments
-        sway = random.uniform(-body_w * 0.08, body_w * 0.08)
-        mid1_y = bottom_y + length * 0.33
-        mid2_y = bottom_y + length * 0.66
-        end_y = bottom_y + length
-        points = [(tx, bottom_y),
-                  (tx + sway, mid1_y),
-                  (tx - sway * 0.5, mid2_y),
-                  (tx + sway * 0.3, end_y)]
-        for j in range(len(points) - 1):
-            draw.line([points[j], points[j + 1]], fill=primary, width=tent_w)
-        # Rounded end
-        ex, ey = points[-1]
-        r = max(tent_w, 3)
-        draw.ellipse([ex - r, ey - r, ex + r, ey + r], fill=primary)
+    for hand_x, hand_y, angle in ends:
+        _draw_fingers(draw, hand_x, hand_y, angle, total_fingers, finger_len, finger_style, primary, line_w)
 
 
-# ---------------------------------------------------------------------------
-# Legs – thicker, with feet
-# ---------------------------------------------------------------------------
-def _draw_legs(draw, cx, cy, body_w, body_h, primary, line_w):
-    bottom_y = cy + body_h // 2
+def _draw_leg_columns(draw, body_geometry, primary, line_w, total_legs=None):
+    body_h = body_geometry["body_h"]
     leg_h = random.randint(int(body_h * 0.18), int(body_h * 0.28))
-    num_legs = random.choices([2, 3, 4], weights=[60, 20, 20])[0]
+    total_legs = total_legs or random.choices([2, 3, 4], weights=[60, 20, 20])[0]
     leg_w = line_w + 3
     foot_r = max(leg_w + 1, 5)
-    spread = body_w * 0.5
+    spread = 0.52
 
-    if num_legs <= 2:
-        positions = [cx - spread / 2, cx + spread / 2]
-    elif num_legs == 3:
-        positions = [cx - spread / 2, cx, cx + spread / 2]
+    if total_legs == 2:
+        x_ratios = [-spread / 2, spread / 2]
     else:
-        step = spread / (num_legs - 1)
-        positions = [cx - spread / 2 + i * step for i in range(num_legs)]
+        step = spread / max(total_legs - 1, 1)
+        x_ratios = [(-spread / 2) + index * step for index in range(total_legs)]
 
-    for lx in positions:
-        draw.line([(lx, bottom_y), (lx, bottom_y + leg_h)],
-                  fill=primary, width=leg_w)
-        # Rounded foot
-        draw.ellipse([lx - foot_r, bottom_y + leg_h - foot_r // 2,
-                      lx + foot_r, bottom_y + leg_h + foot_r],
-                     fill=primary)
+    for x_ratio in x_ratios:
+        leg_x, leg_y = _body_vertical_anchor(body_geometry, "bottom", x_ratio, inset=leg_w)
+        draw.line([(leg_x, leg_y), (leg_x, leg_y + leg_h)], fill=primary, width=leg_w)
+        draw.ellipse([leg_x - foot_r, leg_y + leg_h - foot_r // 2, leg_x + foot_r, leg_y + leg_h + foot_r], fill=primary)
 
 
-# ---------------------------------------------------------------------------
-# Extras – always close to body
-# ---------------------------------------------------------------------------
-def _draw_extras(draw, cx, cy, body_w, body_h, primary, line_w):
-    features = random.sample(
-        ["wings", "tail", "spots", "dots"],
-        k=random.randint(0, 2)
-    )
+def _draw_bottom_tentacles(draw, body_geometry, primary, line_w, total=None):
+    body_w = body_geometry["body_w"]
+    body_h = body_geometry["body_h"]
+    total = total or random.randint(3, 5)
+    spread = 0.72
+    step = spread / max(total - 1, 1)
+    tent_w = line_w + 2
 
+    for index in range(total):
+        x_ratio = (-spread / 2) + index * step
+        tx, start_y = _body_vertical_anchor(body_geometry, "bottom", x_ratio, inset=tent_w)
+        length = random.randint(int(body_h * 0.20), int(body_h * 0.36))
+        sway = random.uniform(-body_w * 0.07, body_w * 0.07)
+        points = [
+            (tx, start_y),
+            (tx + sway, start_y + length * 0.33),
+            (tx - sway * 0.5, start_y + length * 0.66),
+            (tx + sway * 0.2, start_y + length),
+        ]
+        for point_index in range(len(points) - 1):
+            draw.line([points[point_index], points[point_index + 1]], fill=primary, width=tent_w)
+        end_x, end_y = points[-1]
+        radius = max(tent_w, 3)
+        draw.ellipse([end_x - radius, end_y - radius, end_x + radius, end_y + radius], fill=primary)
+
+
+def _draw_face_tentacles(draw, cx, cy, body_w, body_h, primary, line_w):
+    total = random.randint(4, 6)
+    mouth_y = cy + int(body_h * 0.10)
+    spread = body_w * 0.34
+    step = spread / max(total - 1, 1)
+    start_x = cx - spread / 2
+    tent_w = line_w + 1
+
+    for index in range(total):
+        tx = start_x + index * step
+        length = random.randint(int(body_h * 0.10), int(body_h * 0.18))
+        sway = random.uniform(-body_w * 0.04, body_w * 0.04)
+        end_x = tx + sway
+        end_y = mouth_y + length
+        draw.line([(tx, mouth_y), (end_x, end_y)], fill=primary, width=tent_w)
+        radius = max(tent_w, 2)
+        draw.ellipse([end_x - radius, end_y - radius, end_x + radius, end_y + radius], fill=primary)
+
+
+def _draw_spider_legs(draw, body_geometry, primary, line_w):
+    total_pairs = 4
+    leg_w = line_w + 1
+    body_w = body_geometry["body_w"]
+    body_h = body_geometry["body_h"]
+    y_offsets = [-0.20, -0.05, 0.10, 0.24]
+    lengths = [0.26, 0.30, 0.28, 0.24]
+
+    for direction in (-1, 1):
+        for index in range(total_pairs):
+            anchor_x, anchor_y = _body_side_anchor(
+                body_geometry,
+                "left" if direction < 0 else "right",
+                y_offsets[index],
+                inset=leg_w,
+            )
+            joint_x = anchor_x + direction * int(body_w * lengths[index])
+            joint_y = anchor_y + int(body_h * (0.05 if index < 2 else 0.16))
+            end_x = joint_x + direction * int(body_w * 0.16)
+            end_y = joint_y + int(body_h * (0.04 if index < 2 else 0.10))
+            draw.line([(anchor_x, anchor_y), (joint_x, joint_y)], fill=primary, width=leg_w)
+            draw.line([(joint_x, joint_y), (end_x, end_y)], fill=primary, width=leg_w)
+
+
+def _draw_extras(draw, body_geometry, primary, line_w, features):
+    cx = body_geometry["cx"]
+    cy = body_geometry["cy"]
+    body_w = body_geometry["body_w"]
+    body_h = body_geometry["body_h"]
     if "wings" in features:
-        wing_w = random.randint(int(body_w * 0.14), int(body_w * 0.22))
-        wing_h = random.randint(int(body_h * 0.20), int(body_h * 0.30))
-        wing_y = cy - int(body_h * 0.10)
-        lx = cx - body_w // 2
-        rx = cx + body_w // 2
-        # Left wing
-        draw.polygon([(lx, wing_y),
-                      (lx - wing_w, wing_y - wing_h),
-                      (lx - wing_w // 3, wing_y + wing_h // 4)],
-                     outline=primary, width=line_w)
-        # Right wing (mirrored)
-        draw.polygon([(rx, wing_y),
-                      (rx + wing_w, wing_y - wing_h),
-                      (rx + wing_w // 3, wing_y + wing_h // 4)],
-                     outline=primary, width=line_w)
+        wing_w = random.randint(int(body_w * 0.12), int(body_w * 0.18))
+        wing_h = random.randint(int(body_h * 0.18), int(body_h * 0.26))
+        left_anchor = _body_side_anchor(body_geometry, "left", -0.10, inset=line_w + 1)
+        right_anchor = _body_side_anchor(body_geometry, "right", -0.10, inset=line_w + 1)
+        draw.polygon(
+            [left_anchor, (left_anchor[0] - wing_w, left_anchor[1] - wing_h), (left_anchor[0] - wing_w // 4, left_anchor[1] + wing_h // 5)],
+            outline=primary,
+            width=line_w,
+        )
+        draw.polygon(
+            [right_anchor, (right_anchor[0] + wing_w, right_anchor[1] - wing_h), (right_anchor[0] + wing_w // 4, right_anchor[1] + wing_h // 5)],
+            outline=primary,
+            width=line_w,
+        )
 
     if "tail" in features:
         side = random.choice([-1, 1])
-        tail_len = random.randint(int(body_w * 0.12), int(body_w * 0.22))
-        tail_y = cy + int(body_h * 0.25)
-        sx = cx + side * body_w // 2
-        if side < 0:
-            x0, x1 = sx - tail_len, sx
-        else:
-            x0, x1 = sx, sx + tail_len
-        draw.arc([x0, tail_y - tail_len // 2, x1, tail_y + tail_len // 2],
-                 start=180 if side < 0 else 0, end=360 if side < 0 else 180,
-                 fill=primary, width=line_w)
+        tail_len = random.randint(int(body_w * 0.14), int(body_w * 0.24))
+        anchor_x, anchor_y = _body_side_anchor(body_geometry, "left" if side < 0 else "right", 0.22, inset=line_w + 1)
+        mid_x = anchor_x + side * tail_len * 0.55
+        mid_y = anchor_y + body_h * 0.10
+        end_x = mid_x + side * tail_len * 0.45
+        end_y = mid_y + body_h * 0.06
+        draw.line([(anchor_x, anchor_y), (mid_x, mid_y)], fill=primary, width=line_w)
+        draw.line([(mid_x, mid_y), (end_x, end_y)], fill=primary, width=line_w)
 
     if "spots" in features:
         for _ in range(random.randint(2, 4)):
-            sx = cx + random.randint(-int(body_w * 0.25), int(body_w * 0.25))
-            sy = cy + random.randint(-int(body_h * 0.15), int(body_h * 0.20))
-            sr = random.randint(3, max(int(body_w * 0.04), 4))
-            draw.ellipse([sx - sr, sy - sr, sx + sr, sy + sr], fill=primary)
+            spot_x, spot_y = _sample_point_in_body(body_geometry, (-0.24, 0.24), (-0.15, 0.18))
+            spot_r = random.randint(3, max(int(body_w * 0.04), 4))
+            draw.ellipse([spot_x - spot_r, spot_y - spot_r, spot_x + spot_r, spot_y + spot_r], fill=primary)
 
     if "dots" in features:
         for _ in range(random.randint(3, 6)):
-            dx = cx + random.randint(-int(body_w * 0.28), int(body_w * 0.28))
-            dy = cy + random.randint(-int(body_h * 0.20), int(body_h * 0.22))
-            dr = random.randint(2, max(int(body_w * 0.025), 3))
-            draw.ellipse([dx - dr, dy - dr, dx + dr, dy + dr], fill=primary)
+            dot_x, dot_y = _sample_point_in_body(body_geometry, (-0.28, 0.28), (-0.18, 0.20))
+            dot_r = random.randint(2, max(int(body_w * 0.025), 3))
+            draw.ellipse([dot_x - dot_r, dot_y - dot_r, dot_x + dot_r, dot_y + dot_r], fill=primary)
 
 
-# ===================================================================
-# Plugin class
-# ===================================================================
+def _build_monster_spec(width, monster_zone_h):
+    archetype = random.choice(ARCHETYPE_ORDER)
+    config = ARCHETYPES[archetype]
+    body_width_min, body_width_max = config["body_width"]
+    body_height_min, body_height_max = config["body_height"]
+
+    features = set(config["extras"])
+    if archetype == "default":
+        for feature in ("wings", "tail", "spots", "dots"):
+            if random.random() < 0.35:
+                features.add(feature)
+    elif archetype not in {"dragon", "dinosaur", "spider", "octopus", "cthulhu"}:
+        for feature in ("spots", "dots"):
+            if random.random() < 0.25:
+                features.add(feature)
+
+    spec = {
+        "archetype": archetype,
+        "body_shape": random.choice(config["body_shapes"]),
+        "body_w": random.randint(int(width * body_width_min), int(width * body_width_max)),
+        "body_h": random.randint(int(monster_zone_h * body_height_min), int(monster_zone_h * body_height_max)),
+        "eyes": random.choice(config["eyes"]),
+        "mouth_style": random.choice(config["mouth_styles"]),
+        "horns": random.choice(config["horns"]),
+        "horn_shape": random.choice(HORN_SHAPES),
+        "arm_style": random.choice(config["arm_styles"]),
+        "features": features,
+    }
+
+    if archetype == "werewolf":
+        spec["finger_style"] = "claw"
+    elif archetype == "zombie":
+        spec["finger_style"] = "rounded"
+    else:
+        spec["finger_style"] = random.choice(["rounded", "claw"])
+
+    return spec
+
+
+def _build_monster_spec_for_mode(archetype_mode, width, monster_zone_h):
+    selected_mode = archetype_mode or "random"
+    if selected_mode not in ARCHETYPES and selected_mode != "random":
+        selected_mode = "random"
+
+    if selected_mode == "random":
+        return _build_monster_spec(width, monster_zone_h)
+
+    config = ARCHETYPES[selected_mode]
+    body_width_min, body_width_max = config["body_width"]
+    body_height_min, body_height_max = config["body_height"]
+
+    features = set(config["extras"])
+    if selected_mode == "default":
+        for feature in ("wings", "tail", "spots", "dots"):
+            if random.random() < 0.35:
+                features.add(feature)
+    elif selected_mode not in {"dragon", "dinosaur", "spider", "octopus", "cthulhu"}:
+        for feature in ("spots", "dots"):
+            if random.random() < 0.25:
+                features.add(feature)
+
+    spec = {
+        "archetype": selected_mode,
+        "body_shape": random.choice(config["body_shapes"]),
+        "body_w": random.randint(int(width * body_width_min), int(width * body_width_max)),
+        "body_h": random.randint(int(monster_zone_h * body_height_min), int(monster_zone_h * body_height_max)),
+        "eyes": random.choice(config["eyes"]),
+        "mouth_style": random.choice(config["mouth_styles"]),
+        "horns": random.choice(config["horns"]),
+        "horn_shape": random.choice(HORN_SHAPES),
+        "arm_style": random.choice(config["arm_styles"]),
+        "features": features,
+    }
+
+    if selected_mode == "werewolf":
+        spec["finger_style"] = "claw"
+    elif selected_mode == "zombie":
+        spec["finger_style"] = "rounded"
+    else:
+        spec["finger_style"] = random.choice(["rounded", "claw"])
+
+    return spec
+
+
 class TinyMonsters(BasePlugin):
-    """Plugin that generates a random cute monster illustration on each refresh."""
+    """Generate cute, readable monsters with archetype-guided structure."""
 
     def generate_image(self, settings, device_config):
-        primary_color = ImageColor.getcolor(
-            settings.get("primaryColor") or "#000000", "RGB"
-        )
-        secondary_color = ImageColor.getcolor(
-            settings.get("secondaryColor") or "#ffffff", "RGB"
-        )
+        primary_color = ImageColor.getcolor(settings.get("primaryColor") or "#000000", "RGB")
+        secondary_color = ImageColor.getcolor(settings.get("secondaryColor") or "#ffffff", "RGB")
+        archetype_mode = settings.get("archetype") or "random"
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
-        w, h = dimensions
-        image = Image.new("RGB", (w, h), secondary_color)
+        width, height = dimensions
+        image = Image.new("RGB", (width, height), secondary_color)
         draw = ImageDraw.Draw(image)
 
-        # Thicker base stroke for e-ink visibility
-        line_w = max(int(min(w, h) * 0.008), 3)
-
-        # --- Layout zones ---
-        title_zone_h = int(h * 0.10)
-        name_zone_h = int(h * 0.10)
-        monster_zone_h = h - title_zone_h - name_zone_h
-
-        # --- Title ---
-        title_font_size = max(int(h * 0.05), 16)
-        title_font = get_font("Jost", title_font_size, "bold")
-        if title_font:
-            draw.text(
-                (w // 2, title_zone_h // 2),
-                "Tiny Monsters",
-                font=title_font,
-                fill=primary_color,
-                anchor="mm",
-            )
-
-        # --- Monster parameters (controlled randomness) ---
-        monster_name = generate_monster_name()
-        body_shape = random.choice(BODY_SHAPES)
-
-        # Eyes: 1-3 common, 4-5 rare
-        num_eyes = random.choices([1, 2, 3, 4, 5], weights=[20, 40, 25, 10, 5])[0]
-        mouth_style = random.choice(MOUTH_STYLES)
-
-        # Horns: 0-2 common, 3-4 rare
-        num_horns = random.choices([0, 1, 2, 3, 4], weights=[30, 30, 25, 10, 5])[0]
-        horn_shape = random.choice(HORN_SHAPES)
-
-        # Limb style: arms or tentacles
-        use_tentacles = random.random() < 0.15
-        arm_style = "none" if use_tentacles else random.choice(["short", "raised", "normal"])
-
-        # --- Body sizing: 60-70% of monster zone ---
-        body_w = random.randint(int(w * 0.38), int(w * 0.50))
-        body_h = random.randint(int(monster_zone_h * 0.52), int(monster_zone_h * 0.65))
-
-        # Center of monster zone
-        monster_cx = w // 2
+        line_w = max(int(min(width, height) * 0.008), 3)
+        title_zone_h = int(height * 0.10)
+        name_zone_h = int(height * 0.10)
+        monster_zone_h = height - title_zone_h - name_zone_h
+        monster_cx = width // 2
         monster_cy = title_zone_h + monster_zone_h // 2
 
-        # --- Draw order: back → front ---
-        # 1. Extras behind body (wings, tail)
-        _draw_extras(draw, monster_cx, monster_cy, body_w, body_h,
-                     primary_color, line_w)
+        title_font = get_font("Jost", max(int(height * 0.05), 16), "bold")
+        if title_font:
+            draw.text((width // 2, title_zone_h // 2), "Tiny Monsters", font=title_font, fill=primary_color, anchor="mm")
 
-        # 2. Arms behind body
-        _draw_arms(draw, monster_cx, monster_cy, body_w, body_h,
-                   arm_style, primary_color, secondary_color, line_w)
+        monster_name = generate_monster_name()
+        spec = _build_monster_spec_for_mode(archetype_mode, width, monster_zone_h)
+        archetype = spec["archetype"]
+        body_geometry = _build_body_geometry(monster_cx, monster_cy, spec["body_w"], spec["body_h"], spec["body_shape"])
 
-        # 3. Legs or tentacles
-        if use_tentacles:
-            _draw_tentacles(draw, monster_cx, monster_cy, body_w, body_h,
-                            primary_color, line_w)
+        _draw_extras(draw, body_geometry, primary_color, line_w, spec["features"])
+
+        if archetype == "spider":
+            _draw_spider_legs(draw, body_geometry, primary_color, line_w)
+        elif archetype == "octopus":
+            _draw_bottom_tentacles(draw, body_geometry, primary_color, line_w, total=random.randint(4, 5))
+        elif archetype == "ghost":
+            pass
         else:
-            _draw_legs(draw, monster_cx, monster_cy, body_w, body_h,
-                       primary_color, line_w)
+            _draw_leg_columns(
+                draw,
+                body_geometry,
+                primary_color,
+                line_w,
+                total_legs=4 if archetype == "dragon" and random.random() < 0.4 else None,
+            )
 
-        # 4. Body (central anchor, drawn on top of limbs)
-        _draw_body(draw, monster_cx, monster_cy, body_w, body_h,
-                   body_shape, secondary_color, primary_color, line_w)
+        if archetype == "cthulhu":
+            _draw_arms(draw, body_geometry, "normal", primary_color, line_w, small=True, finger_style="claw")
+        elif spec["arm_style"] != "none":
+            _draw_arms(
+                draw,
+                body_geometry,
+                spec["arm_style"],
+                primary_color,
+                line_w,
+                small=archetype == "dinosaur",
+                finger_style=spec["finger_style"],
+            )
 
-        # 5. Horns on top of body
-        _draw_horns(draw, monster_cx, monster_cy, body_w, body_h,
-                    num_horns, horn_shape, primary_color, line_w)
+        _draw_body(draw, body_geometry, secondary_color, primary_color, line_w)
 
-        # 6. Eyes inside body
-        _draw_eyes(draw, monster_cx, monster_cy, body_w, body_h,
-                   num_eyes, primary_color, secondary_color, line_w)
+        if archetype == "werewolf":
+            _draw_ears(draw, body_geometry, primary_color, secondary_color, line_w)
 
-        # 7. Mouth centered on body
-        _draw_mouth(draw, monster_cx, monster_cy, body_w, body_h,
-                    mouth_style, primary_color, secondary_color, line_w)
+        _draw_horns(draw, body_geometry, spec["horns"], spec["horn_shape"], primary_color, line_w)
+        _draw_eyes(draw, monster_cx, monster_cy, spec["body_w"], spec["body_h"], spec["eyes"], primary_color, secondary_color, line_w, archetype)
+        _draw_mouth(draw, monster_cx, monster_cy, spec["body_w"], spec["body_h"], spec["mouth_style"], primary_color, secondary_color, line_w, archetype)
 
-        # --- Monster name ---
-        name_font_size = max(int(h * 0.045), 14)
-        name_font = get_font("Jost", name_font_size)
+        if archetype == "cthulhu":
+            _draw_face_tentacles(draw, monster_cx, monster_cy, spec["body_w"], spec["body_h"], primary_color, line_w)
+
+        name_font = get_font("Jost", max(int(height * 0.045), 14))
         if name_font:
-            name_y = h - name_zone_h // 2
+            archetype_label = archetype.replace("_", " ").title()
             draw.text(
-                (w // 2, name_y),
-                monster_name,
+                (width // 2, height - name_zone_h // 2),
+                f"{monster_name} - {archetype_label}",
                 font=name_font,
                 fill=primary_color,
                 anchor="mm",
