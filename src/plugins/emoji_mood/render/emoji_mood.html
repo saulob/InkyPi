@@ -2,7 +2,13 @@
 
 {% block content %}
 
-<div class="emoji-mood-root">
+<style>
+    body {
+        background-color: {{ secondaryColor }} !important;
+    }
+</style>
+
+<div class="emoji-mood-root" style="background-color: {{ secondaryColor }}; color: {{ primaryColor }};">
     <div class="title">Emoji Mood</div>
 
     <div class="emoji-mood-container">

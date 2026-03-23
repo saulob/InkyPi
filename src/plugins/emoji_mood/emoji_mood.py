@@ -194,7 +194,22 @@ class EmojiMood(BasePlugin):
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
-        mood_key = random.choice(list(MOOD_DATA.keys()))
+        # Determine selected mode from plugin settings
+        # settings can come from the UI as strings; accept 'mode' or 'Mode' keys
+        mode_value = None
+        if isinstance(settings, dict):
+            mode_value = settings.get("mode") or settings.get("Mode")
+        if not mode_value:
+            mode_value = "random"
+
+        mode_key = str(mode_value).lower()
+
+        if mode_key == "random":
+            mood_key = random.choice(list(MOOD_DATA.keys()))
+        else:
+            # if the selected mode exists as a mood key, use it; otherwise default to random
+            mood_key = mode_key if mode_key in MOOD_DATA else random.choice(list(MOOD_DATA.keys()))
+
         mood = MOOD_DATA[mood_key]
 
         emoji = random.choice(mood["emojis"])
@@ -202,10 +217,19 @@ class EmojiMood(BasePlugin):
         # Debug: append chosen mood key to the caption so it's visible in renders
         caption = f"{caption} - {mood_key}"
 
+        # Extract primary (text) and secondary (background) colors from settings
+        primary_color = "#000000"  # default: black
+        secondary_color = "#ffffff"  # default: white
+        if isinstance(settings, dict):
+            primary_color = settings.get("primaryColor") or "#000000"
+            secondary_color = settings.get("secondaryColor") or "#ffffff"
+
         template_params = {
             "emoji": emoji,
             "twemoji_url": _emoji_to_twemoji_url(emoji),
             "caption": caption,
+            "primaryColor": primary_color,
+            "secondaryColor": secondary_color,
             "plugin_settings": settings,
         }
 

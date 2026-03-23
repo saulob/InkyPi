@@ -3,3 +3,52 @@
         Emoji Mood displays a random mood emoji with a short matching caption each time it refreshes. It is a lightweight, playful plugin designed for quick visual variety
     </div>
 </div>
+
+<div class="form-group">
+    <label for="mode" class="form-label">Mode:</label>
+    <select id="mode" name="mode" class="form-input">
+        <option value="random">Random</option>
+        <option value="adventure">Adventure</option>
+        <option value="focus">Focus</option>
+        <option value="fun">Fun</option>
+        <option value="happy">Happy</option>
+        <option value="love">Love</option>
+        <option value="low_energy">Low Energy</option>
+        <option value="neutral">Neutral</option>
+        <option value="sick">Sick</option>
+        <option value="stress">Stress</option>
+        <option value="weird">Weird</option>
+    </select>
+</div>
+
+<div class="form-group">
+    <div class="form-group">
+        <label for="primaryColor" class="form-label">Primary Color (Text):</label>
+        <input type="color" name="primaryColor" class="color-picker" value="#000000"/>
+    </div>
+    <div class="form-group">
+        <label for="secondaryColor" class="form-label">Secondary Color (Background):</label>
+        <input type="color" name="secondaryColor" class="color-picker" value="#ffffff"/>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof loadPluginSettings !== 'undefined' && loadPluginSettings && pluginSettings) {
+            // Populate mode selection
+            const selectedMode = pluginSettings.mode || pluginSettings.Mode || 'random';
+            document.getElementById('mode').value = selectedMode;
+            
+            // Populate primary and secondary colors
+            const primaryInput = document.querySelector('[name=primaryColor]');
+            const secondaryInput = document.querySelector('[name=secondaryColor]');
+            
+            if (primaryInput) {
+                primaryInput.value = pluginSettings.primaryColor || '#000000';
+            }
+            if (secondaryInput) {
+                secondaryInput.value = pluginSettings.secondaryColor || '#ffffff';
+            }
+        }
+    });
+</script>
