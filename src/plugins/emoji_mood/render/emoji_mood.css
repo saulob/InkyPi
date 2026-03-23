@@ -10,6 +10,7 @@
     padding: 0;
     margin: 0;
     background-color: white;
+    gap: 3dvh;
 }
 
 .title {
@@ -19,6 +20,7 @@
     font-weight: 600;
     letter-spacing: 0.02em;
     padding-top: 0;
+    flex-shrink: 0;
 }
 
 .emoji-mood-container {
@@ -31,14 +33,14 @@
 }
 
 .emoji-img {
-    width: min(61dvh, 61dvw);
-    height: min(61dvh, 61dvw);
+    width: min(67dvh, 67dvw);
+    height: min(67dvh, 67dvw);
     object-fit: contain;
 }
 
 .emoji-fallback {
     display: none;
-    font-size: min(61dvh, 61dvw);
+    font-size: min(67dvh, 67dvw);
     line-height: 1.1;
 }
 
@@ -49,5 +51,6 @@
     font-size: min(6dvh, 6dvw);
     font-weight: 300;
     letter-spacing: 0.05em;
+    flex-shrink: 0;
 }
 }
