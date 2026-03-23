@@ -11,6 +11,7 @@
         "ai_image",
         "ai_text",
         "clock",
+        "calendar_card",
         "comic",
         "countdown",
         "flow_progress",
