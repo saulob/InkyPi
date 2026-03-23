@@ -1,0 +1,24 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+
+<style>
+    body {
+        background-color: {{ secondaryColor }} !important;
+    }
+</style>
+
+<div class="emoji-mood-root" style="background-color: {{ secondaryColor }}; color: {{ primaryColor }};">
+    <div class="title">Emoji Mood</div>
+
+    <div class="emoji-mood-container">
+        <img class="emoji-img" src="{{ twemoji_url }}"
+             alt="{{ emoji }}"
+             onerror="this.style.display='none'; document.getElementById('emoji-fallback').style.display='block';" />
+        <div id="emoji-fallback" class="emoji-fallback">{{ emoji }}</div>
+    </div>
+
+    <div class="caption">{{ caption }}</div>
+</div>
+
+{% endblock %}
