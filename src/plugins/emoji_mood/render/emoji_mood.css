@@ -9,7 +9,14 @@
     text-align: center;
 }
 
-.emoji {
+.emoji-img {
+    width: min(36dvh, 36dvw);
+    height: min(36dvh, 36dvw);
+    object-fit: contain;
+}
+
+.emoji-fallback {
+    display: none;
     font-size: min(36dvh, 36dvw);
     line-height: 1.1;
 }

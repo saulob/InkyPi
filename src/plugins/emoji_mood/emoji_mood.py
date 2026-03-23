@@ -4,6 +4,16 @@ from plugins.base_plugin.base_plugin import BasePlugin
 
 logger = logging.getLogger(__name__)
 
+TWEMOJI_BASE_URL = "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg"
+
+
+def _emoji_to_twemoji_url(emoji):
+    """Convert a Unicode emoji string to a Twemoji CDN SVG URL."""
+    codepoints = "-".join(
+        f"{ord(c):x}" for c in emoji if ord(c) != 0xFE0F
+    )
+    return f"{TWEMOJI_BASE_URL}/{codepoints}.svg"
+
 MOOD_DATA = {
     "happy": {
         "emojis": [
@@ -83,6 +93,7 @@ class EmojiMood(BasePlugin):
 
         template_params = {
             "emoji": emoji,
+            "twemoji_url": _emoji_to_twemoji_url(emoji),
             "caption": caption,
             "plugin_settings": settings,
         }
