@@ -29,6 +29,11 @@ def _get_smart_mood():
     hour = now.hour
     weekday = now.weekday()  # 0=Monday, 6=Sunday
     
+    # For late night hours (00:00-04:59), use previous day for weekday-based weighting
+    # to make mood selection feel more natural for late night usage
+    if hour < 5:
+        weekday = (weekday - 1) % 7
+    
     weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     weekday_name = weekday_names[weekday]
     
@@ -42,7 +47,7 @@ def _get_smart_mood():
     else:
         time_period = "night"
     
-    # Base weights by time period
+    # Base weight of 1 for all moods
     mood_weights = {
         "happy": 1,
         "neutral": 1,
@@ -56,25 +61,44 @@ def _get_smart_mood():
         "sick": 1,
     }
     
-    # Adjust weights based on time period
+    # Incrementally adjust weights based on time period (+1 or +2)
     if time_period == "morning":
-        mood_weights.update({"focus": 3, "happy": 2, "neutral": 2})
+        mood_weights["focus"] += 2
+        mood_weights["happy"] += 1
+        mood_weights["neutral"] += 1
     elif time_period == "afternoon":
-        mood_weights.update({"focus": 3, "neutral": 2, "stress": 2})
+        mood_weights["focus"] += 2
+        mood_weights["neutral"] += 1
+        mood_weights["stress"] += 1
     elif time_period == "evening":
-        mood_weights.update({"fun": 3, "love": 2, "low_energy": 2})
+        mood_weights["fun"] += 2
+        mood_weights["love"] += 1
+        mood_weights["low_energy"] += 1
     else:  # night
-        mood_weights.update({"low_energy": 3, "weird": 2, "neutral": 2})
+        mood_weights["low_energy"] += 2
+        mood_weights["weird"] += 1
+        mood_weights["neutral"] += 1
     
-    # Adjust weights based on weekday
+    # Incrementally adjust weights based on weekday (+1 or +2)
+    # For late night (00:00-04:59), weekday is already adjusted to previous day above
     if weekday == 0:  # Monday
-        mood_weights.update({"focus": 4, "stress": 3})
+        mood_weights["focus"] += 2
+        mood_weights["stress"] += 1
     elif weekday == 4:  # Friday
-        mood_weights.update({"happy": 4, "fun": 3})
+        mood_weights["happy"] += 2
+        mood_weights["fun"] += 1
     elif weekday == 5:  # Saturday
-        mood_weights.update({"fun": 4, "adventure": 3, "love": 3})
+        mood_weights["fun"] += 2
+        mood_weights["adventure"] += 1
+        mood_weights["love"] += 1
     elif weekday == 6:  # Sunday
-        mood_weights.update({"low_energy": 3, "love": 2, "neutral": 2})
+        mood_weights["low_energy"] += 1
+        mood_weights["love"] += 1
+        mood_weights["neutral"] += 1
+    
+    # Small random boost for all moods to keep variety and avoid rigid patterns
+    for mood in mood_weights:
+        mood_weights[mood] += random.random() * 0.3
     
     # Select mood using weighted random choice
     moods = list(mood_weights.keys())
@@ -86,7 +110,7 @@ def _get_smart_mood():
         "mood": selected_mood,
         "time_period": time_period,
         "weekday_name": weekday_name,
-        "selected_weight": selected_weight,
+        "selected_weight": round(selected_weight, 1),
     }
 
 MOOD_DATA = {
