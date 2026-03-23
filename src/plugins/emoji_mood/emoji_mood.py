@@ -199,6 +199,8 @@ class EmojiMood(BasePlugin):
 
         emoji = random.choice(mood["emojis"])
         caption = random.choice(mood["captions"])
+        # Debug: append chosen mood key to the caption so it's visible in renders
+        caption = f"{caption} - {mood_key}"
 
         template_params = {
             "emoji": emoji,
