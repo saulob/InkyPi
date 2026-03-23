@@ -1,0 +1,158 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.mini-weather-shell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3.85dvh;
+  padding: 5.5dvh 4.95dvw;
+  font-family: "Jost";
+}
+
+.mini-weather-title {
+  text-align: center;
+  font-size: min(7.15dvh, 6.6dvw);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mini-weather-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.9fr);
+  gap: 2.2dvw;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.current-card,
+.forecast-row {
+  background: rgba(80, 80, 80, 0.09);
+  border-radius: 1.76dvw;
+}
+
+.current-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 0;
+  padding: 3.08dvh 1.98dvw 1.76dvh;
+}
+
+.current-label {
+  width: 100%;
+  text-align: center;
+  font-size: min(5.83dvh, 4.84dvw);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.current-temp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  font-size: min(16.72dvh, 15.29dvw);
+  font-weight: 700;
+  line-height: 0.92;
+}
+
+.current-range,
+.forecast-range {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.65dvw;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.range-high {
+  color: #b4222d;
+}
+
+.range-low {
+  color: #1c6eb6;
+}
+
+.forecast-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.98dvh;
+  min-height: 0;
+}
+
+.forecast-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.65dvw;
+  padding: 1.76dvh 1.98dvw;
+  background: transparent;
+}
+
+.forecast-row:nth-child(odd) {
+  background: rgba(80, 80, 80, 0.09);
+}
+
+.forecast-left {
+  display: flex;
+  align-items: center;
+  gap: 1.21dvw;
+  min-width: 0;
+}
+
+.forecast-icon {
+  width: min(6.6dvh, 6.6dvw);
+  height: min(6.6dvh, 6.6dvw);
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: grayscale(1) brightness(0.68) contrast(0.9);
+  opacity: 0.88;
+}
+
+.forecast-day {
+  font-size: min(4.95dvh, 4.4dvw);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.forecast-range {
+  font-size: min(5.28dvh, 4.73dvw);
+}
+
+.current-range {
+  font-size: min(5.5dvh, 4.62dvw);
+}
+
+@media (max-aspect-ratio: 1) {
+  .mini-weather-shell {
+    gap: 2.2dvh;
+    padding: 3.3dvh 3.85dvw;
+  }
+
+  .mini-weather-layout {
+    grid-template-columns: 1fr;
+    gap: 2.2dvh;
+  }
+
+  .current-card {
+    min-height: 30.8dvh;
+  }
+
+  .forecast-row {
+    padding: 1.43dvh 1.98dvw;
+  }
+}
+
+@media (max-width: 250px) {
+  .mini-weather-shell {
+    font-family: "Dogica";
+  }
+}
