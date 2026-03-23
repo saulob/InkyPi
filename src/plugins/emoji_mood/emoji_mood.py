@@ -1,5 +1,6 @@
 import random
 import logging
+from datetime import datetime
 from plugins.base_plugin.base_plugin import BasePlugin
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,80 @@ def _emoji_to_twemoji_url(emoji):
         f"{ord(c):x}" for c in emoji if ord(c) != 0xFE0F
     )
     return f"{TWEMOJI_BASE_URL}/{codepoints}.svg"
+
+
+def _get_smart_mood():
+    """Select a mood based on current time and day of week with weighted probabilities.
+    
+    Returns a dict with:
+    - mood: selected mood key
+    - time_period: morning/afternoon/evening/night
+    - weekday_name: Monday/Tuesday/etc
+    - selected_weight: weight value of chosen mood
+    """
+    now = datetime.now()
+    hour = now.hour
+    weekday = now.weekday()  # 0=Monday, 6=Sunday
+    
+    weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    weekday_name = weekday_names[weekday]
+    
+    # Determine time period
+    if 5 <= hour < 12:
+        time_period = "morning"
+    elif 12 <= hour < 17:
+        time_period = "afternoon"
+    elif 17 <= hour < 21:
+        time_period = "evening"
+    else:
+        time_period = "night"
+    
+    # Base weights by time period
+    mood_weights = {
+        "happy": 1,
+        "neutral": 1,
+        "low_energy": 1,
+        "stress": 1,
+        "fun": 1,
+        "weird": 1,
+        "focus": 1,
+        "adventure": 1,
+        "love": 1,
+        "sick": 1,
+    }
+    
+    # Adjust weights based on time period
+    if time_period == "morning":
+        mood_weights.update({"focus": 3, "happy": 2, "neutral": 2})
+    elif time_period == "afternoon":
+        mood_weights.update({"focus": 3, "neutral": 2, "stress": 2})
+    elif time_period == "evening":
+        mood_weights.update({"fun": 3, "love": 2, "low_energy": 2})
+    else:  # night
+        mood_weights.update({"low_energy": 3, "weird": 2, "neutral": 2})
+    
+    # Adjust weights based on weekday
+    if weekday == 0:  # Monday
+        mood_weights.update({"focus": 4, "stress": 3})
+    elif weekday == 4:  # Friday
+        mood_weights.update({"happy": 4, "fun": 3})
+    elif weekday == 5:  # Saturday
+        mood_weights.update({"fun": 4, "adventure": 3, "love": 3})
+    elif weekday == 6:  # Sunday
+        mood_weights.update({"low_energy": 3, "love": 2, "neutral": 2})
+    
+    # Select mood using weighted random choice
+    moods = list(mood_weights.keys())
+    weights = [mood_weights[mood] for mood in moods]
+    selected_mood = random.choices(moods, weights=weights, k=1)[0]
+    selected_weight = mood_weights[selected_mood]
+    
+    return {
+        "mood": selected_mood,
+        "time_period": time_period,
+        "weekday_name": weekday_name,
+        "selected_weight": selected_weight,
+    }
 
 MOOD_DATA = {
     "happy": {
@@ -204,18 +279,52 @@ class EmojiMood(BasePlugin):
 
         mode_key = str(mode_value).lower()
 
+        # Determine behavior setting (default: random)
+        behavior_value = "random"
+        if isinstance(settings, dict):
+            behavior_value = str(settings.get("behavior") or "random").lower()
+
+        # Variable to store mood selection info for debug
+        mood_info = None
+
         if mode_key == "random":
-            mood_key = random.choice(list(MOOD_DATA.keys()))
+            # Mode is Random, so use Behavior to decide how to select a mood
+            if behavior_value == "smart":
+                mood_info = _get_smart_mood()
+                mood_key = mood_info["mood"]
+            else:
+                # Random behavior: equal probability for all moods
+                mood_key = random.choice(list(MOOD_DATA.keys()))
+                # Create mood_info dict for consistency
+                now = datetime.now()
+                weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+                weekday_name = weekday_names[now.weekday()]
+                mood_info = {
+                    "mood": mood_key,
+                    "time_period": "N/A",
+                    "weekday_name": weekday_name,
+                    "selected_weight": "equal",
+                }
         else:
-            # if the selected mode exists as a mood key, use it; otherwise default to random
+            # Mode is set to a specific mood, ignore Behavior and use that mood
             mood_key = mode_key if mode_key in MOOD_DATA else random.choice(list(MOOD_DATA.keys()))
+            # Create mood_info dict for consistency
+            now = datetime.now()
+            weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            weekday_name = weekday_names[now.weekday()]
+            mood_info = {
+                "mood": mood_key,
+                "time_period": "N/A",
+                "weekday_name": weekday_name,
+                "selected_weight": "fixed",
+            }
 
         mood = MOOD_DATA[mood_key]
 
         emoji = random.choice(mood["emojis"])
         caption = random.choice(mood["captions"])
-        # Debug: append chosen mood key to the caption so it's visible in renders
-        caption = f"{caption} - {mood_key}"
+        # Debug: append full debug info to caption
+        caption = f"{caption} - {mood_info['mood']} - {mood_info['weekday_name']} - {mood_info['time_period']} - {mood_info['selected_weight']}"
 
         # Extract primary (text) and secondary (background) colors from settings
         primary_color = "#000000"  # default: black
