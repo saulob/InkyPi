@@ -287,138 +287,299 @@ def _draw_thick_curve(draw, pts, width, fill):
         draw.line([pts[i], pts[i + 1]], fill=fill, width=width)
 
 
-def _organic_blob(cx, cy, rx, ry, num_points=40, wobble=0.08):
-    """Generate an organic closed shape — like a hand-drawn circle."""
+# ---------------------------------------------------------------------------
+# Catmull-Rom spline helpers for smooth curves through control points
+# ---------------------------------------------------------------------------
+
+def _catmull_rom_segment(p0, p1, p2, p3, steps=8):
+    """Return points along a Catmull-Rom spline segment between p1 and p2."""
     pts = []
-    for i in range(num_points):
-        a = 2 * math.pi * i / num_points
-        r_jitter = 1.0 + random.uniform(-wobble, wobble)
-        pts.append((cx + rx * r_jitter * math.cos(a),
-                     cy + ry * r_jitter * math.sin(a)))
+    for i in range(steps + 1):
+        t = i / steps
+        t2, t3 = t * t, t * t * t
+        x = 0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t
+                    + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2
+                    + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3)
+        y = 0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t
+                    + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2
+                    + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)
+        pts.append((x, y))
     return pts
 
 
-def _draw_filled_blob(draw, cx, cy, rx, ry, fill, outline, line_w, wobble=0.08):
-    """Draw an organic filled blob shape."""
-    pts = _organic_blob(cx, cy, rx, ry, wobble=wobble)
+def _catmull_rom_closed(controls, steps_per_seg=6):
+    """Smooth closed curve through control points using Catmull-Rom splines."""
+    n = len(controls)
+    if n < 3:
+        return list(controls)
+    pts = []
+    for i in range(n):
+        seg = _catmull_rom_segment(
+            controls[(i - 1) % n], controls[i],
+            controls[(i + 1) % n], controls[(i + 2) % n],
+            steps_per_seg)
+        pts.extend(seg[:-1])
+    return pts
+
+
+def _catmull_rom_open(controls, steps_per_seg=6):
+    """Smooth open curve through control points using Catmull-Rom splines."""
+    n = len(controls)
+    if n < 2:
+        return list(controls)
+    ext = [controls[0]] + list(controls) + [controls[-1]]
+    pts = []
+    for i in range(1, len(ext) - 2):
+        seg = _catmull_rom_segment(ext[i - 1], ext[i], ext[i + 1], ext[i + 2],
+                                   steps_per_seg)
+        if i > 1:
+            seg = seg[1:]
+        pts.extend(seg)
+    return pts
+
+
+# ---------------------------------------------------------------------------
+# Polygon-based stroke for smooth tapered limbs and tentacles
+# ---------------------------------------------------------------------------
+
+def _stroke_path_poly(draw, pts, base_w, fill, taper_start=1.0, taper_end=0.3):
+    """Draw a thick stroked path as a filled polygon with smooth tapering."""
+    if len(pts) < 2:
+        return
+    left, right = [], []
+    for i, (x, y) in enumerate(pts):
+        t = i / max(len(pts) - 1, 1)
+        hw = base_w * 0.5 * (taper_start + (taper_end - taper_start) * t)
+        if i == 0:
+            dx, dy = pts[1][0] - x, pts[1][1] - y
+        elif i == len(pts) - 1:
+            dx, dy = x - pts[-2][0], y - pts[-2][1]
+        else:
+            dx, dy = pts[i + 1][0] - pts[i - 1][0], pts[i + 1][1] - pts[i - 1][1]
+        ln = math.hypot(dx, dy) or 1
+        nx, ny = -dy / ln, dx / ln
+        left.append((x + nx * hw, y + ny * hw))
+        right.append((x - nx * hw, y - ny * hw))
+    draw.polygon(left + right[::-1], fill=fill)
+
+
+# ---------------------------------------------------------------------------
+# Organic body-shape generators with varied silhouettes
+# ---------------------------------------------------------------------------
+
+def _pear_blob(cx, cy, rx, ry, num_controls=12, wobble=0.10):
+    """Pear/teardrop shape: wider at bottom, narrower at top."""
+    controls = []
+    for i in range(num_controls):
+        a = 2 * math.pi * i / num_controls
+        widen = 1.0 + 0.25 * max(0, math.sin(a))
+        r_jitter = 1.0 + random.uniform(-wobble, wobble)
+        controls.append((cx + rx * widen * r_jitter * math.cos(a),
+                         cy + ry * r_jitter * math.sin(a)))
+    return _catmull_rom_closed(controls, steps_per_seg=6)
+
+
+def _bean_blob(cx, cy, rx, ry, num_controls=12, wobble=0.08):
+    """Bean/kidney shape: indented on one side."""
+    controls = []
+    for i in range(num_controls):
+        a = 2 * math.pi * i / num_controls
+        indent = 1.0 - 0.18 * max(0, math.cos(a)) * (0.5 + 0.5 * math.sin(a))
+        r_jitter = 1.0 + random.uniform(-wobble, wobble)
+        controls.append((cx + rx * indent * r_jitter * math.cos(a),
+                         cy + ry * r_jitter * math.sin(a)))
+    return _catmull_rom_closed(controls, steps_per_seg=6)
+
+
+def _squat_blob(cx, cy, rx, ry, num_controls=12, wobble=0.10):
+    """Squat shape: wider with flat-ish bottom and round top."""
+    controls = []
+    for i in range(num_controls):
+        a = 2 * math.pi * i / num_controls
+        if math.sin(a) > 0.3:
+            stretch = 1.0 + 0.15 * math.sin(a)
+        elif math.sin(a) < -0.3:
+            stretch = 1.0 - 0.08 * abs(math.sin(a))
+        else:
+            stretch = 1.0
+        r_jitter = 1.0 + random.uniform(-wobble, wobble)
+        controls.append((cx + rx * stretch * r_jitter * math.cos(a),
+                         cy + ry * r_jitter * math.sin(a)))
+    return _catmull_rom_closed(controls, steps_per_seg=6)
+
+
+# ---------------------------------------------------------------------------
+# Core organic shape primitives (Catmull-Rom smoothed)
+# ---------------------------------------------------------------------------
+
+def _organic_blob(cx, cy, rx, ry, num_controls=12, wobble=0.12):
+    """Generate an organic closed shape using Catmull-Rom spline smoothing."""
+    controls = []
+    for i in range(num_controls):
+        a = 2 * math.pi * i / num_controls
+        r_jitter = 1.0 + random.uniform(-wobble, wobble)
+        controls.append((cx + rx * r_jitter * math.cos(a),
+                         cy + ry * r_jitter * math.sin(a)))
+    return _catmull_rom_closed(controls, steps_per_seg=6)
+
+
+def _draw_filled_blob(draw, cx, cy, rx, ry, fill, outline, line_w, wobble=0.10,
+                       shape_func=None):
+    """Draw an organic filled shape with smooth spline-based outline."""
+    if shape_func:
+        pts = shape_func(cx, cy, rx, ry, wobble=wobble)
+    else:
+        pts = _organic_blob(cx, cy, rx, ry, wobble=wobble)
     draw.polygon(pts, fill=fill, outline=outline, width=line_w)
     return pts
 
 
 def _draw_organic_limb(draw, x1, y1, x2, y2, thickness, fill, taper=0.7):
-    """Draw a thick organic limb using a Bézier with tapering."""
-    mx = (x1 + x2) / 2 + random.uniform(-thickness, thickness) * 0.4
-    my = (y1 + y2) / 2 + random.uniform(-thickness, thickness) * 0.3
-    pts = _bezier_pts((x1, y1), (mx, my), (x2, y2), steps=10)
-    for i in range(len(pts) - 1):
-        t = i / max(len(pts) - 1, 1)
-        w = max(int(thickness * (1.0 - t * (1.0 - taper))), 2)
-        draw.line([pts[i], pts[i + 1]], fill=fill, width=w)
+    """Draw a thick organic limb with smooth cubic Bezier and polygon tapering."""
+    dx, dy = x2 - x1, y2 - y1
+    length = math.hypot(dx, dy) or 1
+    px, py = -dy / length, dx / length
+    sway = random.uniform(-thickness, thickness) * 0.5
+    c1 = (x1 + dx * 0.3 + px * sway, y1 + dy * 0.3 + py * sway)
+    c2 = (x1 + dx * 0.7 - px * sway * 0.6, y1 + dy * 0.7 - py * sway * 0.6)
+    pts = _cubic_bezier_pts((x1, y1), c1, c2, (x2, y2), steps=14)
+    _stroke_path_poly(draw, pts, thickness, fill, taper_start=1.0, taper_end=taper)
 
 
 def _draw_organic_leg(draw, x1, y1, x2, y2, thickness, fill, foot_r=0):
-    """Draw a thick cartoon leg with optional round foot."""
+    """Draw a thick cartoon leg with optional organic foot."""
     _draw_organic_limb(draw, x1, y1, x2, y2, thickness, fill, taper=0.85)
     if foot_r > 0:
-        pts = _organic_blob(x2, y2 + foot_r * 0.3, foot_r, foot_r * 0.6, wobble=0.06)
+        fx, fy = x2, y2 + foot_r * 0.25
+        pts = _organic_blob(fx, fy, foot_r, foot_r * 0.55, num_controls=10, wobble=0.08)
         draw.polygon(pts, fill=fill)
 
 
 def _draw_expressive_eyes(draw, positions, base_r, primary, secondary, line_w,
                            style="normal", look_dir=0):
-    """Draw cartoon eyes at positions. style: normal|sleepy|angry|cute|hollow."""
+    """Draw cartoon doodle eyes with organic shapes and layered detail."""
     for i, (ex, ey) in enumerate(positions):
         r = base_r + random.randint(-1, 1)
-        # outer eye with slight wobble
-        eye_pts = _organic_blob(ex, ey, r, r, wobble=0.04)
+        # Smooth organic eye white using Catmull-Rom
+        eye_pts = _organic_blob(ex, ey, r, r * 1.05, num_controls=10, wobble=0.04)
         draw.polygon(eye_pts, fill=secondary, outline=primary, width=line_w)
 
         if style == "hollow":
             inner = max(r - line_w * 2, 2)
-            draw.ellipse([ex - inner, ey - inner, ex + inner, ey + inner],
-                         fill=secondary, outline=primary, width=max(line_w - 1, 1))
+            inner_pts = _organic_blob(ex, ey, inner, inner, num_controls=8, wobble=0.03)
+            draw.polygon(inner_pts, fill=secondary, outline=primary, width=max(line_w - 1, 1))
         else:
-            # pupil
-            pr = max(r // 3, 2)
-            px = ex + int(look_dir * pr * 0.5)
-            py = ey + random.randint(-1, 1)
-            draw.ellipse([px - pr, py - pr, px + pr, py + pr], fill=primary)
-            # highlight
+            # Iris (larger, organic)
+            ir = max(int(r * 0.55), 3)
+            ix = ex + int(look_dir * ir * 0.35)
+            iy = ey + random.randint(-1, 1)
+            iris_pts = _organic_blob(ix, iy, ir, ir, num_controls=8, wobble=0.03)
+            draw.polygon(iris_pts, fill=primary)
+            # Pupil center
+            pr = max(ir // 2, 2)
+            draw.ellipse([ix - pr, iy - pr, ix + pr, iy + pr], fill=primary)
+            # Main highlight
             hr = max(pr // 2, 1)
-            draw.ellipse([px - hr - 1, py - hr - 1, px - hr + hr, py - hr + hr],
+            hx = ix - int(ir * 0.25)
+            hy = iy - int(ir * 0.25)
+            draw.ellipse([hx - hr, hy - hr, hx + hr, hy + hr], fill=secondary)
+            # Tiny second highlight for illustrated look
+            hr2 = max(hr - 1, 1)
+            draw.ellipse([ix + hr, iy + hr, ix + hr + hr2, iy + hr + hr2],
                          fill=secondary)
 
-        # sleepy = half-closed lid
+        # Sleepy: organic curved lid
         if style == "sleepy":
-            draw.rectangle([ex - r - 1, ey - r - 1, ex + r + 1, ey - r * 0.2],
-                           fill=secondary)
-            draw.line([(ex - r, ey - r * 0.2), (ex + r, ey - r * 0.1)],
-                      fill=primary, width=line_w)
+            lid_pts = _bezier_pts((ex - r * 1.1, ey - r * 0.1),
+                                  (ex, ey - r * 0.4),
+                                  (ex + r * 1.1, ey - r * 0.05), steps=10)
+            lid_poly = [(ex - r - 2, ey - r - 2)] + lid_pts + [(ex + r + 2, ey - r - 2)]
+            draw.polygon(lid_poly, fill=secondary)
+            _draw_thick_curve(draw, lid_pts, max(line_w, 2), primary)
 
-        # angry = angled brow
+        # Angry: curved angled brow
         if style == "angry":
             brow_y = ey - r - line_w * 2
             side = -1 if i == 0 else 1
-            draw.line([(ex - r * 0.8, brow_y - r * 0.3 * side),
-                       (ex + r * 0.8, brow_y + r * 0.3 * side)],
-                      fill=primary, width=max(line_w + 1, 3))
+            brow_pts = _bezier_pts(
+                (ex - r * 0.9, brow_y - r * 0.35 * side),
+                (ex, brow_y + r * 0.1 * side),
+                (ex + r * 0.9, brow_y + r * 0.35 * side), steps=8)
+            _draw_thick_curve(draw, brow_pts, max(line_w + 1, 3), primary)
 
-        # cute = simple dot brow
+        # Cute: small curved brow
         if style == "cute":
             brow_y = ey - r - line_w * 2
-            draw.line([(ex - r * 0.4, brow_y), (ex + r * 0.4, brow_y - 2)],
-                      fill=primary, width=max(line_w, 2))
-
+            brow_pts = _bezier_pts(
+                (ex - r * 0.45, brow_y),
+                (ex, brow_y - max(r * 0.15, 2)),
+                (ex + r * 0.45, brow_y), steps=6)
+            _draw_thick_curve(draw, brow_pts, max(line_w, 2), primary)
 
 def _draw_mouth(draw, cx, cy, width, primary, secondary, line_w,
                 style="smile"):
-    """Draw a cartoon mouth. Styles: smile|grin|open|confused|teeth|sleepy."""
+    """Draw an organic cartoon mouth with smooth curves."""
     hw = width // 2
     if style == "smile":
-        pts = _bezier_pts((cx - hw, cy), (cx, cy + hw * 0.7), (cx + hw, cy), steps=10)
+        controls = [(cx - hw, cy), (cx - hw * 0.3, cy + hw * 0.3),
+                    (cx + hw * 0.3, cy + hw * 0.35), (cx + hw, cy)]
+        pts = _catmull_rom_open(controls, steps_per_seg=8)
         _draw_thick_curve(draw, pts, line_w, primary)
     elif style == "grin":
-        pts = _bezier_pts((cx - hw, cy), (cx, cy + hw * 0.8), (cx + hw, cy), steps=10)
-        _draw_thick_curve(draw, pts, line_w, primary)
-        # teeth line
-        draw.line([(cx - hw + 3, cy + 1), (cx + hw - 3, cy + 1)],
-                  fill=primary, width=max(line_w - 1, 1))
-        # individual teeth
+        # Wide curved grin filled with teeth
+        controls = [(cx - hw, cy - hw * 0.1), (cx - hw * 0.4, cy + hw * 0.5),
+                    (cx + hw * 0.4, cy + hw * 0.5), (cx + hw, cy - hw * 0.1)]
+        outline = _catmull_rom_open(controls, steps_per_seg=8)
+        grin_poly = list(outline)
+        draw.polygon(grin_poly, fill=primary)
+        # Organic teeth inside grin
         n_teeth = random.randint(2, 5)
-        tw = max(hw * 2 // (n_teeth + 1), 3)
-        for i in range(n_teeth):
-            tx = cx - hw + 3 + i * (tw + 1)
-            draw.line([(tx, cy + 1), (tx, cy + tw * 0.6)],
-                      fill=secondary, width=max(line_w - 1, 1))
+        if n_teeth > 0:
+            tw = max(hw * 2 // (n_teeth + 1), 3)
+            th = max(int(hw * 0.35), 3)
+            total = n_teeth * tw + (n_teeth - 1) * 2
+            sx = cx - total // 2
+            for ti in range(n_teeth):
+                tx = sx + ti * (tw + 2)
+                tooth_y = cy + int(hw * 0.05)
+                tooth_pts = _organic_blob(tx + tw // 2, tooth_y,
+                                           tw // 2, th // 2,
+                                           num_controls=6, wobble=0.06)
+                draw.polygon(tooth_pts, fill=secondary)
     elif style == "open":
         mr = max(hw // 2, 4)
-        pts = _organic_blob(cx, cy + 2, mr, int(mr * 0.7), wobble=0.06)
+        pts = _organic_blob(cx, cy + 2, mr, int(mr * 0.7),
+                             num_controls=8, wobble=0.08)
         draw.polygon(pts, fill=primary)
     elif style == "confused":
-        pts = _bezier_pts((cx - hw * 0.5, cy + 2),
-                          (cx, cy - hw * 0.3),
-                          (cx + hw * 0.5, cy + 2), steps=8)
+        controls = [(cx - hw * 0.5, cy + 2), (cx - hw * 0.15, cy - hw * 0.25),
+                    (cx + hw * 0.15, cy + hw * 0.15), (cx + hw * 0.5, cy - hw * 0.1)]
+        pts = _catmull_rom_open(controls, steps_per_seg=6)
         _draw_thick_curve(draw, pts, line_w, primary)
     elif style == "teeth":
-        draw.line([(cx - hw, cy), (cx + hw, cy)], fill=primary, width=line_w)
+        mouth_pts = _bezier_pts((cx - hw, cy + random.randint(-2, 2)),
+                                (cx, cy + random.randint(-2, 2)),
+                                (cx + hw, cy + random.randint(-2, 2)), steps=8)
+        _draw_thick_curve(draw, mouth_pts, line_w, primary)
         n_teeth = random.randint(2, 5)
         tw = max(hw * 2 // (n_teeth + 1), 3)
         th = max(tw, 3)
         total = n_teeth * tw + (n_teeth - 1) * 2
         sx = cx - total // 2
-        for i in range(n_teeth):
+        for ti in range(n_teeth):
             if random.random() < 0.25:
                 continue
-            tx = sx + i * (tw + 2)
-            draw.polygon(
-                [(tx, cy), (tx + tw, cy), (tx + tw // 2, cy + th)],
-                fill=secondary, outline=primary, width=max(line_w - 1, 1))
+            tx = sx + ti * (tw + 2)
+            tooth_pts = [(tx, cy), (tx + tw, cy),
+                         (tx + tw * 0.7 + random.randint(-1, 1), cy + th),
+                         (tx + tw * 0.3 + random.randint(-1, 1), cy + th)]
+            draw.polygon(tooth_pts, fill=secondary, outline=primary,
+                         width=max(line_w - 1, 1))
     elif style == "sleepy":
-        pts = _bezier_pts((cx - hw * 0.4, cy),
-                          (cx, cy + hw * 0.2),
-                          (cx + hw * 0.4, cy), steps=6)
+        controls = [(cx - hw * 0.4, cy), (cx, cy + hw * 0.15),
+                    (cx + hw * 0.4, cy)]
+        pts = _catmull_rom_open(controls, steps_per_seg=6)
         _draw_thick_curve(draw, pts, line_w, primary)
-
 
 def _draw_simple_spikes(draw, pts_along_curve, spike_h_range, spike_w, fill):
     """Draw triangular spikes along a series of points."""
@@ -429,16 +590,18 @@ def _draw_simple_spikes(draw, pts_along_curve, spike_h_range, spike_w, fill):
 
 
 def _draw_fur_edge(draw, pts, tuft_len_range, fill, line_w):
-    """Draw small fur tufts along an outline."""
+    """Draw soft fur tufts along an outline using curved strokes."""
     step = max(len(pts) // random.randint(6, 14), 1)
     for i in range(0, len(pts), step):
         px, py = pts[i]
-        # direction away from center
         tl = random.randint(*tuft_len_range)
         angle = random.uniform(0, 2 * math.pi)
+        mx = px + tl * 0.5 * math.cos(angle + random.uniform(-0.4, 0.4))
+        my = py + tl * 0.5 * math.sin(angle + random.uniform(-0.4, 0.4))
         tx = px + tl * math.cos(angle)
         ty = py + tl * math.sin(angle)
-        draw.line([(px, py), (tx, ty)], fill=fill, width=line_w)
+        tuft_pts = _bezier_pts((px, py), (mx, my), (tx, ty), steps=6)
+        _draw_thick_curve(draw, tuft_pts, line_w, fill)
 
 
 def _draw_stitches(draw, cx, cy, hw, hh, count, primary, line_w):
@@ -459,20 +622,21 @@ def _draw_stitches(draw, cx, cy, hw, hh, count, primary, line_w):
 
 
 def _curvy_tentacle(draw, sx, sy, length, sway_range, tent_w, primary):
-    """Draw a single tentacle with organic S-curves, tapering toward the tip."""
-    pts = [(sx, sy)]
+    """Draw a tentacle with smooth organic Catmull-Rom curves and polygon tapering."""
+    controls = [(sx, sy)]
     segs = random.randint(3, 5)
     seg_len = length / segs
     for i in range(segs):
         d = 1 if i % 2 == 0 else -1
-        x = pts[-1][0] + random.uniform(sway_range * 0.3, sway_range) * d
-        y = pts[-1][1] + seg_len
-        pts.append((x, y))
-    for i in range(len(pts) - 1):
-        w = max(tent_w - i, 2)
-        draw.line([pts[i], pts[i + 1]], fill=primary, width=w)
-    r = max(2, tent_w // 2)
-    draw.ellipse([pts[-1][0] - r, pts[-1][1] - r, pts[-1][0] + r, pts[-1][1] + r], fill=primary)
+        x = controls[-1][0] + random.uniform(sway_range * 0.3, sway_range) * d
+        y = controls[-1][1] + seg_len
+        controls.append((x, y))
+    pts = _catmull_rom_open(controls, steps_per_seg=6)
+    _stroke_path_poly(draw, pts, tent_w, primary, taper_start=1.0, taper_end=0.2)
+    # Rounded tip
+    r = max(2, tent_w // 3)
+    tip = pts[-1]
+    draw.ellipse([tip[0] - r, tip[1] - r, tip[0] + r, tip[1] + r], fill=primary)
 
 
 def _draw_polygon_body(draw, points, fill, outline, line_w):
@@ -552,9 +716,11 @@ def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
     hand_y = arm_y + int(arm_len * random.uniform(0.5, 0.9))
     _draw_organic_limb(draw, arm_x, arm_y, hand_x, hand_y, arm_w, primary)
 
-    # --- body silhouette (organic blob) ---
+    # --- body silhouette (organic shape) ---
+    body_shape = random.choice([None, _pear_blob, _squat_blob])
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_rx, body_ry,
-                                  secondary, primary, line_w, wobble=0.06)
+                                  secondary, primary, line_w, wobble=0.08,
+                                  shape_func=body_shape)
 
     # --- back spikes ---
     spike_tier = random.choice(["none", "few", "many"])
@@ -588,7 +754,7 @@ def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
 
     # --- head (organic blob) ---
     head_pts = _draw_filled_blob(draw, head_cx, head_cy, head_r, int(head_r * 0.9),
-                                  secondary, primary, line_w, wobble=0.05)
+                                  secondary, primary, line_w, wobble=0.06)
 
     # --- face ---
     look_dir = random.choice([-1, 0, 1])
@@ -675,12 +841,14 @@ def _draw_spider_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
             jr = max(leg_thickness - 1, 2)
             draw.ellipse([knee_x - jr, knee_y - jr, knee_x + jr, knee_y + jr], fill=primary)
 
-    # --- body silhouette ---
-    _draw_filled_blob(draw, cx, cy, abd_rx, abd_ry, secondary, primary, line_w, wobble=0.06)
+    # --- body silhouette (organic shape) ---
+    spider_shape = random.choice([None, _pear_blob])
+    _draw_filled_blob(draw, cx, cy, abd_rx, abd_ry, secondary, primary, line_w,
+                       wobble=0.07, shape_func=spider_shape)
 
-    # head
+    # head (smooth organic)
     _draw_filled_blob(draw, cx, head_cy, head_r, int(head_r * 0.95),
-                       secondary, primary, line_w, wobble=0.05)
+                       secondary, primary, line_w, wobble=0.06)
 
     # --- eyes: 2, 4, 6, 8 clustered ---
     num_eyes = random.choice([2, 2, 4, 6, 8])
@@ -769,9 +937,11 @@ def _draw_werewolf_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
             ty = hand_y + claw_len * math.sin(a)
             draw.line([(hand_x, hand_y), (tx, ty)], fill=primary, width=max(line_w, 2))
 
-    # --- body silhouette ---
+    # --- body silhouette (organic shape) ---
+    wolf_shape = random.choice([None, _bean_blob, _squat_blob])
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
-                                  secondary, primary, line_w, wobble=0.07)
+                                  secondary, primary, line_w, wobble=0.08,
+                                  shape_func=wolf_shape)
 
     # --- fur tufts along body edge ---
     _draw_fur_edge(draw, body_pts, (int(body_hw * 0.04), int(body_hw * 0.14)),
@@ -857,9 +1027,11 @@ def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
         fx = lx + random.randint(-4, 4)
         _draw_organic_leg(draw, lx, ly, fx, ly + h, leg_w, primary, foot_r)
 
-    # --- body silhouette ---
+    # --- body silhouette (organic shape) ---
+    zombie_shape = random.choice([None, _bean_blob])
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
-                                  secondary, primary, line_w, wobble=0.09)
+                                  secondary, primary, line_w, wobble=0.10,
+                                  shape_func=zombie_shape)
 
     # --- stitches ---
     num_stitches = random.randint(1, 5)
@@ -975,9 +1147,11 @@ def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
         r = max(2, tent_w // 2)
         draw.ellipse([pts[-1][0] - r, pts[-1][1] - r, pts[-1][0] + r, pts[-1][1] + r], fill=primary)
 
-    # --- dome silhouette (organic) ---
+    # --- dome silhouette (organic shape) ---
+    octo_shape = random.choice([None, _squat_blob])
     _draw_filled_blob(draw, cx, dome_cy, dome_rx, dome_ry,
-                       secondary, primary, line_w, wobble=0.05)
+                       secondary, primary, line_w, wobble=0.06,
+                       shape_func=octo_shape)
 
     # --- face ---
     eye_r = max(int(dome_rx * random.uniform(0.14, 0.25)), 5)
@@ -1089,9 +1263,11 @@ def _draw_dragon_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
         _draw_organic_leg(draw, lx, ly, lx + random.randint(-3, 3), ly + leg_h,
                          leg_w, primary, foot_r)
 
-    # --- body silhouette ---
+    # --- body silhouette (organic shape) ---
+    dragon_shape = random.choice([None, _pear_blob, _squat_blob])
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
-                                  secondary, primary, line_w, wobble=0.06)
+                                  secondary, primary, line_w, wobble=0.07,
+                                  shape_func=dragon_shape)
 
     # --- spikes on back ---
     spike_tier = random.choice(["none", "few", "many"])
@@ -1168,13 +1344,14 @@ def _draw_cthulhu_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
         hand_y = ay + arm_len * random.uniform(0.3, 0.6)
         _draw_organic_limb(draw, ax, ay, hand_x, hand_y, arm_w, primary)
 
-    # --- body silhouette ---
+    # --- body silhouette (organic shape) ---
     _draw_filled_blob(draw, cx, body_cy, body_hw, body_hh,
-                       secondary, primary, line_w, wobble=0.06)
+                       secondary, primary, line_w, wobble=0.07,
+                       shape_func=random.choice([None, _squat_blob]))
 
     # --- head silhouette (organic, large) ---
     _draw_filled_blob(draw, cx, head_cy, head_rx, head_ry,
-                       secondary, primary, line_w, wobble=0.07)
+                       secondary, primary, line_w, wobble=0.08)
 
     # --- horns ---
     horn_h = int(head_ry * random.uniform(0.18, 0.38))
@@ -1362,9 +1539,11 @@ def _draw_default_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
             hand_y = ay + arm_len * random.uniform(0.1, 0.5)
             _draw_organic_limb(draw, ax, ay, hand_x, hand_y, arm_w, primary)
 
-    # body
+    # body (organic shape)
+    default_shape = random.choice([None, _pear_blob, _bean_blob, _squat_blob])
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
-                                  secondary, primary, line_w, wobble=0.08)
+                                  secondary, primary, line_w, wobble=0.10,
+                                  shape_func=default_shape)
 
     # horns
     if use_horns:
@@ -1459,9 +1638,19 @@ class TinyMonsters(BasePlugin):
         monster_name = generate_monster_name()
         archetype = _pick_archetype(archetype_mode)
 
+        # Render monster at 2x resolution for smooth anti-aliased edges
+        ss = 2
+        monster_img = Image.new("RGB",
+                                (width * ss, monster_zone_h * ss),
+                                secondary_color)
+        monster_draw = ImageDraw.Draw(monster_img)
         drawer = ARCHETYPE_DRAWERS[archetype]
-        drawer(draw, monster_cx, monster_cy, width, monster_zone_h,
-               primary_color, secondary_color, line_w)
+        drawer(monster_draw,
+               (width // 2) * ss, (monster_zone_h // 2) * ss,
+               width * ss, monster_zone_h * ss,
+               primary_color, secondary_color, line_w * ss)
+        monster_img = monster_img.resize((width, monster_zone_h), Image.LANCZOS)
+        image.paste(monster_img, (0, title_zone_h))
 
         name_font = get_font("Jost", max(int(height * 0.045), 14))
         if name_font:
