@@ -52,6 +52,11 @@
         </div>
 
         <div class="form-group">
+            <input type="checkbox" id="showLastBoot" name="showLastBoot" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Last Boot</span>
+        </div>
+
+        <div class="form-group">
             <input type="checkbox" id="showIp" name="showIp" onclick="this.value=this.checked ? 'true' : 'false';">
             <span>Local IP</span>
         </div>
@@ -94,6 +99,9 @@
             document.getElementById('showUptime').checked = pluginSettings.showUptime === 'true';
             document.getElementById('showUptime').value = pluginSettings.showUptime || 'true';
 
+            document.getElementById('showLastBoot').checked = pluginSettings.showLastBoot === 'true';
+            document.getElementById('showLastBoot').value = pluginSettings.showLastBoot || 'true';
+
             document.getElementById('showIp').checked = pluginSettings.showIp === 'true';
             document.getElementById('showIp').value = pluginSettings.showIp || 'true';
 
@@ -119,6 +127,9 @@
 
             document.getElementById('showUptime').checked = true;
             document.getElementById('showUptime').value = 'true';
+
+            document.getElementById('showLastBoot').checked = true;
+            document.getElementById('showLastBoot').value = 'true';
 
             document.getElementById('showIp').checked = true;
             document.getElementById('showIp').value = 'true';

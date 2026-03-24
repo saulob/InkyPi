@@ -4,6 +4,7 @@ import platform
 import socket
 import subprocess
 import time
+from datetime import datetime
 
 import psutil
 
@@ -32,6 +33,7 @@ class SystemStatus(BasePlugin):
         show_disk = settings.get("showDisk", "true") == "true"
         show_disk_used_total = settings.get("showDiskUsedTotal", "false") == "true"
         show_ram_used_total = settings.get("showRamUsedTotal", "false") == "true"
+        show_last_boot = settings.get("showLastBoot", "true") == "true"
         style = settings.get("style", "dots")
 
         metrics = []
@@ -76,6 +78,15 @@ class SystemStatus(BasePlugin):
         if show_uptime:
             uptime_str = self._get_uptime()
             metrics.append({"label": "UPTIME", "value_text": uptime_str, "type": "text"})
+
+        if show_last_boot:
+            try:
+                boot_ts = psutil.boot_time()
+                boot_dt = datetime.fromtimestamp(boot_ts)
+                boot_str = boot_dt.strftime("%Y-%m-%d %H:%M")
+                metrics.append({"label": "LAST BOOT", "value_text": boot_str, "type": "text"})
+            except Exception:
+                logger.exception("SystemStatus: failed to get boot time")
 
         if show_ip:
             ip = self._get_local_ip()
