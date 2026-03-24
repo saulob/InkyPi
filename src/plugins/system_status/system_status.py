@@ -132,10 +132,18 @@ class SystemStatus(BasePlugin):
     def _get_local_ip(self):
         """Get the primary local IPv4 address for the device.
 
-        Uses a UDP socket connect to a well-known external address to determine
-        the outbound interface IP (no packets are sent). Falls back to
-        inspecting network interfaces via psutil. Returns None when no valid
-        non-loopback IPv4 address is available.
+        Primary: use a UDP socket connect to an external address (no traffic
+        is sent) to determine the outbound interface IP.
+
+        Fallback: collect all IPv4 addresses from interfaces via
+        `psutil.net_if_addrs()`, filter out loopback and link-local, then
+        prioritize candidates using the following order:
+          1) 192.168.x.x
+          2) 10.x.x.x
+          3) 172.x.x.x
+          4) any other remaining IPv4
+
+        Returns the best candidate or None if no valid address is found.
         """
         # Preferred method: UDP socket to external host (doesn't send traffic)
         try:
@@ -148,19 +156,42 @@ class SystemStatus(BasePlugin):
         except OSError:
             ip = None
 
+        def _is_loopback(a):
+            return a.startswith("127.") if a else False
+
+        def _is_link_local(a):
+            return a.startswith("169.254.") if a else False
+
+        def _priority(a):
+            # Lower number => higher priority
+            if a.startswith("192.168."):
+                return 0
+            if a.startswith("10."):
+                return 1
+            if a.startswith("172."):
+                # Only treat 172.16.0.0 - 172.31.255.255 as private
+                try:
+                    parts = a.split('.')
+                    if len(parts) >= 2:
+                        second = int(parts[1])
+                        if 16 <= second <= 31:
+                            return 2
+                except Exception:
+                    pass
+            return 3
+
         def _valid_ipv4(a):
             if not a:
                 return False
-            if a.startswith("127."):
-                return False
-            if a.startswith("169.254."):
+            if _is_loopback(a) or _is_link_local(a):
                 return False
             return True
 
         if _valid_ipv4(ip):
             return ip
 
-        # Fallback: inspect interfaces and pick the first valid IPv4 address
+        # Fallback: collect all valid IPv4 addresses
+        candidates = []
         try:
             addrs = psutil.net_if_addrs()
             for iface, addr_list in addrs.items():
@@ -168,11 +199,16 @@ class SystemStatus(BasePlugin):
                     if addr.family == socket.AF_INET:
                         candidate = addr.address
                         if _valid_ipv4(candidate):
-                            return candidate
+                            candidates.append(candidate)
         except Exception:
-            pass
+            candidates = []
 
-        return None
+        if not candidates:
+            return None
+
+        # Sort candidates by priority and return the best one
+        candidates.sort(key=lambda a: _priority(a))
+        return candidates[0]
 
     def _get_device_name(self):
         """Detect device model or fallback to hostname."""
