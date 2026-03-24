@@ -1,39 +1,65 @@
+<style>
+    .display-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem 1.2rem;
+        margin-top: 0.75rem;
+    }
+
+    .display-grid .form-group {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+    }
+
+    .display-grid input[type="checkbox"] {
+        margin: 0;
+    }
+
+    .display-grid span {
+        white-space: nowrap;
+    }
+</style>
+
 <div class="form-group">
     <label class="form-label">Display:</label>
 
-    <div class="form-group">
-        <input type="checkbox" id="showCpu" name="showCpu" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>CPU</span>
-    </div>
+    <div class="display-grid">
+        <div class="form-group">
+            <input type="checkbox" id="showCpu" name="showCpu" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>CPU</span>
+        </div>
 
-    <div class="form-group">
-        <input type="checkbox" id="showRam" name="showRam" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>RAM</span>
-    </div>
+        <div class="form-group">
+            <input type="checkbox" id="showRam" name="showRam" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>RAM</span>
+        </div>
 
-    <div class="form-group">
-        <input type="checkbox" id="showTemp" name="showTemp" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>Temperature</span>
-    </div>
+        <div class="form-group">
+            <input type="checkbox" id="showTemp" name="showTemp" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Temperature</span>
+        </div>
 
-    <div class="form-group">
-        <input type="checkbox" id="showUptime" name="showUptime" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>Uptime</span>
-    </div>
+        <div class="form-group">
+            <input type="checkbox" id="showUptime" name="showUptime" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Uptime</span>
+        </div>
 
-    <div class="form-group">
-        <input type="checkbox" id="showIp" name="showIp" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>Local IP</span>
-    </div>
+        <div class="form-group">
+            <input type="checkbox" id="showIp" name="showIp" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Local IP</span>
+        </div>
 
-    <div class="form-group">
-        <input type="checkbox" id="showDisk" name="showDisk" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>Disk</span>
-    </div>
+        <div class="form-group">
+            <input type="checkbox" id="showDisk" name="showDisk" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Disk</span>
+        </div>
 
-    <div class="form-group">
-        <input type="checkbox" id="showDiskUsedTotal" name="showDiskUsedTotal" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>Show used / total</span>
+        <div class="form-group">
+            <input type="checkbox" id="showDiskUsedTotal" name="showDiskUsedTotal" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Show used / total</span>
+        </div>
     </div>
 </div>
 
