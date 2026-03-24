@@ -88,23 +88,13 @@ class FamousQuotes(BasePlugin):
             dimensions = dimensions[::-1]
             logger.debug(f"Vertical orientation detected, dimensions: {dimensions[0]}x{dimensions[1]}")
 
-        # Debug info
-        import datetime
-        now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        api_url = _build_api_url(category)
-
         # Prepare template parameters
         template_params = {
             "quote": quote_text,
             "author": author if (show_author and author) else "",
             "max_lines": max_lines,
             "show_author": show_author and bool(author),
-            "plugin_settings": settings,
-            "debug_category": category,
-            "debug_show_author": show_author,
-            "debug_max_lines": max_lines,
-            "debug_datetime": now_str,
-            "debug_api_url": api_url
+            "plugin_settings": settings
         }
 
         logger.info(f"Rendering quote: {quote_text[:50]}...")
