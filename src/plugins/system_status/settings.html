@@ -58,7 +58,7 @@
 
         <div class="form-group">
             <input type="checkbox" id="showDiskUsedTotal" name="showDiskUsedTotal" onclick="this.value=this.checked ? 'true' : 'false';">
-            <span>Show used / total</span>
+            <span>Disk show used/total</span>
         </div>
     </div>
 </div>
@@ -93,7 +93,7 @@
             document.getElementById('showDisk').value = pluginSettings.showDisk || 'true';
 
             document.getElementById('showDiskUsedTotal').checked = pluginSettings.showDiskUsedTotal === 'true';
-            document.getElementById('showDiskUsedTotal').value = pluginSettings.showDiskUsedTotal || 'false';
+            document.getElementById('showDiskUsedTotal').value = pluginSettings.showDiskUsedTotal || 'true';
 
             document.getElementById('style').value = pluginSettings.style || 'dots';
         } else {
@@ -115,8 +115,8 @@
             document.getElementById('showDisk').checked = true;
             document.getElementById('showDisk').value = 'true';
 
-            document.getElementById('showDiskUsedTotal').checked = false;
-            document.getElementById('showDiskUsedTotal').value = 'false';
+            document.getElementById('showDiskUsedTotal').checked = true;
+            document.getElementById('showDiskUsedTotal').value = 'true';
 
             document.getElementById('style').value = 'dots';
         }

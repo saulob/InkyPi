@@ -79,12 +79,27 @@
 }
 
 .ss-value {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    min-width: min(10ch, 12dvw);
+    gap: 0.15rem;
+}
+
+.ss-primary-value {
     font-size: clamp(11px, 3.6vh, 24px);
     font-weight: 700;
-    min-width: min(10ch, 12dvw);
-    text-align: right;
+    white-space: nowrap;
+}
+
+.ss-secondary-value {
+    font-size: clamp(9px, 2.2vh, 14px);
+    font-weight: 500;
+    opacity: 0.75;
     white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Dots style */

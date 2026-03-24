@@ -51,7 +51,7 @@ class SystemStatus(BasePlugin):
                 if show_disk_used_total:
                     used = disk.used
                     total = disk.total
-                    metric["value_text"] = self._format_bytes(used) + " / " + self._format_bytes(total)
+                    metric["secondary_text"] = self._format_bytes(used) + " / " + self._format_bytes(total)
                 metrics.append(metric)
             except Exception:
                 logger.exception("SystemStatus: failed to get disk usage")
