@@ -31,6 +31,7 @@ class SystemStatus(BasePlugin):
         show_ip = settings.get("showIp", "false") == "true"
         show_disk = settings.get("showDisk", "true") == "true"
         show_disk_used_total = settings.get("showDiskUsedTotal", "false") == "true"
+        show_ram_used_total = settings.get("showRamUsedTotal", "false") == "true"
         style = settings.get("style", "dots")
 
         metrics = []
@@ -40,8 +41,14 @@ class SystemStatus(BasePlugin):
             metrics.append({"label": "CPU", "value": cpu, "type": "progress"})
 
         if show_ram:
-            ram = psutil.virtual_memory().percent
-            metrics.append({"label": "RAM", "value": ram, "type": "progress"})
+            vm = psutil.virtual_memory()
+            ram_percent = vm.percent
+            ram_metric = {"label": "RAM", "value": ram_percent, "type": "progress"}
+            if show_ram_used_total:
+                used = vm.used
+                total = vm.total
+                ram_metric["secondary_text"] = self._format_bytes(used) + " / " + self._format_bytes(total)
+            metrics.append(ram_metric)
 
         if show_disk:
             try:
