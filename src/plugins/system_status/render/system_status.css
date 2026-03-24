@@ -3,16 +3,19 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding-top: min(3dvh, 2.5dvw);
-    padding-bottom: min(3dvh, 2.5dvw);
+    padding-top: min(1.6dvh, 1.2dvw);
+    padding-bottom: min(1.6dvh, 1.2dvw);
     font-family: "Jost";
     width: 100%;
     height: 100%;
-    gap: min(5dvh, 4.5dvw);
+    gap: min(2dvh, 1.6dvw);
+    box-sizing: border-box;
+    max-height: 100vh;
+    overflow: hidden;
 }
 
 .ss-header {
-    font-size: min(13dvh, 12dvw);
+    font-size: clamp(18px, 5.2vh, 48px);
     font-weight: 800;
     text-align: center;
     letter-spacing: 0.02em;
@@ -21,71 +24,83 @@
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 98%;
+    flex: 0 0 auto;
+    margin-bottom: 0.12rem;
 }
 
 .ss-subheader {
-    font-size: min(5dvh, 4.5dvw);
+    font-size: clamp(11px, 2.8vh, 22px);
     font-weight: 400;
     text-align: center;
-    margin-top: min(0.3dvh, 0.3dvw);
+    margin-top: 0.08rem;
     letter-spacing: 0.03em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 98%;
+    flex: 0 0 auto;
 }
 
 .ss-metrics {
     display: flex;
     flex-direction: column;
     width: 94%;
-    gap: min(4.5dvh, 4dvw);
+    gap: min(1.8dvh, 1.6dvw);
+    flex: 1 1 auto;
+    max-height: 100%;
+    overflow-y: auto;
+    padding-bottom: min(1.5dvh, 1.5dvw);
 }
 
 .ss-row {
     display: flex;
     align-items: center;
-    gap: min(4dvw, 4.5dvh);
+    gap: min(1.8dvw, 1.2dvh);
 }
 
 .ss-label {
-    font-size: min(6.5dvh, 5.8dvw);
+    font-size: clamp(11px, 3.2vh, 28px);
     font-weight: 700;
-    min-width: min(19dvw, 21dvh);
+    min-width: min(10ch, 16dvw);
     text-transform: uppercase;
     letter-spacing: 0.09em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 0 0 auto;
 }
 
 /* Progress row: dots/bar + value */
 .ss-progress {
     display: flex;
     align-items: center;
-    flex: 1;
-    gap: min(3.5dvw, 4dvh);
+    flex: 1 1 auto;
+    gap: min(1.4dvw, 1.2dvh);
 }
 
 .ss-value {
-    font-size: min(6dvh, 5.5dvw);
+    font-size: clamp(11px, 3.6vh, 24px);
     font-weight: 700;
-    min-width: min(15dvw, 17dvh);
+    min-width: min(10ch, 12dvw);
     text-align: right;
     white-space: nowrap;
+    overflow: hidden;
 }
 
 /* Dots style */
 .ss-dots {
     display: flex;
     align-items: center;
-    gap: min(1.1dvw, 1.3dvh);
-    flex: 1;
+    gap: min(0.6dvw, 0.8dvh);
+    flex: 1 1 auto;
 }
 
 .ss-dot {
-    flex: 1;
+    flex: 1 1 auto;
     aspect-ratio: 1;
-    max-height: min(4.8dvh, 4.3dvw);
+    max-height: min(3.2dvh, 2.8dvw);
     border-radius: 50%;
-    border: min(0.5dvh, 0.45dvw) solid currentColor;
+    border: min(0.38dvh, 0.32dvw) solid currentColor;
     opacity: 0.3;
 }
 
@@ -96,12 +111,12 @@
 
 /* Bar style */
 .ss-bar-track {
-    flex: 1;
-    height: min(4.8dvh, 4.3dvw);
-    border-radius: min(0.7dvh, 0.6dvw);
+    flex: 1 1 auto;
+    height: min(3.2dvh, 2.8dvw);
+    border-radius: min(0.6dvh, 0.5dvw);
     overflow: hidden;
-    background-image: radial-gradient(currentColor 1.8px, transparent 1.8px);
-    background-size: min(1.4dvw, 1.6dvh) min(1.4dvw, 1.6dvh);
+    background-image: radial-gradient(currentColor 1.6px, transparent 1.6px);
+    background-size: min(1.2dvw, 1.3dvh) min(1.2dvw, 1.3dvh);
     opacity: 0.25;
     position: relative;
 }
