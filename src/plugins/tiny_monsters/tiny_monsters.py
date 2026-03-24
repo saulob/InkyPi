@@ -923,120 +923,184 @@ def _centered_box(zone_w, zone_h, width_ratio, height_ratio):
 # ---------------------------------------------------------------------------
 
 def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
-    """Dinosaur silhouette-first: horizontal body plan with front head and rear legs."""
-    silhouette = _pick_template(DINOSAUR_SILHOUETTES)
+    """Cute doodle dinosaur drawn with overlapping simple shapes like reference art.
+
+    Drawing order (back to front): tail, legs, body oval, neck, head, face.
+    This creates the classic cute brontosaurus/baby dino look from the references.
+    """
     pose = _pick_template(DINOSAUR_POSE_TEMPLATES)
     facing = pose["facing"]
 
-    box_w, box_h = _centered_box(zone_w, zone_h, 0.70, 0.58)
-    bx0 = cx - box_w // 2
-    by0 = cy - box_h // 2
+    box_w, box_h = _centered_box(zone_w, zone_h, 0.68, 0.72)
 
-    body_len = int(box_w * silhouette["body_len"])
-    body_h = int(box_h * silhouette["body_h"])
-    neck_len = int(box_w * silhouette["neck"])
-    head_r = max(int(box_h * silhouette["head"]), 8)
-    tail_len = int(box_w * silhouette["tail"])
-    leg_h = int(box_h * silhouette["leg_h"])
-
+    # --- Core geometry: all positions relative to center ---
+    # Body: large oval slightly below center
     body_cx = cx
-    body_cy = by0 + int(box_h * 0.52 + box_h * pose["body_y"] * 0.25)
-    body_front_x = body_cx + facing * body_len // 2
-    body_back_x = body_cx - facing * body_len // 2
-    body_top = body_cy - body_h // 2
-    body_bottom = body_cy + body_h // 2
+    body_cy = cy + int(box_h * 0.10)
+    body_rx = int(box_w * 0.28)
+    body_ry = int(box_h * 0.19)
 
-    # Horizontal torso silhouette.
-    torso = [
-        (body_back_x, body_top + body_h * 0.22),
-        (body_cx - facing * body_len * 0.18, body_top),
-        (body_front_x - facing * body_len * 0.08, body_top + body_h * 0.10),
-        (body_front_x, body_top + body_h * 0.35),
-        (body_front_x - facing * body_len * 0.05, body_bottom - body_h * 0.10),
-        (body_cx - facing * body_len * 0.25, body_bottom),
-        (body_back_x + facing * body_len * 0.10, body_bottom - body_h * 0.04),
+    # Head: small round above and in front
+    head_cx = cx + facing * int(box_w * 0.08)
+    head_cy = cy - int(box_h * 0.28)
+    head_r = max(int(box_h * 0.10), 6)
+
+    # Neck dimensions
+    neck_w = max(int(box_w * 0.12), line_w + 5)
+
+    # Tail dimensions
+    tail_base_x = cx - facing * int(body_rx * 0.80)
+    tail_base_y = body_cy + int(body_ry * 0.05)
+    tail_tip_x = tail_base_x - facing * int(box_w * 0.18)
+    tail_tip_y = tail_base_y - int(box_h * 0.02)
+    tail_w = max(int(box_w * 0.09), line_w + 3)
+
+    # Legs: 4 short stubby ovals peeking below body
+    leg_rx = max(int(box_w * 0.05), 4)
+    leg_ry = max(int(box_h * 0.09), 5)
+    leg_cy = body_cy + int(body_ry * 0.84) + leg_ry // 2
+    leg_positions = [
+        cx - facing * int(body_rx * 0.55),
+        cx - facing * int(body_rx * 0.20),
+        cx + facing * int(body_rx * 0.20),
+        cx + facing * int(body_rx * 0.55),
     ]
-    draw.polygon(torso, fill=secondary, outline=primary, width=line_w)
 
-    # Tail always starts at rear and points backwards.
-    tail_anchor = (body_back_x, body_cy + body_h * 0.05)
-    tail_tip = (body_back_x - facing * tail_len, body_cy + body_h * 0.15)
-    tail_high = (body_back_x - facing * int(tail_len * 0.65), body_cy - body_h * 0.10)
-    draw.polygon([tail_anchor, tail_high, tail_tip], fill=secondary, outline=primary, width=line_w)
+    # === DRAW ORDER: back to front ===
 
-    # Neck and head in front, with smaller head/body ratio.
-    neck_base = (body_front_x - facing * int(body_len * 0.10), body_top + body_h * 0.12)
-    neck_top = (neck_base[0] + facing * neck_len, neck_base[1] - box_h * 0.18)
-    neck_w = max(int(body_h * 0.24), line_w + 2)
-    draw.polygon([
-        (neck_base[0], neck_base[1] - neck_w // 2),
-        (neck_top[0], neck_top[1] - neck_w // 2),
-        (neck_top[0], neck_top[1] + neck_w // 2),
-        (neck_base[0], neck_base[1] + neck_w // 2),
-    ], fill=secondary, outline=primary, width=line_w)
+    # 1. TAIL: thick tapered curve behind body
+    tail_mid_x = (tail_base_x + tail_tip_x) // 2
+    tail_mid_y = tail_base_y - int(box_h * 0.05)
+    tail_pts = _bezier_pts(
+        (tail_base_x, tail_base_y),
+        (tail_mid_x, tail_mid_y),
+        (tail_tip_x, tail_tip_y),
+        steps=10,
+    )
+    _stroke_path_poly(draw, tail_pts, tail_w, secondary, taper_start=1.0, taper_end=0.28)
+    # Outline both edges of the tail
+    left_e, right_e = [], []
+    for i, (tx, ty) in enumerate(tail_pts):
+        t = i / max(len(tail_pts) - 1, 1)
+        hw = tail_w * 0.5 * (1.0 + (0.28 - 1.0) * t)
+        if i == 0:
+            dx, dy = tail_pts[1][0] - tx, tail_pts[1][1] - ty
+        elif i == len(tail_pts) - 1:
+            dx, dy = tx - tail_pts[-2][0], ty - tail_pts[-2][1]
+        else:
+            dx, dy = tail_pts[i + 1][0] - tail_pts[i - 1][0], tail_pts[i + 1][1] - tail_pts[i - 1][1]
+        ln = math.hypot(dx, dy) or 1
+        nx, ny = -dy / ln, dx / ln
+        left_e.append((tx + nx * hw, ty + ny * hw))
+        right_e.append((tx - nx * hw, ty - ny * hw))
+    for edge in [left_e, right_e]:
+        for i in range(len(edge) - 1):
+            draw.line([(int(edge[i][0]), int(edge[i][1])),
+                       (int(edge[i+1][0]), int(edge[i+1][1]))],
+                      fill=primary, width=line_w)
 
-    head_cx = neck_top[0] + facing * int(head_r * 0.6)
-    head_cy = neck_top[1] + int(head_r * 0.1)
-    head_poly = [
-        (head_cx - facing * head_r, head_cy - head_r * 0.60),
-        (head_cx + facing * head_r * 0.85, head_cy - head_r * 0.40),
-        (head_cx + facing * head_r, head_cy + head_r * 0.05),
-        (head_cx + facing * head_r * 0.55, head_cy + head_r * 0.55),
-        (head_cx - facing * head_r * 0.65, head_cy + head_r * 0.55),
-    ]
-    draw.polygon(head_poly, fill=secondary, outline=primary, width=line_w)
+    # 2. LEGS: stubby ovals peeking below body
+    for lx in leg_positions:
+        draw.ellipse(
+            [lx - leg_rx, leg_cy - leg_ry, lx + leg_rx, leg_cy + leg_ry],
+            fill=secondary, outline=primary, width=line_w,
+        )
 
-    if pose["horned"]:
-        frill_r = max(int(head_r * 0.85), 8)
-        draw.ellipse([head_cx - facing * int(head_r * 0.85) - frill_r,
-                      head_cy - frill_r,
-                      head_cx - facing * int(head_r * 0.85) + frill_r,
-                      head_cy + frill_r],
-                     fill=secondary, outline=primary, width=line_w)
+    # 3. BODY: large filled oval (covers leg tops and tail base)
+    draw.ellipse(
+        [body_cx - body_rx, body_cy - body_ry, body_cx + body_rx, body_cy + body_ry],
+        fill=secondary, outline=primary, width=line_w,
+    )
 
-    # Rear legs under the rear half of torso.
-    rear_bias = silhouette["rear_bias"]
-    leg_xs = [
-        body_cx - facing * int(body_len * rear_bias),
-        body_cx - facing * int(body_len * (rear_bias - 0.16)),
-    ]
-    leg_w = max(int(body_len * 0.10), line_w + 2)
-    for lx in leg_xs:
-        thigh_y = body_bottom - int(body_h * 0.05)
-        foot_y = min(thigh_y + leg_h, by0 + box_h - line_w)
-        draw.polygon([
-            (lx - leg_w // 2, thigh_y),
-            (lx + leg_w // 2, thigh_y),
-            (lx + leg_w // 3, foot_y),
-            (lx - leg_w // 3, foot_y),
-        ], fill=secondary, outline=primary, width=line_w)
+    # 4. NECK: thick filled curve connecting body-top to head-bottom
+    neck_base = (cx + facing * int(box_w * 0.04), body_cy - int(body_ry * 0.72))
+    neck_top = (head_cx - facing * int(head_r * 0.06), head_cy + int(head_r * 0.62))
+    neck_ctrl = (cx + facing * int(box_w * 0.12), cy - int(box_h * 0.10))
+    neck_pts = _bezier_pts(neck_base, neck_ctrl, neck_top, steps=12)
+    # Fill the neck area
+    _stroke_path_poly(draw, neck_pts, neck_w, secondary, taper_start=1.0, taper_end=0.90)
+    # Outline both edges of the neck
+    left_n, right_n = [], []
+    for i, (nx, ny) in enumerate(neck_pts):
+        t = i / max(len(neck_pts) - 1, 1)
+        hw = neck_w * 0.5 * (1.0 + (0.90 - 1.0) * t)
+        if i == 0:
+            dx, dy = neck_pts[1][0] - nx, neck_pts[1][1] - ny
+        elif i == len(neck_pts) - 1:
+            dx, dy = nx - neck_pts[-2][0], ny - neck_pts[-2][1]
+        else:
+            dx, dy = neck_pts[i + 1][0] - neck_pts[i - 1][0], neck_pts[i + 1][1] - neck_pts[i - 1][1]
+        ln = math.hypot(dx, dy) or 1
+        px, py = -dy / ln, dx / ln
+        left_n.append((nx + px * hw, ny + py * hw))
+        right_n.append((nx - px * hw, ny - py * hw))
+    for edge in [left_n, right_n]:
+        for i in range(len(edge) - 1):
+            draw.line([(int(edge[i][0]), int(edge[i][1])),
+                       (int(edge[i+1][0]), int(edge[i+1][1]))],
+                      fill=primary, width=line_w)
 
-    # Tiny arm in front section.
-    arm_base = (body_front_x - facing * int(body_len * 0.22), body_cy)
-    arm_tip = (arm_base[0] + facing * int(body_len * 0.12), arm_base[1] + int(body_h * 0.18))
-    draw.line([arm_base, arm_tip], fill=primary, width=max(line_w, 2))
+    # 5. Mask junction seams with fill color (clean doodle overlaps)
+    # Body-neck junction
+    jx, jy = neck_base
+    jr = int(neck_w * 0.52)
+    draw.ellipse([jx - jr, jy - jr, jx + jr, jy + jr], fill=secondary)
+    # Head-neck junction
+    jx, jy = neck_top
+    jr = int(neck_w * 0.46)
+    draw.ellipse([jx - jr, jy - jr, jx + jr, jy + jr], fill=secondary)
 
-    eye_x = head_cx + facing * int(head_r * 0.22)
-    eye_y = head_cy - int(head_r * 0.15)
-    eye_r = max(head_r // 6, 2)
+    # 6. HEAD: small filled circle
+    draw.ellipse(
+        [head_cx - head_r, head_cy - head_r, head_cx + head_r, head_cy + head_r],
+        fill=secondary, outline=primary, width=line_w,
+    )
+
+    # === FACE: cute minimal details ===
+    eye_x = head_cx + facing * int(head_r * 0.26)
+    eye_y = head_cy - int(head_r * 0.06)
+    eye_r = max(int(head_r * 0.17), 2)
     draw.ellipse([eye_x - eye_r, eye_y - eye_r, eye_x + eye_r, eye_y + eye_r], fill=primary)
 
-    mouth_x = head_cx + facing * int(head_r * 0.10)
-    mouth_y = head_cy + int(head_r * 0.35)
-    draw.line([(mouth_x - facing * int(head_r * 0.50), mouth_y),
-               (mouth_x + facing * int(head_r * 0.55), mouth_y)],
-              fill=primary, width=max(line_w - 1, 1))
+    smile_y = head_cy + int(head_r * 0.32)
+    smile_pts = _bezier_pts(
+        (head_cx - facing * int(head_r * 0.06), smile_y),
+        (head_cx + facing * int(head_r * 0.16), smile_y + int(head_r * 0.12)),
+        (head_cx + facing * int(head_r * 0.38), smile_y + int(head_r * 0.01)),
+        steps=7,
+    )
+    _draw_thick_curve(draw, smile_pts, max(line_w - 1, 1), primary)
 
-    # Optional back plates for silhouette breakup while preserving body plan.
+    # Optional cheek blush
+    if random.random() < 0.50:
+        cr = max(int(head_r * 0.13), 2)
+        draw.ellipse(
+            [head_cx + facing * int(head_r * 0.50) - cr,
+             head_cy + int(head_r * 0.30) - cr,
+             head_cx + facing * int(head_r * 0.50) + cr,
+             head_cy + int(head_r * 0.30) + cr],
+            fill=primary,
+        )
+
+    # Optional back spikes (2-4 small triangles along body top arc)
     if random.random() < 0.55:
-        count = random.randint(3, 6)
-        for i in range(count):
-            t = i / max(count - 1, 1)
-            sx = body_back_x + facing * int(t * body_len * 0.70)
-            sy = body_top + int(body_h * (0.08 + abs(0.5 - t) * 0.10))
-            sh = max(int(body_h * 0.20), 5)
-            sw = max(int(body_len * 0.03), 3)
-            draw.polygon([(sx, sy - sh), (sx - sw, sy), (sx + sw, sy)], fill=primary)
+        n_spikes = random.randint(2, 4)
+        for i in range(n_spikes):
+            t = (i + 1) / (n_spikes + 1)
+            angle = math.pi * (0.70 + t * 0.45)
+            sx = body_cx + int(body_rx * 0.90 * math.cos(angle))
+            sy = body_cy + int(body_ry * 0.90 * math.sin(angle))
+            sh = max(int(body_ry * 0.30), 4)
+            sw = max(int(body_rx * 0.07), 2)
+            ox = (sx - body_cx)
+            oy = (sy - body_cy)
+            ol = math.hypot(ox, oy) or 1
+            draw.polygon(
+                [(int(sx + ox / ol * sh), int(sy + oy / ol * sh)),
+                 (int(sx - oy / ol * sw), int(sy + ox / ol * sw)),
+                 (int(sx + oy / ol * sw), int(sy - ox / ol * sw))],
+                fill=primary,
+            )
 
 
 def _draw_spider_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
