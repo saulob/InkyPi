@@ -45,6 +45,11 @@ class SystemStatus(BasePlugin):
             temp = self._get_temperature()
             if temp is not None:
                 metrics.append({"label": "TEMP", "value": temp, "suffix": "°C", "type": "progress"})
+            else:
+                # Ensure the Temperature row is always present when enabled.
+                # Show 'N/A' if temperature cannot be retrieved to avoid
+                # visual jumps in the layout.
+                metrics.append({"label": "TEMP", "value_text": "N/A", "type": "text"})
 
         if show_uptime:
             uptime_str = self._get_uptime()
