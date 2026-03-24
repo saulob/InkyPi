@@ -23,7 +23,7 @@
 
     <div class="form-group">
         <input type="checkbox" id="showIp" name="showIp" onclick="this.value=this.checked ? 'true' : 'false';">
-        <span>IP Address</span>
+        <span>Local IP</span>
     </div>
 </div>
 
@@ -51,7 +51,7 @@
             document.getElementById('showUptime').value = pluginSettings.showUptime || 'true';
 
             document.getElementById('showIp').checked = pluginSettings.showIp === 'true';
-            document.getElementById('showIp').value = pluginSettings.showIp || 'false';
+            document.getElementById('showIp').value = pluginSettings.showIp || 'true';
 
             document.getElementById('style').value = pluginSettings.style || 'dots';
         } else {
@@ -67,8 +67,8 @@
             document.getElementById('showUptime').checked = true;
             document.getElementById('showUptime').value = 'true';
 
-            document.getElementById('showIp').checked = false;
-            document.getElementById('showIp').value = 'false';
+            document.getElementById('showIp').checked = true;
+            document.getElementById('showIp').value = 'true';
 
             document.getElementById('style').value = 'dots';
         }

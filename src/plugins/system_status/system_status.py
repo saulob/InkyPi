@@ -52,7 +52,10 @@ class SystemStatus(BasePlugin):
 
         if show_ip:
             ip = self._get_local_ip()
-            metrics.append({"label": "IP", "value_text": ip, "type": "text"})
+            if ip:
+                metrics.append({"label": "Local IP", "value_text": ip, "type": "text"})
+            else:
+                logger.debug("SystemStatus: no valid local IP found; hiding IP metric")
 
         device_name = self._get_device_name()
 
@@ -127,16 +130,49 @@ class SystemStatus(BasePlugin):
         return " ".join(parts)
 
     def _get_local_ip(self):
-        """Get local IP address."""
+        """Get the primary local IPv4 address for the device.
+
+        Uses a UDP socket connect to a well-known external address to determine
+        the outbound interface IP (no packets are sent). Falls back to
+        inspecting network interfaces via psutil. Returns None when no valid
+        non-loopback IPv4 address is available.
+        """
+        # Preferred method: UDP socket to external host (doesn't send traffic)
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
-                s.connect(("10.255.255.255", 1))
-                return s.getsockname()[0]
+                s.connect(("8.8.8.8", 80))
+                ip = s.getsockname()[0]
             finally:
                 s.close()
         except OSError:
-            return "No network"
+            ip = None
+
+        def _valid_ipv4(a):
+            if not a:
+                return False
+            if a.startswith("127."):
+                return False
+            if a.startswith("169.254."):
+                return False
+            return True
+
+        if _valid_ipv4(ip):
+            return ip
+
+        # Fallback: inspect interfaces and pick the first valid IPv4 address
+        try:
+            addrs = psutil.net_if_addrs()
+            for iface, addr_list in addrs.items():
+                for addr in addr_list:
+                    if addr.family == socket.AF_INET:
+                        candidate = addr.address
+                        if _valid_ipv4(candidate):
+                            return candidate
+        except Exception:
+            pass
+
+        return None
 
     def _get_device_name(self):
         """Detect device model or fallback to hostname."""
