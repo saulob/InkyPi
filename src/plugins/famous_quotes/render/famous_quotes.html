@@ -1,0 +1,15 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+
+<div class="quotes-container">
+    <div class="quotes-wrapper">
+        <div class="quotes-title">Famous Quote</div>
+        <div class="quote-text">{{ quote }}</div>
+        {% if show_author %}
+        <div class="quote-author">— {{ author }}</div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

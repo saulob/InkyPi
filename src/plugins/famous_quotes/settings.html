@@ -1,0 +1,51 @@
+<div class="form-group">
+    <div class="form-group">
+        <label for="category" class="form-label">Quote Category</label>
+        <select id="category" name="category" class="form-input">
+            <option value="random">random</option>
+            <option value="art">art</option>
+            <option value="courage">courage</option>
+            <option value="death">death</option>
+            <option value="faith">faith</option>
+            <option value="fear">fear</option>
+            <option value="freedom">freedom</option>
+            <option value="happiness">happiness</option>
+            <option value="humor">humor</option>
+            <option value="inspirational">inspirational</option>
+            <option value="leadership">leadership</option>
+            <option value="life">life</option>
+            <option value="love">love</option>
+            <option value="nature">nature</option>
+            <option value="philosophy">philosophy</option>
+            <option value="relationships">relationships</option>
+            <option value="success">success</option>
+            <option value="time">time</option>
+            <option value="truth">truth</option>
+            <option value="wisdom">wisdom</option>
+            <option value="writing">writing</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="show_author" class="form-label">
+            <input type="checkbox" id="show_author" name="show_author" onclick="this.value=this.checked ? 'true' : 'false';">
+            Show Author Name
+        </label>
+    </div>
+    
+    <div class="form-group">
+        <label for="max_lines" class="form-label">Maximum Text Lines</label>
+        <input type="number" id="max_lines" name="max_lines" min="1" max="10" value="4" class="form-input">
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (loadPluginSettings) {
+            document.getElementById('category').value = pluginSettings.category || 'random';
+            document.getElementById('show_author').checked = pluginSettings.show_author === 'true' || pluginSettings.show_author === true;
+            document.getElementById('show_author').value = document.getElementById('show_author').checked ? 'true' : 'false';
+            document.getElementById('max_lines').value = pluginSettings.max_lines || '4';
+        }
+    });
+</script>

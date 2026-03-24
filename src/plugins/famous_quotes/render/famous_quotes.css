@@ -1,0 +1,51 @@
+.quotes-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Jost";
+  height: 100%;
+  width: 100%;
+  padding: 2dvh;
+}
+
+.quotes-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2dvh;
+}
+
+.quotes-title {
+  font-size: min(8dvw, 8dvh);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  margin-bottom: 4dvh;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.quote-text {
+  font-size: min(5.5dvw, 5.5dvh);
+  line-height: 1.5;
+  font-style: italic;
+  margin: 0 2dvw 3dvh 2dvw;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+}
+
+.quote-author {
+  font-size: min(4dvw, 4dvh);
+  margin-top: 2dvh;
+  font-weight: 500;
+  opacity: 0.85;
+  letter-spacing: 0.05em;
+}
