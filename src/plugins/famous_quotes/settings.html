@@ -35,7 +35,7 @@
     
     <div class="form-group">
         <label for="max_lines" class="form-label">Maximum Text Lines</label>
-        <input type="number" id="max_lines" name="max_lines" min="1" max="10" value="4" class="form-input">
+        <input type="number" id="max_lines" name="max_lines" min="1" max="10" value="3" class="form-input">
     </div>
 </div>
 
@@ -45,7 +45,7 @@
             document.getElementById('category').value = pluginSettings.category || 'random';
             document.getElementById('show_author').checked = pluginSettings.show_author === 'true' || pluginSettings.show_author === true;
             document.getElementById('show_author').value = document.getElementById('show_author').checked ? 'true' : 'false';
-            document.getElementById('max_lines').value = pluginSettings.max_lines || '4';
+            document.getElementById('max_lines').value = pluginSettings.max_lines || '3';
         }
     });
 </script>

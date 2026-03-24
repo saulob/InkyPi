@@ -80,9 +80,9 @@ class FamousQuotes(BasePlugin):
             show_author = False
 
         try:
-            max_lines = int(settings.get("max_lines", 4))
+            max_lines = int(settings.get("max_lines", 3))
         except Exception:
-            max_lines = 4
+            max_lines = 3
 
         # Get device dimensions
         dimensions = device_config.get_resolution()
