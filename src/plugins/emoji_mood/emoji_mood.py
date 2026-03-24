@@ -1292,40 +1292,19 @@ class EmojiMood(BasePlugin):
         if isinstance(settings, dict):
             behavior_value = str(settings.get("behavior") or "random").lower()
 
-        # Variable to store mood selection info for debug
-        mood_info = None
+        # Determine mood using Mode and Behavior
 
         if mode_key == "random":
             # Mode is Random, so use Behavior to decide how to select a mood
             if behavior_value == "smart":
-                mood_info = _get_smart_mood()
-                mood_key = mood_info["mood"]
+                mood_key = _get_smart_mood()["mood"]
             else:
                 # Random behavior: equal probability for all moods
                 mood_key = random.choice(list(MOOD_DATA.keys()))
-                # Create mood_info dict for consistency
-                now = datetime.now()
-                weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-                weekday_name = weekday_names[now.weekday()]
-                mood_info = {
-                    "mood": mood_key,
-                    "time_period": "N/A",
-                    "weekday_name": weekday_name,
-                    "selected_weight": "equal",
-                }
+                # No debug info required
         else:
             # Mode is set to a specific mood, ignore Behavior and use that mood
             mood_key = mode_key if mode_key in MOOD_DATA else random.choice(list(MOOD_DATA.keys()))
-            # Create mood_info dict for consistency
-            now = datetime.now()
-            weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-            weekday_name = weekday_names[now.weekday()]
-            mood_info = {
-                "mood": mood_key,
-                "time_period": "N/A",
-                "weekday_name": weekday_name,
-                "selected_weight": "fixed",
-            }
 
         mood = MOOD_DATA[mood_key]
 
@@ -1337,10 +1316,7 @@ class EmojiMood(BasePlugin):
             language = str(settings.get("language") or "en").lower()
 
         captions_for_mood = CAPTION_TRANSLATIONS.get(language, CAPTION_TRANSLATIONS["en"]).get(mood_key, MOOD_DATA[mood_key]["captions"])
-        caption_text = random.choice(captions_for_mood)
-
-        # Debug: append mood/debug info in English (do not translate debug text)
-        caption = f"{caption_text} - {mood_info['mood']} - {mood_info['weekday_name']} - {mood_info['time_period']} - {mood_info['selected_weight']}"
+        caption = random.choice(captions_for_mood)
 
         # Extract primary (text) and secondary (background) colors from settings
         primary_color = "#000000"  # default: black
