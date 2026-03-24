@@ -39,8 +39,8 @@ class SystemStatus(BasePlugin):
         metrics = []
 
         if show_cpu:
-            cpu = psutil.cpu_percent(interval=1)
-            metrics.append({"label": "CPU", "value": cpu, "type": "progress"})
+            cpu_metric = {"label": "CPU", "value": self._get_cpu_usage(), "type": "progress"}
+            metrics.append(cpu_metric)
 
         if show_ram:
             vm = psutil.virtual_memory()
@@ -149,6 +149,66 @@ class SystemStatus(BasePlugin):
                 pass
 
         return None
+
+    def _get_cpu_usage(self):
+        """Get total system CPU usage percentage.
+
+        On WSL, psutil measures the Linux guest CPU, not the Windows host CPU
+        shown by Task Manager. In that case, try reading the host CPU usage via
+        PowerShell so the plugin matches what the user sees on Windows.
+        """
+        if self._is_wsl():
+            windows_cpu = self._get_windows_host_cpu_usage()
+            if windows_cpu is not None:
+                return windows_cpu
+
+        try:
+            cpu = psutil.cpu_percent(interval=0.2)
+        except Exception:
+            cpu = 0.0
+
+        try:
+            cpu = float(cpu)
+        except Exception:
+            cpu = 0.0
+
+        return max(0.0, min(100.0, cpu))
+
+    def _is_wsl(self):
+        """Return True when running inside Windows Subsystem for Linux."""
+        try:
+            if os.environ.get("WSL_INTEROP"):
+                return True
+            return "microsoft" in platform.release().lower()
+        except Exception:
+            return False
+
+    def _get_windows_host_cpu_usage(self):
+        """Read Windows host CPU usage from WSL to match Task Manager.
+
+        Returns None if PowerShell/counters are unavailable.
+        """
+        try:
+            result = subprocess.run(
+                [
+                    "powershell.exe",
+                    "-NoProfile",
+                    "-Command",
+                    "(Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter \"Name='_Total'\" | Select-Object -ExpandProperty PercentProcessorTime)",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+            if result.returncode != 0:
+                return None
+
+            value = result.stdout.strip().replace(",", ".")
+            cpu = float(value)
+            return max(0.0, min(100.0, cpu))
+        except Exception:
+            logger.debug("SystemStatus: failed to read Windows host CPU usage", exc_info=True)
+            return None
 
     def _format_bytes(self, num_bytes):
         """Format bytes into human-friendly string (GB or MB)."""
