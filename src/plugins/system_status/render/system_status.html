@@ -25,7 +25,13 @@
                     <div class="ss-bar-fill" style="width: {{ metric.value }}%; background-color: {{ plugin_settings.textColor }};"></div>
                 </div>
                 {% endif %}
-                <div class="ss-value">{{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}</div>
+                <div class="ss-value">
+                    {% if metric.value_text %}
+                        {{ metric.value_text }}
+                    {% else %}
+                        {{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}
+                    {% endif %}
+                </div>
             </div>
 
             {% elif metric.type == "text" %}

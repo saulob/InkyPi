@@ -29,6 +29,8 @@ class SystemStatus(BasePlugin):
         show_temp = settings.get("showTemp", "true") == "true"
         show_uptime = settings.get("showUptime", "true") == "true"
         show_ip = settings.get("showIp", "false") == "true"
+        show_disk = settings.get("showDisk", "true") == "true"
+        show_disk_used_total = settings.get("showDiskUsedTotal", "false") == "true"
         style = settings.get("style", "dots")
 
         metrics = []
@@ -40,6 +42,19 @@ class SystemStatus(BasePlugin):
         if show_ram:
             ram = psutil.virtual_memory().percent
             metrics.append({"label": "RAM", "value": ram, "type": "progress"})
+
+        if show_disk:
+            try:
+                disk = psutil.disk_usage('/')
+                disk_percent = disk.percent
+                metric = {"label": "Disk", "value": disk_percent, "type": "progress"}
+                if show_disk_used_total:
+                    used = disk.used
+                    total = disk.total
+                    metric["value_text"] = self._format_bytes(used) + " / " + self._format_bytes(total)
+                metrics.append(metric)
+            except Exception:
+                logger.exception("SystemStatus: failed to get disk usage")
 
         if show_temp:
             temp = self._get_temperature()
@@ -116,6 +131,17 @@ class SystemStatus(BasePlugin):
                 pass
 
         return None
+
+    def _format_bytes(self, num_bytes):
+        """Format bytes into human-friendly string (GB or MB)."""
+        try:
+            gb = float(num_bytes) / (1024 ** 3)
+            if gb >= 1:
+                return f"{gb:.0f}GB"
+            mb = float(num_bytes) / (1024 ** 2)
+            return f"{mb:.0f}MB"
+        except Exception:
+            return "0B"
 
     def _get_uptime(self):
         """Get system uptime as readable text."""
