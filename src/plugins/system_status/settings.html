@@ -70,6 +70,16 @@
             <input type="checkbox" id="showDiskUsedTotal" name="showDiskUsedTotal" onclick="this.value=this.checked ? 'true' : 'false';">
             <span>Disk show used/total</span>
         </div>
+
+        <div class="form-group">
+            <input type="checkbox" id="showModel" name="showModel" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Model</span>
+        </div>
+
+        <div class="form-group">
+            <input type="checkbox" id="showOS" name="showOS" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>OS</span>
+        </div>
     </div>
 </div>
 
@@ -111,6 +121,12 @@
             document.getElementById('showDiskUsedTotal').checked = pluginSettings.showDiskUsedTotal === 'true';
             document.getElementById('showDiskUsedTotal').value = pluginSettings.showDiskUsedTotal || 'true';
 
+            document.getElementById('showModel').checked = pluginSettings.showModel === 'true';
+            document.getElementById('showModel').value = pluginSettings.showModel || 'true';
+
+            document.getElementById('showOS').checked = pluginSettings.showOS === 'true';
+            document.getElementById('showOS').value = pluginSettings.showOS || 'true';
+
             document.getElementById('style').value = pluginSettings.style || 'dots';
         } else {
             document.getElementById('showCpu').checked = true;
@@ -139,6 +155,12 @@
 
             document.getElementById('showDiskUsedTotal').checked = true;
             document.getElementById('showDiskUsedTotal').value = 'true';
+
+            document.getElementById('showModel').checked = true;
+            document.getElementById('showModel').value = 'true';
+
+            document.getElementById('showOS').checked = true;
+            document.getElementById('showOS').value = 'true';
 
             document.getElementById('style').value = 'dots';
         }

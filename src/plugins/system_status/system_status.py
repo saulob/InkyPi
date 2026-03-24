@@ -34,6 +34,8 @@ class SystemStatus(BasePlugin):
         show_disk_used_total = settings.get("showDiskUsedTotal", "false") == "true"
         show_ram_used_total = settings.get("showRamUsedTotal", "false") == "true"
         show_last_boot = settings.get("showLastBoot", "true") == "true"
+        show_model = settings.get("showModel", "true") == "true"
+        show_os = settings.get("showOS", "true") == "true"
         style = settings.get("style", "dots")
 
         metrics = []
@@ -94,6 +96,20 @@ class SystemStatus(BasePlugin):
                 metrics.append({"label": "Local IP", "value_text": ip, "type": "text"})
             else:
                 logger.debug("SystemStatus: no valid local IP found; hiding IP metric")
+
+        if show_model:
+            model = self._get_model()
+            if model:
+                metrics.append({"label": "MODEL", "value_text": model, "type": "text"})
+            else:
+                # Ensure the Model row is always present when enabled.
+                # Show 'N/A' if model information cannot be retrieved.
+                metrics.append({"label": "MODEL", "value_text": "N/A", "type": "text"})
+
+        if show_os:
+            os_version = self._get_os_version()
+            if os_version:
+                metrics.append({"label": "OS", "value_text": os_version, "type": "text"})
 
         device_name = self._get_device_name()
 
@@ -333,3 +349,114 @@ class SystemStatus(BasePlugin):
                 pass
 
         return platform.node() or "System"
+
+    def _get_model(self):
+        """Get device model with proper fallbacks.
+        
+        On Raspberry Pi: read /proc/device-tree/model
+        On Linux (non-RPi): read DMI identifiers (product_name, sys_vendor)
+        On Windows: use platform.uname().machine
+        Returns None if no valid model found (never falls back to hostname).
+        """
+        # 1. Try Raspberry Pi model first
+        model_path = "/proc/device-tree/model"
+        if os.path.isfile(model_path):
+            try:
+                with open(model_path) as f:
+                    model = f.read().strip().rstrip("\x00")
+                if model:
+                    return model
+            except OSError:
+                pass
+        
+        # 2. Linux non-RPi: try DMI identifiers
+        dmi_product_name = "/sys/devices/virtual/dmi/id/product_name"
+        dmi_sys_vendor = "/sys/devices/virtual/dmi/id/sys_vendor"
+        
+        vendor = None
+        product = None
+        
+        if os.path.isfile(dmi_sys_vendor):
+            try:
+                with open(dmi_sys_vendor) as f:
+                    vendor = f.read().strip()
+                if not vendor:
+                    vendor = None
+            except OSError:
+                pass
+        
+        if os.path.isfile(dmi_product_name):
+            try:
+                with open(dmi_product_name) as f:
+                    product = f.read().strip()
+                if not product:
+                    product = None
+            except OSError:
+                pass
+        
+        # Combine vendor and product, or return whichever is available
+        if vendor and product:
+            return f"{vendor} {product}"
+        if vendor:
+            return vendor
+        if product:
+            return product
+        
+        # 3. Windows: use machine info
+        try:
+            if platform.system() == "Windows":
+                uname = platform.uname()
+                if uname.machine:
+                    return uname.machine
+        except Exception:
+            pass
+        
+        # 4. No valid model found
+        return None
+
+    def _get_os_version(self):
+        """Get OS version string.
+        
+        On Linux: read /etc/os-release (prefer PRETTY_NAME)
+        On Windows: use platform.system() + platform.release()
+        Returns None if not available.
+        """
+        # Try /etc/os-release (Linux, RPi)
+        os_release_path = "/etc/os-release"
+        if os.path.isfile(os_release_path):
+            try:
+                with open(os_release_path) as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        if line.startswith("PRETTY_NAME="):
+                            # Extract value, remove quotes
+                            value = line.split("=", 1)[1].strip()
+                            value = value.strip('"\'')
+                            if value:
+                                return value
+                        elif line.startswith("NAME="):
+                            # Fallback to NAME if PRETTY_NAME not found
+                            value = line.split("=", 1)[1].strip()
+                            value = value.strip('"\'')
+                            if value:
+                                name = value
+                    # If we found a NAME but no PRETTY_NAME, return it
+                    try:
+                        return name
+                    except NameError:
+                        pass
+            except OSError:
+                pass
+        
+        # Windows fallback: system + release (e.g., "Windows 11")
+        try:
+            system = platform.system()
+            if system == "Windows":
+                release = platform.release()
+                if release:
+                    return f"{system} {release}"
+                return system
+        except Exception:
+            pass
+        
+        return None
