@@ -644,19 +644,151 @@ def _draw_polygon_body(draw, points, fill, outline, line_w):
     draw.polygon(points, fill=fill, outline=outline, width=line_w)
 
 
+def _oval_silhouette(cx, cy, rx, ry, wobble=0.0):
+    return _ellipse_points(cx, cy, rx, ry)
+
+
+def _round_silhouette(cx, cy, rx, ry, wobble=0.0):
+    radius = min(rx, ry)
+    return _ellipse_points(cx, cy, radius, radius)
+
+
+def _rounded_rect_silhouette(cx, cy, rx, ry, wobble=0.0):
+    return _rounded_rect_points(cx, cy, rx, ry, max(min(rx, ry) / 3, 1))
+
+
+def _squared_silhouette(cx, cy, rx, ry, wobble=0.0):
+    return _rounded_rect_points(cx, cy, rx, ry, max(min(rx, ry) / 8, 1))
+
+
+def _capsule_silhouette(cx, cy, rx, ry, wobble=0.0):
+    return _rounded_rect_points(cx, cy, rx, ry, max(min(rx, ry) / 2.2, 1))
+
+
+BODY_SHAPES = {
+    "oval": _oval_silhouette,
+    "round": _round_silhouette,
+    "rounded_rect": _rounded_rect_silhouette,
+    "squared": _squared_silhouette,
+    "capsule": _capsule_silhouette,
+}
+
+
+def _pick_template(templates):
+    return random.choice(templates)
+
+
+DINOSAUR_TEMPLATES = [
+    {"body_tier": "tall", "body_shape": "oval", "neck_tier": "long", "spike_tier": "few",
+     "eye_style": "cute", "mouth_style": "smile", "tail_tier": "long"},
+    {"body_tier": "chubby", "body_shape": "squared", "neck_tier": "short", "spike_tier": "many",
+     "eye_style": "angry", "mouth_style": "grin", "tail_tier": "thick"},
+    {"body_tier": "normal", "body_shape": "round", "neck_tier": "none", "spike_tier": "none",
+     "eye_style": "normal", "mouth_style": "smile", "tail_tier": "short"},
+    {"body_tier": "normal", "body_shape": "rounded_rect", "neck_tier": "medium", "spike_tier": "plates",
+     "eye_style": "sleepy", "mouth_style": "open", "tail_tier": "medium"},
+]
+
+SPIDER_TEMPLATES = [
+    {"abdomen_tier": "small", "abdomen_shape": "oval", "head_ratio": 0.70, "num_pairs": 4,
+     "leg_len_tier": "long", "eye_count": 8, "mouth_style": "smile"},
+    {"abdomen_tier": "medium", "abdomen_shape": "round", "head_ratio": 0.58, "num_pairs": 3,
+     "leg_len_tier": "medium", "eye_count": 6, "mouth_style": "confused"},
+    {"abdomen_tier": "large", "abdomen_shape": "oval", "head_ratio": 0.62, "num_pairs": 4,
+     "leg_len_tier": "short", "eye_count": 4, "mouth_style": "open"},
+    {"abdomen_tier": "medium", "abdomen_shape": "capsule", "head_ratio": 0.52, "num_pairs": 4,
+     "leg_len_tier": "long", "eye_count": 2, "mouth_style": "smile"},
+]
+
+WEREWOLF_TEMPLATES = [
+    {"build": "lean", "body_shape": "rounded_rect", "arm_pose": "raised", "eye_style": "angry",
+     "mouth_style": "grin", "fur_tier": "sparse"},
+    {"build": "stocky", "body_shape": "squared", "arm_pose": "lowered", "eye_style": "normal",
+     "mouth_style": "smile", "fur_tier": "heavy"},
+    {"build": "hulking", "body_shape": "oval", "arm_pose": "reaching", "eye_style": "angry",
+     "mouth_style": "teeth", "fur_tier": "heavy"},
+    {"build": "hunched", "body_shape": "capsule", "arm_pose": "raised", "eye_style": "cute",
+     "mouth_style": "open", "fur_tier": "spiky"},
+]
+
+ZOMBIE_TEMPLATES = [
+    {"body_tier": "thin", "body_shape": "rounded_rect", "arm_mode": "both", "eye_dead": True,
+     "mouth_style": "confused"},
+    {"body_tier": "normal", "body_shape": "squared", "arm_mode": "one", "eye_dead": False,
+     "mouth_style": "open"},
+    {"body_tier": "wide", "body_shape": "oval", "arm_mode": "both", "eye_dead": True,
+     "mouth_style": "teeth"},
+    {"body_tier": "thin", "body_shape": "capsule", "arm_mode": "both", "eye_dead": False,
+     "mouth_style": "smile"},
+]
+
+OCTOPUS_TEMPLATES = [
+    {"dome_tier": "small", "dome_shape": "round", "n_tentacles": 8, "tent_len_tier": "long",
+     "eye_count": 2, "mouth_style": "smile"},
+    {"dome_tier": "medium", "dome_shape": "oval", "n_tentacles": 6, "tent_len_tier": "medium",
+     "eye_count": 3, "mouth_style": "open"},
+    {"dome_tier": "large", "dome_shape": "capsule", "n_tentacles": 5, "tent_len_tier": "short",
+     "eye_count": 2, "mouth_style": "confused"},
+    {"dome_tier": "medium", "dome_shape": "round", "n_tentacles": 7, "tent_len_tier": "long",
+     "eye_count": 2, "mouth_style": "sleepy"},
+]
+
+DRAGON_TEMPLATES = [
+    {"body_tier": "compact", "body_shape": "oval", "wing_tier": "large", "n_legs": 2,
+     "tail_tier": "long", "spike_tier": "few", "eye_style": "cute", "mouth_style": "grin"},
+    {"body_tier": "wide", "body_shape": "squared", "wing_tier": "small", "n_legs": 4,
+     "tail_tier": "side", "spike_tier": "many", "eye_style": "normal", "mouth_style": "teeth"},
+    {"body_tier": "tall", "body_shape": "rounded_rect", "wing_tier": "large", "n_legs": 2,
+     "tail_tier": "long", "spike_tier": "few", "eye_style": "angry", "mouth_style": "smile"},
+    {"body_tier": "compact", "body_shape": "round", "wing_tier": "none", "n_legs": 4,
+     "tail_tier": "side", "spike_tier": "many", "eye_style": "sleepy", "mouth_style": "open"},
+]
+
+CTHULHU_TEMPLATES = [
+    {"head_tier": "large", "head_shape": "oval", "body_shape": "round", "n_eyes": 2,
+     "tent_total": 5, "tent_len_tier": "long", "horns": True, "wings": False},
+    {"head_tier": "very_large", "head_shape": "capsule", "body_shape": "squared", "n_eyes": 4,
+     "tent_total": 7, "tent_len_tier": "short", "horns": True, "wings": True},
+    {"head_tier": "large", "head_shape": "round", "body_shape": "oval", "n_eyes": 3,
+     "tent_total": 6, "tent_len_tier": "long", "horns": False, "wings": True},
+    {"head_tier": "very_large", "head_shape": "oval", "body_shape": "rounded_rect", "n_eyes": 2,
+     "tent_total": 4, "tent_len_tier": "short", "horns": True, "wings": False},
+]
+
+GHOST_TEMPLATES = [
+    {"size_tier": "small", "eye_count": 1, "mouth_style": "open", "arm_style": "stubs"},
+    {"size_tier": "medium", "eye_count": 2, "mouth_style": "smile", "arm_style": "reaching"},
+    {"size_tier": "large", "eye_count": 3, "mouth_style": "confused", "arm_style": "one_only"},
+    {"size_tier": "medium", "eye_count": 2, "mouth_style": "none", "arm_style": "none"},
+]
+
+DEFAULT_TEMPLATES = [
+    {"body_shape": "oval", "use_tentacles": False, "use_wings": True, "use_tail": False,
+     "use_horns": True, "n_legs": 2, "eye_count": 2, "mouth_style": "smile"},
+    {"body_shape": "rounded_rect", "use_tentacles": True, "use_wings": False, "use_tail": True,
+     "use_horns": False, "n_legs": 0, "eye_count": 3, "mouth_style": "open"},
+    {"body_shape": "squared", "use_tentacles": False, "use_wings": False, "use_tail": True,
+     "use_horns": True, "n_legs": 4, "eye_count": 1, "mouth_style": "grin"},
+    {"body_shape": "round", "use_tentacles": False, "use_wings": True, "use_tail": False,
+     "use_horns": False, "n_legs": 2, "eye_count": 2, "mouth_style": "cute"},
+]
+
+
 # ---------------------------------------------------------------------------
 # Archetype drawing templates — cartoon doodle style
 # ---------------------------------------------------------------------------
 
 def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Dinosaur: rounded body, curved neck, thick tail, small arms, short legs, back spikes."""
+    template = _pick_template(DINOSAUR_TEMPLATES)
+
     # --- pose: slight tilt and offset ---
     tilt = random.uniform(-0.03, 0.03)
     lean_x = int(zone_w * random.uniform(-0.02, 0.02))
     bcx = cx + lean_x
 
     # --- body proportions ---
-    body_tier = random.choice(["chubby", "normal", "tall"])
+    body_tier = template["body_tier"]
     if body_tier == "chubby":
         body_rx = int(zone_w * random.uniform(0.12, 0.16))
         body_ry = int(zone_h * random.uniform(0.12, 0.16))
@@ -671,7 +803,7 @@ def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
 
     # --- head: large relative to body (cartoon proportion) ---
     head_r = max(int(body_rx * random.uniform(0.55, 0.85)), 14)
-    neck_tier = random.choice(["none", "short", "long"])
+    neck_tier = template["neck_tier"]
     if neck_tier == "none":
         neck_len = 0
         head_cx = bcx + int(body_rx * 0.4)
@@ -686,7 +818,15 @@ def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
         head_cy = body_cy - body_ry - neck_len - int(head_r * 0.1)
 
     # --- tail: thick, curved ---
-    tail_len = int(zone_w * random.uniform(0.08, 0.18))
+    tail_tier = template["tail_tier"]
+    if tail_tier == "short":
+        tail_len = int(zone_w * random.uniform(0.05, 0.10))
+    elif tail_tier == "medium":
+        tail_len = int(zone_w * random.uniform(0.10, 0.15))
+    elif tail_tier == "thick":
+        tail_len = int(zone_w * random.uniform(0.08, 0.14))
+    else:
+        tail_len = int(zone_w * random.uniform(0.16, 0.24))
     tail_w = max(line_w + 3, int(body_rx * 0.25))
     tail_x0 = bcx - body_rx + int(body_rx * 0.15)
     tail_y0 = body_cy + int(body_ry * random.uniform(0.0, 0.3))
@@ -717,13 +857,13 @@ def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
     _draw_organic_limb(draw, arm_x, arm_y, hand_x, hand_y, arm_w, primary)
 
     # --- body silhouette (organic shape) ---
-    body_shape = random.choice([None, _pear_blob, _squat_blob])
+    body_shape = BODY_SHAPES[template["body_shape"]]
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_rx, body_ry,
                                   secondary, primary, line_w, wobble=0.08,
                                   shape_func=body_shape)
 
     # --- back spikes ---
-    spike_tier = random.choice(["none", "few", "many"])
+    spike_tier = template["spike_tier"]
     if spike_tier != "none":
         n_spikes = random.randint(2, 4) if spike_tier == "few" else random.randint(5, 8)
         spike_size = random.choice(["small", "large"])
@@ -754,20 +894,21 @@ def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
 
     # --- head (organic blob) ---
     head_pts = _draw_filled_blob(draw, head_cx, head_cy, head_r, int(head_r * 0.9),
-                                  secondary, primary, line_w, wobble=0.06)
+                                  secondary, primary, line_w, wobble=0.06,
+                                  shape_func=BODY_SHAPES["round"])
 
     # --- face ---
     look_dir = random.choice([-1, 0, 1])
     eye_r = max(int(head_r * random.uniform(0.22, 0.35)), 5)
     eye_y = head_cy - int(head_r * random.uniform(0.05, 0.20))
     eye_spread = head_r * random.uniform(0.25, 0.45)
-    eye_style = random.choice(["normal", "cute", "sleepy"])
+    eye_style = template["eye_style"]
     _draw_expressive_eyes(draw,
                           [(head_cx - eye_spread, eye_y), (head_cx + eye_spread, eye_y)],
                           eye_r, primary, secondary, line_w,
                           style=eye_style, look_dir=look_dir)
 
-    mouth_style = random.choice(["smile", "grin", "open", "confused"])
+    mouth_style = template["mouth_style"]
     mouth_y = head_cy + int(head_r * random.uniform(0.30, 0.50))
     mouth_w = max(int(head_r * random.uniform(0.40, 0.70)), 8)
     _draw_mouth(draw, head_cx, mouth_y, mouth_w, primary, secondary, line_w, style=mouth_style)
@@ -783,8 +924,10 @@ def _draw_dinosaur_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
 
 def _draw_spider_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Spider: rounded body, segmented curved legs with joints, big clustered eyes."""
+    template = _pick_template(SPIDER_TEMPLATES)
+
     # --- body proportions ---
-    body_tier = random.choice(["small", "medium", "large"])
+    body_tier = template["abdomen_tier"]
     if body_tier == "small":
         abd_rx = int(zone_w * random.uniform(0.05, 0.07))
         abd_ry = int(zone_h * random.uniform(0.06, 0.08))
@@ -796,15 +939,15 @@ def _draw_spider_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
         abd_ry = int(zone_h * random.uniform(0.13, 0.18))
 
     # head size (cartoon=bigger head)
-    head_ratio = random.uniform(0.50, 0.80)
+    head_ratio = template["head_ratio"]
     head_r = max(int(min(abd_rx, abd_ry) * head_ratio), 10)
     head_gap = random.uniform(0.10, 0.35)
     head_cy = cy - abd_ry - int(head_r * (1 - head_gap))
 
     # --- legs: 3-4 pairs, organic curves ---
-    num_pairs = random.choice([3, 3, 4, 4])
+    num_pairs = template["num_pairs"]
     leg_thickness = max(line_w + 1, int(abd_rx * 0.10))
-    leg_len_tier = random.choice(["short", "medium", "long"])
+    leg_len_tier = template["leg_len_tier"]
     if leg_len_tier == "short":
         seg1 = int(zone_w * random.uniform(0.07, 0.11))
         seg2 = int(zone_w * random.uniform(0.05, 0.08))
@@ -842,16 +985,17 @@ def _draw_spider_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
             draw.ellipse([knee_x - jr, knee_y - jr, knee_x + jr, knee_y + jr], fill=primary)
 
     # --- body silhouette (organic shape) ---
-    spider_shape = random.choice([None, _pear_blob])
+    spider_shape = BODY_SHAPES[template["abdomen_shape"]]
     _draw_filled_blob(draw, cx, cy, abd_rx, abd_ry, secondary, primary, line_w,
                        wobble=0.07, shape_func=spider_shape)
 
     # head (smooth organic)
     _draw_filled_blob(draw, cx, head_cy, head_r, int(head_r * 0.95),
-                       secondary, primary, line_w, wobble=0.06)
+                       secondary, primary, line_w, wobble=0.06,
+                       shape_func=BODY_SHAPES["round"])
 
     # --- eyes: 2, 4, 6, 8 clustered ---
-    num_eyes = random.choice([2, 2, 4, 6, 8])
+    num_eyes = template["eye_count"]
     eye_r = max(int(head_r * random.uniform(0.18, 0.32)), 4)
     sp_x = head_r * random.uniform(0.25, 0.50)
     sp_y = head_r * random.uniform(0.15, 0.30)
@@ -870,23 +1014,25 @@ def _draw_spider_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
                      (cx - sp_x * 0.6, head_cy + sp_y * 0.3), (cx + sp_x * 0.6, head_cy + sp_y * 0.3),
                      (cx - sp_x * 0.35, head_cy + sp_y), (cx + sp_x * 0.35, head_cy + sp_y)]
     _draw_expressive_eyes(draw, positions, eye_r, primary, secondary, line_w,
-                          style=random.choice(["normal", "cute"]))
+                          style="cute" if num_eyes >= 6 else "normal")
 
     # mandibles / smile
     m_y = head_cy + head_r - 2
-    mouth_style = random.choice(["smile", "open", "confused"])
+    mouth_style = template["mouth_style"]
     _draw_mouth(draw, cx, m_y, max(int(head_r * 0.5), 6), primary, secondary, line_w,
                 style=mouth_style)
 
 
 def _draw_werewolf_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Werewolf: upright body, fur edges, pointed ears, claws, toothy grin."""
+    template = _pick_template(WEREWOLF_TEMPLATES)
+
     # --- pose ---
     lean = random.uniform(-0.02, 0.02) * zone_w
     bcx = cx + int(lean)
 
     # --- body (large torso, cartoon) ---
-    build = random.choice(["lean", "stocky", "hulking"])
+    build = template["build"]
     if build == "lean":
         body_hw = int(zone_w * random.uniform(0.08, 0.12))
         body_hh = int(zone_h * random.uniform(0.20, 0.26))
@@ -912,7 +1058,7 @@ def _draw_werewolf_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
     # --- arms (thick, with claws) ---
     arm_w = max(line_w + 2, int(body_hw * 0.18))
     arm_len = int(body_hw * random.uniform(0.50, 0.90))
-    arm_pose = random.choice(["neutral", "raised", "lowered"])
+    arm_pose = template["arm_pose"]
     claw_count = random.choice([2, 3, 4])
     for side_name, side in (("left", -1), ("right", 1)):
         ax = bcx + side * body_hw
@@ -938,13 +1084,20 @@ def _draw_werewolf_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
             draw.line([(hand_x, hand_y), (tx, ty)], fill=primary, width=max(line_w, 2))
 
     # --- body silhouette (organic shape) ---
-    wolf_shape = random.choice([None, _bean_blob, _squat_blob])
+    wolf_shape = BODY_SHAPES[template["body_shape"]]
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
                                   secondary, primary, line_w, wobble=0.08,
                                   shape_func=wolf_shape)
 
     # --- fur tufts along body edge ---
-    _draw_fur_edge(draw, body_pts, (int(body_hw * 0.04), int(body_hw * 0.14)),
+    fur_tier = template["fur_tier"]
+    if fur_tier == "sparse":
+        tuft_range = (int(body_hw * 0.03), int(body_hw * 0.07))
+    elif fur_tier == "spiky":
+        tuft_range = (int(body_hw * 0.06), int(body_hw * 0.12))
+    else:
+        tuft_range = (int(body_hw * 0.08), int(body_hw * 0.16))
+    _draw_fur_edge(draw, body_pts, tuft_range,
                    primary, line_w)
 
     # --- ears (pointed, triangular) ---
@@ -963,7 +1116,7 @@ def _draw_werewolf_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
     eye_r = max(int(min(body_hw, body_hh) * random.uniform(0.09, 0.14)), 5)
     eye_y = body_cy - int(body_hh * random.uniform(0.22, 0.35))
     eye_spread = body_hw * random.uniform(0.30, 0.50)
-    eye_style = random.choice(["angry", "normal"])
+    eye_style = template["eye_style"]
     _draw_expressive_eyes(draw,
                           [(bcx - eye_spread, eye_y), (bcx + eye_spread, eye_y)],
                           eye_r, primary, secondary, line_w,
@@ -972,18 +1125,21 @@ def _draw_werewolf_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, l
     # toothy grin
     mouth_y = body_cy + int(body_hh * random.uniform(0.05, 0.18))
     mouth_w = max(int(body_hw * random.uniform(0.30, 0.50)), 10)
-    _draw_mouth(draw, bcx, mouth_y, mouth_w, primary, secondary, line_w, style="grin")
+    _draw_mouth(draw, bcx, mouth_y, mouth_w, primary, secondary, line_w,
+                style=template["mouth_style"])
 
 
 def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Zombie: loose posture, slightly bent limbs, uneven face, stitches."""
+    template = _pick_template(ZOMBIE_TEMPLATES)
+
     # --- posture: tilted ---
     tilt = random.uniform(-0.04, 0.04) * zone_w
     bcx = cx + int(tilt)
     body_lean = random.uniform(-0.03, 0.03) * zone_h
 
     # --- body ---
-    body_tier = random.choice(["thin", "normal", "wide"])
+    body_tier = template["body_tier"]
     if body_tier == "thin":
         body_hw = int(zone_w * random.uniform(0.08, 0.11))
         body_hh = int(zone_h * random.uniform(0.20, 0.26))
@@ -999,7 +1155,7 @@ def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
     # --- arms (bent, hanging, one sometimes missing) ---
     arm_w = max(line_w + 2, int(body_hw * 0.16))
     arm_len = int(body_hw * random.uniform(0.55, 0.95))
-    has_both = random.random() < 0.80
+    has_both = template["arm_mode"] == "both"
     arm_sides = [("left", -1), ("right", 1)]
     if not has_both:
         arm_sides = [arm_sides[random.randint(0, 1)]]
@@ -1028,7 +1184,7 @@ def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
         _draw_organic_leg(draw, lx, ly, fx, ly + h, leg_w, primary, foot_r)
 
     # --- body silhouette (organic shape) ---
-    zombie_shape = random.choice([None, _bean_blob])
+    zombie_shape = BODY_SHAPES[template["body_shape"]]
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
                                   secondary, primary, line_w, wobble=0.10,
                                   shape_func=zombie_shape)
@@ -1044,13 +1200,13 @@ def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
     eye_spread = body_hw * random.uniform(0.28, 0.45)
 
     # one eye might be X (dead)
-    dead_eye = random.random() < 0.30
+    dead_eye = template["eye_dead"]
     for idx, (ex, ey_off, er) in enumerate([
         (bcx - eye_spread, random.randint(-2, 2), left_eye_r),
         (bcx + eye_spread, random.randint(0, 3), right_eye_r),
     ]):
         ey = eye_y + ey_off
-        eye_pts = _organic_blob(ex, ey, er, er, wobble=0.05)
+        eye_pts = BODY_SHAPES["round"](ex, ey, er, er, wobble=0.05)
         draw.polygon(eye_pts, fill=secondary, outline=primary, width=line_w)
         if dead_eye and idx == 1:
             cr = max(er - 2, 2)
@@ -1063,10 +1219,14 @@ def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
     # mouth (crooked line + missing teeth)
     mouth_y = body_cy + int(body_hh * random.uniform(0.10, 0.22))
     mouth_w = max(int(body_hw * random.uniform(0.25, 0.45)), 8)
+    mouth_style = template["mouth_style"]
     mouth_pts = _bezier_pts((bcx - mouth_w, mouth_y + random.randint(-3, 3)),
                              (bcx, mouth_y + random.randint(-4, 4)),
                              (bcx + mouth_w, mouth_y + random.randint(-3, 3)), steps=8)
-    _draw_thick_curve(draw, mouth_pts, line_w, primary)
+    if mouth_style == "smile":
+        _draw_thick_curve(draw, mouth_pts, line_w, primary)
+    else:
+        _draw_thick_curve(draw, mouth_pts, line_w, primary)
     # teeth
     n_teeth = random.randint(2, 5)
     tw = max(mouth_w * 2 // (n_teeth + 1), 3)
@@ -1095,8 +1255,10 @@ def _draw_zombie_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
 
 def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Octopus: round head/dome, thick curling tentacles, soft curves."""
+    template = _pick_template(OCTOPUS_TEMPLATES)
+
     # --- dome ---
-    dome_tier = random.choice(["small", "medium", "large"])
+    dome_tier = template["dome_tier"]
     if dome_tier == "small":
         dome_rx = int(zone_w * random.uniform(0.09, 0.13))
         dome_ry = int(zone_h * random.uniform(0.09, 0.13))
@@ -1107,7 +1269,7 @@ def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
         dome_rx = int(zone_w * random.uniform(0.18, 0.24))
         dome_ry = int(zone_h * random.uniform(0.16, 0.22))
 
-    dome_shape = random.choice(["round", "wide"])
+    dome_shape = template["dome_shape"]
     if dome_shape == "wide":
         dome_rx = int(dome_rx * 1.2)
         dome_ry = int(dome_ry * 0.85)
@@ -1115,9 +1277,9 @@ def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
     dome_cy = cy - int(zone_h * random.uniform(0.04, 0.10))
 
     # --- tentacles: thick, curling ---
-    n_tentacles = random.randint(4, 8)
+    n_tentacles = template["n_tentacles"]
     tent_w = max(line_w + 2, int(dome_rx * 0.15))
-    tent_len_tier = random.choice(["short", "medium", "long"])
+    tent_len_tier = template["tent_len_tier"]
     tent_spread = dome_rx * random.uniform(1.2, 1.8)
     tent_step = tent_spread / max(n_tentacles - 1, 1)
     tent_start_y = dome_cy + dome_ry - line_w
@@ -1148,7 +1310,7 @@ def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
         draw.ellipse([pts[-1][0] - r, pts[-1][1] - r, pts[-1][0] + r, pts[-1][1] + r], fill=primary)
 
     # --- dome silhouette (organic shape) ---
-    octo_shape = random.choice([None, _squat_blob])
+    octo_shape = BODY_SHAPES[dome_shape]
     _draw_filled_blob(draw, cx, dome_cy, dome_rx, dome_ry,
                        secondary, primary, line_w, wobble=0.06,
                        shape_func=octo_shape)
@@ -1157,7 +1319,7 @@ def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
     eye_r = max(int(dome_rx * random.uniform(0.14, 0.25)), 5)
     eye_y = dome_cy - int(dome_ry * random.uniform(0.02, 0.18))
     spread = dome_rx * random.uniform(0.30, 0.55)
-    n_eyes = random.choice([2, 2, 3])
+    n_eyes = template["eye_count"]
     if n_eyes == 2:
         positions = [(cx - spread, eye_y), (cx + spread, eye_y)]
     else:
@@ -1166,7 +1328,7 @@ def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
     _draw_expressive_eyes(draw, positions, eye_r, primary, secondary, line_w, style=eye_style)
 
     mouth_y = dome_cy + int(dome_ry * random.uniform(0.25, 0.45))
-    mouth_style = random.choice(["smile", "open", "confused"])
+    mouth_style = template["mouth_style"]
     _draw_mouth(draw, cx, mouth_y, max(int(dome_rx * 0.3), 6), primary, secondary, line_w,
                 style=mouth_style)
 
@@ -1181,11 +1343,13 @@ def _draw_octopus_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
 
 def _draw_dragon_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Dragon: curved body, simple membrane wings, tail, spikes, expressive face."""
+    template = _pick_template(DRAGON_TEMPLATES)
+
     lean = random.uniform(-0.02, 0.02) * zone_w
     bcx = cx + int(lean)
 
     # --- body ---
-    body_tier = random.choice(["compact", "wide", "tall"])
+    body_tier = template["body_tier"]
     if body_tier == "compact":
         body_hw = int(zone_w * random.uniform(0.10, 0.14))
         body_hh = int(zone_h * random.uniform(0.13, 0.18))
@@ -1199,7 +1363,7 @@ def _draw_dragon_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
     body_cy = cy + int(zone_h * 0.02)
 
     # --- wings (membrane with curves) ---
-    wing_tier = random.choice(["none", "small", "large", "large"])
+    wing_tier = template["wing_tier"]
     if wing_tier != "none":
         if wing_tier == "small":
             wing_w = int(zone_w * random.uniform(0.07, 0.12))
@@ -1225,9 +1389,15 @@ def _draw_dragon_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
                 draw.line([(wx, wy), rib_end], fill=primary, width=max(line_w - 1, 1))
 
     # --- tail (curved) ---
-    tail_len = int(zone_w * random.uniform(0.08, 0.20))
+    tail_tier = template["tail_tier"]
+    if tail_tier == "side":
+        tail_len = int(zone_w * random.uniform(0.06, 0.12))
+    elif tail_tier == "long":
+        tail_len = int(zone_w * random.uniform(0.14, 0.22))
+    else:
+        tail_len = int(zone_w * random.uniform(0.08, 0.16))
     tail_w = max(line_w + 2, int(body_hw * 0.18))
-    tail_side = random.choice([-1, 1])
+    tail_side = -1 if tail_tier == "side" else random.choice([-1, 1])
     tail_x0 = bcx + tail_side * body_hw
     tail_y0 = body_cy + int(body_hh * random.uniform(0.2, 0.5))
     tail_ctrl = (tail_x0 + tail_side * tail_len * 0.5,
@@ -1264,13 +1434,13 @@ def _draw_dragon_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
                          leg_w, primary, foot_r)
 
     # --- body silhouette (organic shape) ---
-    dragon_shape = random.choice([None, _pear_blob, _squat_blob])
+    dragon_shape = BODY_SHAPES[template["body_shape"]]
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
                                   secondary, primary, line_w, wobble=0.07,
                                   shape_func=dragon_shape)
 
     # --- spikes on back ---
-    spike_tier = random.choice(["none", "few", "many"])
+    spike_tier = template["spike_tier"]
     if spike_tier != "none":
         n_sp = random.randint(2, 4) if spike_tier == "few" else random.randint(5, 8)
         for i in range(n_sp):
@@ -1295,21 +1465,23 @@ def _draw_dragon_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, lin
     eye_r = max(int(min(body_hw, body_hh) * random.uniform(0.10, 0.16)), 5)
     eye_y = body_cy - int(body_hh * random.uniform(0.18, 0.32))
     eye_spread = body_hw * random.uniform(0.30, 0.50)
-    eye_style = random.choice(["normal", "angry", "cute"])
+    eye_style = template["eye_style"]
     _draw_expressive_eyes(draw,
                           [(bcx - eye_spread, eye_y), (bcx + eye_spread, eye_y)],
                           eye_r, primary, secondary, line_w, style=eye_style)
 
     mouth_y = body_cy + int(body_hh * random.uniform(0.12, 0.28))
     mouth_w = max(int(body_hw * random.uniform(0.30, 0.50)), 8)
-    mouth_style = random.choice(["grin", "teeth", "smile"])
+    mouth_style = template["mouth_style"]
     _draw_mouth(draw, bcx, mouth_y, mouth_w, primary, secondary, line_w, style=mouth_style)
 
 
 def _draw_cthulhu_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Cthulhu: large head, tentacles from mouth, soft flowing shapes, compact body."""
+    template = _pick_template(CTHULHU_TEMPLATES)
+
     # --- head (oversized, cartoon) ---
-    head_tier = random.choice(["large", "very_large"])
+    head_tier = template["head_tier"]
     if head_tier == "large":
         head_rx = int(zone_w * random.uniform(0.13, 0.18))
         head_ry = int(zone_h * random.uniform(0.15, 0.20))
@@ -1324,7 +1496,7 @@ def _draw_cthulhu_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
     body_cy = head_cy + head_ry + body_hh - int(body_hh * random.uniform(0.10, 0.25))
 
     # --- wings (small, optional) ---
-    if random.random() < 0.55:
+    if template["wings"]:
         wing_w = int(zone_w * random.uniform(0.05, 0.12))
         wing_h = int(zone_h * random.uniform(0.08, 0.16))
         for side in (-1, 1):
@@ -1347,11 +1519,12 @@ def _draw_cthulhu_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
     # --- body silhouette (organic shape) ---
     _draw_filled_blob(draw, cx, body_cy, body_hw, body_hh,
                        secondary, primary, line_w, wobble=0.07,
-                       shape_func=random.choice([None, _squat_blob]))
+                       shape_func=BODY_SHAPES[template["body_shape"]])
 
     # --- head silhouette (organic, large) ---
     _draw_filled_blob(draw, cx, head_cy, head_rx, head_ry,
-                       secondary, primary, line_w, wobble=0.08)
+                       secondary, primary, line_w, wobble=0.08,
+                       shape_func=BODY_SHAPES[template["head_shape"]])
 
     # --- horns ---
     horn_h = int(head_ry * random.uniform(0.18, 0.38))
@@ -1365,7 +1538,7 @@ def _draw_cthulhu_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
     eye_r = max(int(head_rx * random.uniform(0.10, 0.17)), 5)
     eye_y = head_cy - int(head_ry * random.uniform(0.08, 0.25))
     eye_spread = head_rx * random.uniform(0.30, 0.50)
-    n_eyes = random.choice([2, 2, 3, 4])
+    n_eyes = template["n_eyes"]
     if n_eyes == 2:
         positions = [(cx - eye_spread, eye_y), (cx + eye_spread, eye_y)]
     elif n_eyes == 3:
@@ -1379,12 +1552,12 @@ def _draw_cthulhu_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
                           style=random.choice(["normal", "angry", "sleepy"]))
 
     # --- mouth tentacles ---
-    tent_total = random.randint(3, 7)
+    tent_total = template["tent_total"]
     tent_spread = head_rx * random.uniform(0.6, 1.0)
     tent_step = tent_spread / max(tent_total - 1, 1)
     tent_start_y = head_cy + int(head_ry * random.uniform(0.35, 0.55))
     tent_w = max(line_w + 1, int(head_rx * 0.06))
-    tent_len_tier = random.choice(["short", "long"])
+    tent_len_tier = template["tent_len_tier"]
     for i in range(tent_total):
         tx = cx - tent_spread / 2 + i * tent_step + random.uniform(-2, 2)
         if tent_len_tier == "short":
@@ -1397,8 +1570,10 @@ def _draw_cthulhu_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
 
 def _draw_ghost_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Ghost: soft rounded top, wavy bottom, floating shape, simple expressive face."""
+    template = _pick_template(GHOST_TEMPLATES)
+
     # --- size ---
-    size_tier = random.choice(["small", "medium", "large"])
+    size_tier = template["size_tier"]
     if size_tier == "small":
         body_w = int(zone_w * random.uniform(0.18, 0.24))
         body_h = int(zone_h * random.uniform(0.40, 0.50))
@@ -1414,7 +1589,7 @@ def _draw_ghost_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line
     body_geo = _build_body_geometry(cx, cy, body_w, body_h, "ghost")
 
     # --- arms (organic curves) ---
-    arm_style = random.choice(["none", "stubs", "reaching", "one_only"])
+    arm_style = template["arm_style"]
     if arm_style != "none":
         arm_w = max(line_w + 1, int(body_w * 0.06))
         if arm_style == "stubs":
@@ -1435,7 +1610,7 @@ def _draw_ghost_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line
     _draw_polygon_body(draw, ghost_pts, secondary, primary, line_w)
 
     # --- face ---
-    n_eyes = random.choices([1, 2, 3], weights=[15, 60, 25])[0]
+    n_eyes = template["eye_count"]
     eye_r = max(int(min(body_w, body_h) * random.uniform(0.05, 0.10)), 5)
     eye_y = cy - int(body_h * random.uniform(0.10, 0.22))
     hollow = random.random() < 0.55
@@ -1454,7 +1629,7 @@ def _draw_ghost_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line
                           style="hollow" if hollow else random.choice(["normal", "sleepy", "cute"]))
 
     # mouth
-    mouth_style = random.choice(["open", "confused", "smile", "none"])
+    mouth_style = template["mouth_style"]
     if mouth_style != "none":
         mouth_y = cy + int(body_h * random.uniform(0.03, 0.12))
         _draw_mouth(draw, cx, mouth_y, max(int(body_w * 0.15), 6),
@@ -1463,18 +1638,20 @@ def _draw_ghost_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line
 
 def _draw_default_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, line_w):
     """Default: randomized organic creature with various features."""
+    template = _pick_template(DEFAULT_TEMPLATES)
+
     lean = random.uniform(-0.02, 0.02) * zone_w
     bcx = cx + int(lean)
 
     body_hw = int(zone_w * random.uniform(0.10, 0.18))
     body_hh = int(zone_h * random.uniform(0.14, 0.24))
 
-    use_tentacles = random.random() < 0.25
+    use_tentacles = template["use_tentacles"]
     use_arms = random.random() < 0.75
-    use_wings = random.random() < 0.20
-    use_tail = random.random() < 0.25
-    use_horns = random.random() < 0.30
-    n_legs = 0 if use_tentacles else random.choices([2, 3, 4], weights=[60, 20, 20])[0]
+    use_wings = template["use_wings"]
+    use_tail = template["use_tail"]
+    use_horns = template["use_horns"]
+    n_legs = template["n_legs"] if not use_tentacles else 0
 
     body_cy = cy + int(zone_h * 0.02)
 
@@ -1540,7 +1717,7 @@ def _draw_default_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
             _draw_organic_limb(draw, ax, ay, hand_x, hand_y, arm_w, primary)
 
     # body (organic shape)
-    default_shape = random.choice([None, _pear_blob, _bean_blob, _squat_blob])
+    default_shape = BODY_SHAPES[template["body_shape"]]
     body_pts = _draw_filled_blob(draw, bcx, body_cy, body_hw, body_hh,
                                   secondary, primary, line_w, wobble=0.10,
                                   shape_func=default_shape)
@@ -1558,7 +1735,7 @@ def _draw_default_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
                          fill=primary)
 
     # face
-    n_eyes = random.choices([1, 2, 3], weights=[20, 55, 25])[0]
+    n_eyes = template["eye_count"]
     eye_r = max(int(min(body_hw, body_hh) * 0.10), 5)
     eye_y = body_cy - int(body_hh * 0.18)
     eye_zone_w = body_hw * 0.50
@@ -1574,7 +1751,7 @@ def _draw_default_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
     mouth_y = body_cy + int(body_hh * 0.22)
     mouth_w = max(int(body_hw * random.uniform(0.15, 0.35)), 6)
     _draw_mouth(draw, bcx, mouth_y, mouth_w, primary, secondary, line_w,
-                style=random.choice(["smile", "open", "confused", "grin"]))
+                style=template["mouth_style"])
 
 
 # ---------------------------------------------------------------------------
