@@ -6,7 +6,7 @@
 <div class="quotes-container">
     <div class="quotes-wrapper">
         <div class="quotes-title">Famous Quote</div>
-        <div class="quote-text" style="-webkit-line-clamp: {{ max_lines }};">{{ quote }}</div>
+        <div class="quote-text" style="-webkit-line-clamp: {{ max_lines }}; --quote-font-size: {{ quote_font_px }}px; --author-font-size: {{ author_font_px }}px; --title-font-size: {{ title_font_px }}px;">{{ quote }}</div>
         {% if show_author %}
         <div class="quote-author">— {{ author }}</div>
         {% endif %}
