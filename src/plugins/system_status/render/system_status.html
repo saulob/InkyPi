@@ -15,8 +15,8 @@
             <div class="ss-progress">
                 {% if style == "dots" %}
                 <div class="ss-dots">
-                    {% set filled = (metric.value / 5)|round(0, 'floor')|int %}
-                    {% for i in range(20) %}
+                    {% set filled = (metric.value / 4)|round(0, 'floor')|int %}
+                    {% for i in range(25) %}
                     <span class="ss-dot{% if i < filled %} filled{% endif %}"></span>
                     {% endfor %}
                 </div>
