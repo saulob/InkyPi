@@ -88,6 +88,40 @@ def truncate_text(text, max_chars=180):
     return truncated.rstrip(".,;:!? ") + "..."
 
 
+def _hex_to_rgb(hex_color: str):
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 3:
+        hex_color = ''.join([c*2 for c in hex_color])
+    try:
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        return (r, g, b)
+    except Exception:
+        return (0, 0, 0)
+
+
+def _rgb_to_hex(rgb):
+    return '#{0:02x}{1:02x}{2:02x}'.format(*[max(0, min(255, int(c))) for c in rgb])
+
+
+def _normalize_primary_color(hex_color: str):
+    """If the chosen color is a gray (R==G==B), reduce its brightness toward black.
+    Otherwise return the color unchanged. Returns hex string.
+    """
+    if not hex_color:
+        return "#000000"
+    r, g, b = _hex_to_rgb(hex_color)
+    if r == g == b:
+        # reduce brightness to make 'gray' behave like a reduced black for text
+        factor = 0.35
+        r2 = int(r * factor)
+        g2 = int(g * factor)
+        b2 = int(b * factor)
+        return _rgb_to_hex((r2, g2, b2))
+    return hex_color
+
+
 class DailyHoroscope(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -105,8 +139,12 @@ class DailyHoroscope(BasePlugin):
             language = "en"
         labels = LABELS[language]
 
-        primary_color = settings.get("primaryColor", "#000000")
-        secondary_color = settings.get("secondaryColor", "#666666")
+        # Primary: text color (default black). If user chose a gray, reduce it toward black.
+        primary_color_raw = settings.get("primaryColor", "#000000")
+        primary_color = _normalize_primary_color(primary_color_raw)
+
+        # Secondary: background color (default white)
+        secondary_color = settings.get("secondaryColor", "#FFFFFF")
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
