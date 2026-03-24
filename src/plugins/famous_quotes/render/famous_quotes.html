@@ -2,13 +2,19 @@
 
 {% block content %}
 
+
 <div class="quotes-container">
     <div class="quotes-wrapper">
         <div class="quotes-title">Famous Quote</div>
-        <div class="quote-text">{{ quote }}</div>
+        <div class="quote-text" style="-webkit-line-clamp: {{ max_lines }};">{{ quote }}</div>
         {% if show_author %}
         <div class="quote-author">— {{ author }}</div>
         {% endif %}
+        <div class="debug-info">
+            <div>cat: <b>{{ debug_category }}</b> | show_author: <b>{{ debug_show_author }}</b> | max_lines: <b>{{ debug_max_lines }}</b></div>
+            <div>dt: <b>{{ debug_datetime }}</b></div>
+            <div style="font-size:10px;word-break:break-all;">url: {{ debug_api_url }}</div>
+        </div>
     </div>
 </div>
 

@@ -5,11 +5,17 @@ and displays them on the InkyPi device with optional category filtering.
 """
 
 from plugins.base_plugin.base_plugin import BasePlugin
-from PIL import Image
 from utils.http_client import get_http_session
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _build_api_url(category):
+    base_url = "https://api.api-ninjas.com/v2/randomquotes"
+    if category and category != "random":
+        return f"{base_url}?categories={category}"
+    return base_url
 
 
 class FamousQuotes(BasePlugin):
@@ -61,9 +67,20 @@ class FamousQuotes(BasePlugin):
                 "No quote found"
             )
 
-        # Get display settings
-        show_author = settings.get("show_author", "true") == "true"
-        max_lines = int(settings.get("max_lines", "4"))
+        # Get display settings and normalize types
+        raw_show = settings.get("show_author")
+        if isinstance(raw_show, str):
+            show_author = raw_show.lower() == 'true'
+        elif isinstance(raw_show, bool):
+            show_author = raw_show
+        else:
+            # If the form omitted the checkbox (e.g., unchecked), treat as False
+            show_author = False
+
+        try:
+            max_lines = int(settings.get("max_lines", 4))
+        except Exception:
+            max_lines = 4
 
         # Get device dimensions
         dimensions = device_config.get_resolution()
@@ -71,13 +88,23 @@ class FamousQuotes(BasePlugin):
             dimensions = dimensions[::-1]
             logger.debug(f"Vertical orientation detected, dimensions: {dimensions[0]}x{dimensions[1]}")
 
+        # Debug info
+        import datetime
+        now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        api_url = _build_api_url(category)
+
         # Prepare template parameters
         template_params = {
             "quote": quote_text,
             "author": author if (show_author and author) else "",
             "max_lines": max_lines,
             "show_author": show_author and bool(author),
-            "plugin_settings": settings
+            "plugin_settings": settings,
+            "debug_category": category,
+            "debug_show_author": show_author,
+            "debug_max_lines": max_lines,
+            "debug_datetime": now_str,
+            "debug_api_url": api_url
         }
 
         logger.info(f"Rendering quote: {quote_text[:50]}...")
@@ -91,26 +118,25 @@ class FamousQuotes(BasePlugin):
         logger.info("=== Famous Quotes Plugin: Image generation complete ===")
         return image
 
+
     def _fetch_quote(self, api_key, category):
-        """Fetch a quote from API Ninjas Quotes API v2"""
+        """Fetch a quote from API Ninjas random quotes API v2."""
         try:
             headers = {"X-Api-Key": api_key}
-            
-            if category and category != "random":
-                url = f"https://api.api-ninjas.com/v2/quotes?category={category}"
-            else:
-                url = "https://api.api-ninjas.com/v2/quotes"
+            session = get_http_session()
+
+            url = _build_api_url(category)
 
             logger.debug(f"Fetching from URL: {url}")
-            session = get_http_session()
             response = session.get(url, headers=headers, timeout=10)
+
+            logger.debug(f"API Ninjas response: {response.status_code} {response.text}")
 
             if response.status_code != 200:
                 logger.error(f"API error (status {response.status_code}): {response.text}")
                 return None
 
             data = response.json()
-            
             # API returns an array of quotes, use the first one
             if isinstance(data, list) and len(data) > 0:
                 return data[0]

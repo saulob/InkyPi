@@ -36,7 +36,6 @@
   word-wrap: break-word;
   overflow-wrap: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   letter-spacing: 0.02em;
@@ -48,4 +47,17 @@
   font-weight: 500;
   opacity: 0.85;
   letter-spacing: 0.05em;
+}
+
+.debug-info {
+  margin-top: 2dvh;
+  font-size: min(2.5dvw, 2.5dvh);
+  color: #888;
+  opacity: 0.9;
+  word-break: break-all;
+  text-align: left;
+  width: 100%;
+  max-width: 95vw;
+  margin-left: auto;
+  margin-right: auto;
 }
