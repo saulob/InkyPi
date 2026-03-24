@@ -15,7 +15,7 @@
 }
 
 .ss-header {
-    font-size: clamp(16px, 4.4vh, 40px);
+    font-size: clamp(18px, 5.2vh, 44px);
     font-weight: 800;
     text-align: center;
     letter-spacing: 0.01em;
@@ -25,14 +25,14 @@
     text-overflow: ellipsis;
     max-width: 98%;
     flex: 0 0 auto;
-    margin-bottom: 0.06rem;
+    margin-bottom: 0.28rem;
 }
 
 .ss-subheader {
-    font-size: clamp(10px, 2.4vh, 18px);
-    font-weight: 400;
+    font-size: clamp(12px, 2.8vh, 20px);
+    font-weight: 500;
     text-align: center;
-    margin-top: 0.04rem;
+    margin-top: 0.24rem;
     letter-spacing: 0.02em;
     white-space: nowrap;
     overflow: hidden;
@@ -44,26 +44,28 @@
 .ss-metrics {
     display: flex;
     flex-direction: column;
-    width: 94%;
-    gap: min(0.9dvh, 0.8dvw);
+    width: 96%;
+    gap: min(1.1dvh, 0.9dvw);
     flex: 1 1 auto;
     max-height: calc(100vh - 8.2vh);
     overflow-y: auto;
-    padding-bottom: min(1.0dvh, 1.0dvw);
+    padding-bottom: min(1.2dvh, 1.0dvw);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .ss-row {
     display: flex;
     align-items: center;
-    gap: min(1.0dvw, 0.8dvh);
-    padding-top: 0.06rem;
-    padding-bottom: 0.06rem;
+    gap: min(1.05dvw, 0.9dvh);
+    padding-top: min(0.32dvh, 0.28dvw);
+    padding-bottom: min(0.32dvh, 0.28dvw);
 }
 
 .ss-label {
-    font-size: clamp(11px, 2.8vh, 22px);
+    font-size: clamp(12px, 3.0vh, 24px);
     font-weight: 700;
-    min-width: min(9ch, 12dvw);
+    min-width: min(10ch, 14dvw);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     white-space: nowrap;
@@ -85,20 +87,21 @@
     flex-direction: column;
     align-items: flex-end;
     justify-content: center;
-    min-width: min(8ch, 10dvw);
-    gap: 0.08rem;
+    min-width: min(9ch, 12dvw);
+    gap: 0.06rem;
+    padding-right: min(0.6dvw, 6px);
 }
 
 .ss-primary-value {
-    font-size: clamp(11px, 3.0vh, 22px);
+    font-size: clamp(12px, 3.2vh, 24px);
     font-weight: 700;
     white-space: nowrap;
 }
 
 .ss-secondary-value {
-    font-size: clamp(8px, 1.8vh, 12px);
+    font-size: clamp(9px, 2.0vh, 13px);
     font-weight: 500;
-    opacity: 0.75;
+    opacity: 0.78;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
