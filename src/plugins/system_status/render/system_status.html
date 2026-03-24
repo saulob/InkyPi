@@ -13,18 +13,22 @@
 
             {% if metric.type == "progress" %}
             <div class="ss-progress">
-                {% if style == "dots" %}
-                <div class="ss-dots">
-                    {% set filled = (metric.value / 4)|round(0, 'floor')|int %}
-                    {% for i in range(25) %}
-                    <span class="ss-dot{% if i < filled %} filled{% endif %}"></span>
+                {% set dots_per_row = 20 %}
+                {% set rows = 2 %}
+                {% set total_dots = dots_per_row * rows %}
+                {% set filled_total = ((metric.value / 100.0) * total_dots)|round(0, 'common')|int %}
+
+                <div class="ss-dot-block" style="--dots: {{ dots_per_row }};">
+                    {% for row in range(rows) %}
+                    <div class="ss-dots-row" aria-hidden="false">
+                        {% for i in range(dots_per_row) %}
+                        {% set idx = row * dots_per_row + i %}
+                        <span class="ss-dot{% if idx < filled_total %} filled{% endif %}" aria-hidden="true"></span>
+                        {% endfor %}
+                    </div>
                     {% endfor %}
                 </div>
-                {% else %}
-                <div class="ss-bar-track">
-                    <div class="ss-bar-fill" style="width: {{ metric.value }}%; background-color: {{ plugin_settings.textColor }};"></div>
-                </div>
-                {% endif %}
+
                 <div class="ss-value">
                     <div class="ss-primary-value">{{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}</div>
                     {% if metric.secondary_text %}

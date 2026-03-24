@@ -36,8 +36,6 @@ class SystemStatus(BasePlugin):
         show_last_boot = settings.get("showLastBoot", "true") == "true"
         show_model = settings.get("showModel", "true") == "true"
         show_os = settings.get("showOS", "true") == "true"
-        style = settings.get("style", "dots")
-
         metrics = []
 
         if show_cpu:
@@ -115,7 +113,6 @@ class SystemStatus(BasePlugin):
 
         template_params = {
             "metrics": metrics,
-            "style": style,
             "device_name": device_name,
             "plugin_settings": settings,
         }

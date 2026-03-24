@@ -83,14 +83,6 @@
     </div>
 </div>
 
-<div class="form-group">
-    <label for="style" class="form-label">Style:</label>
-    <select id="style" name="style" class="form-input">
-        <option value="dots">Dots</option>
-        <option value="bars">Bars</option>
-    </select>
-</div>
-
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         if (loadPluginSettings) {
@@ -126,8 +118,6 @@
 
             document.getElementById('showOS').checked = pluginSettings.showOS === 'true';
             document.getElementById('showOS').value = pluginSettings.showOS || 'true';
-
-            document.getElementById('style').value = pluginSettings.style || 'dots';
         } else {
             document.getElementById('showCpu').checked = true;
             document.getElementById('showCpu').value = 'true';
@@ -161,8 +151,6 @@
 
             document.getElementById('showOS').checked = true;
             document.getElementById('showOS').value = 'true';
-
-            document.getElementById('style').value = 'dots';
         }
     });
 </script>
