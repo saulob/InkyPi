@@ -30,6 +30,14 @@
 </div>
 
 <div class="form-group">
+    <label for="captionStyle" class="form-label">Caption Style:</label>
+    <select id="captionStyle" name="captionStyle" class="form-input">
+        <option value="normal">Normal</option>
+        <option value="minimal">Minimal (No Caption)</option>
+    </select>
+</div>
+
+<div class="form-group">
     <div class="form-group">
         <label for="primaryColor" class="form-label">Primary Color (Text):</label>
         <input type="color" name="primaryColor" class="color-picker" value="#000000"/>
@@ -50,6 +58,13 @@
             // Populate behavior selection
             const selectedBehavior = pluginSettings.behavior || 'random';
             document.getElementById('behavior').value = selectedBehavior;
+            
+            // Populate caption style selection
+            const selectedCaptionStyle = pluginSettings.captionStyle || 'normal';
+            const captionEl = document.getElementById('captionStyle');
+            if (captionEl) {
+                captionEl.value = selectedCaptionStyle;
+            }
             
             // Populate primary and secondary colors
             const primaryInput = document.querySelector('[name=primaryColor]');

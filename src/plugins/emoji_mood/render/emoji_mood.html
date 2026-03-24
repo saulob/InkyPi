@@ -8,7 +8,7 @@
     }
 </style>
 
-<div class="emoji-mood-root" style="background-color: {{ secondaryColor }}; color: {{ primaryColor }};">
+<div class="emoji-mood-root{% if not show_caption %} minimal{% endif %}" style="background-color: {{ secondaryColor }}; color: {{ primaryColor }};">
     <div class="title">Emoji Mood</div>
 
     <div class="emoji-mood-container">
@@ -18,7 +18,9 @@
         <div id="emoji-fallback" class="emoji-fallback">{{ emoji }}</div>
     </div>
 
+    {% if show_caption %}
     <div class="caption">{{ caption }}</div>
+    {% endif %}
 </div>
 
 {% endblock %}

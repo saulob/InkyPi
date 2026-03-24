@@ -53,4 +53,8 @@
     letter-spacing: 0.05em;
     flex-shrink: 0;
 }
+
+.emoji-mood-root.minimal {
+    /* Slightly larger gap when caption is hidden to keep layout balanced */
+    gap: 6dvh;
 }

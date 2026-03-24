@@ -357,6 +357,13 @@ class EmojiMood(BasePlugin):
             primary_color = settings.get("primaryColor") or "#000000"
             secondary_color = settings.get("secondaryColor") or "#ffffff"
 
+        # Caption style: 'normal' (show caption) or 'minimal' (hide caption)
+        caption_style = "normal"
+        show_caption = True
+        if isinstance(settings, dict):
+            caption_style = str(settings.get("captionStyle") or "normal").lower()
+            show_caption = (caption_style == "normal")
+
         template_params = {
             "emoji": emoji,
             "twemoji_url": _emoji_to_twemoji_url(emoji),
@@ -364,6 +371,7 @@ class EmojiMood(BasePlugin):
             "primaryColor": primary_color,
             "secondaryColor": secondary_color,
             "plugin_settings": settings,
+            "show_caption": show_caption,
         }
 
         image = self.render_image(
