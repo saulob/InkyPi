@@ -1,0 +1,38 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+
+<div class="ss-container">
+    <div class="ss-header">{{ device_name }}</div>
+
+    <div class="ss-metrics">
+        {% for metric in metrics %}
+        <div class="ss-row">
+            <div class="ss-label">{{ metric.label }}</div>
+
+            {% if metric.type == "progress" %}
+            <div class="ss-progress">
+                {% if style == "dots" %}
+                <div class="ss-dots">
+                    {% set filled = (metric.value / 5)|round(0, 'floor')|int %}
+                    {% for i in range(20) %}
+                    <span class="ss-dot{% if i < filled %} filled{% endif %}"></span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="ss-bar-track">
+                    <div class="ss-bar-fill" style="width: {{ metric.value }}%; background-color: {{ plugin_settings.textColor }};"></div>
+                </div>
+                {% endif %}
+                <div class="ss-value">{{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}</div>
+            </div>
+
+            {% elif metric.type == "text" %}
+            <div class="ss-text-value">{{ metric.value_text }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
