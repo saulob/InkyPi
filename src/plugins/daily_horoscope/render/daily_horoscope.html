@@ -1,0 +1,59 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+
+<div class="horoscope-container">
+    <div class="horoscope-header">
+        <h1 class="horoscope-title" style="color: {{ primary_color }};">{{ title }}</h1>
+        <p class="horoscope-date">{{ date_display }}</p>
+    </div>
+
+    <div class="horoscope-sign">
+        <span class="zodiac-symbol" style="color: {{ primary_color }};">{{ symbol }}</span>
+        <span class="sign-name" style="color: {{ primary_color }};">{{ sign_display }}</span>
+    </div>
+
+    <div class="horoscope-body">
+        <p class="horoscope-text">{{ horoscope_text }}</p>
+    </div>
+
+    {% if mood or compatibility or lucky_number %}
+    <div class="horoscope-details">
+        {% if mood %}
+        <div class="detail-item">
+            <span class="detail-label" style="color: {{ secondary_color }};">{{ mood_label }}</span>
+            <span class="detail-value">{{ mood }}</span>
+        </div>
+        {% endif %}
+        {% if compatibility %}
+        <div class="detail-item">
+            <span class="detail-label" style="color: {{ secondary_color }};">{{ compatibility_label }}</span>
+            <span class="detail-value">{{ compatibility }}</span>
+        </div>
+        {% endif %}
+        {% if lucky_number %}
+        <div class="detail-item">
+            <span class="detail-label" style="color: {{ secondary_color }};">{{ lucky_number_label }}</span>
+            <span class="detail-value">{{ lucky_number }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="horoscope-footer">
+        <div class="footer-item">
+            <span class="footer-dot" style="background-color: {{ primary_color }};"></span>
+            <span class="footer-label">{{ love_label }}</span>
+        </div>
+        <div class="footer-item">
+            <span class="footer-dot" style="background-color: {{ primary_color }};"></span>
+            <span class="footer-label">{{ work_label }}</span>
+        </div>
+        <div class="footer-item">
+            <span class="footer-dot" style="background-color: {{ primary_color }};"></span>
+            <span class="footer-label">{{ money_label }}</span>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
