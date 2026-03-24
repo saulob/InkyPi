@@ -21,6 +21,18 @@
     max-width: 90%;
 }
 
+.ss-subheader {
+    font-size: min(3.2dvh, 3dvw);
+    font-weight: 400;
+    text-align: center;
+    margin-top: min(1dvh, 1dvw);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 95%;
+}
+
 .ss-metrics {
     display: flex;
     flex-direction: column;
