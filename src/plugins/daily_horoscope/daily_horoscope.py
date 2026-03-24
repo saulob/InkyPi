@@ -6,7 +6,7 @@ import pytz
 
 logger = logging.getLogger(__name__)
 
-AZTRO_API_URL = "https://aztro.sameerkumar.website/"
+API_NINJAS_URL = "https://api.api-ninjas.com/v1/horoscope"
 
 ZODIAC_SIGNS = [
     "aries", "taurus", "gemini", "cancer", "leo", "virgo",
@@ -59,18 +59,29 @@ def _cache_key(sign, date_str):
     return f"{sign}:{date_str}"
 
 
-def fetch_horoscope(sign, date_str):
-    """Fetch horoscope from Aztro API with daily cache."""
+def fetch_horoscope(sign, date_str, api_key):
+    """Fetch horoscope from API Ninjas with daily cache."""
     key = _cache_key(sign, date_str)
     if key in _horoscope_cache:
         logger.info("Returning cached horoscope for %s on %s", sign, date_str)
         return _horoscope_cache[key]
 
+    if not api_key:
+        logger.warning("API Ninjas key not configured, cannot fetch horoscope.")
+        return None
+
     session = get_http_session()
     try:
-        response = session.post(AZTRO_API_URL, params={"sign": sign, "day": "today"}, timeout=15)
+        response = session.get(
+            API_NINJAS_URL,
+            params={"sign": sign},
+            headers={"X-Api-Key": api_key},
+            timeout=15,
+        )
         if not response.ok:
-            logger.error("Aztro API returned status %s", response.status_code)
+            logger.error(
+                "API Ninjas returned status %s: %s", response.status_code, response.text
+            )
             return None
         data = response.json()
         _horoscope_cache[key] = data
@@ -125,6 +136,11 @@ def _normalize_primary_color(hex_color: str):
 class DailyHoroscope(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
+        template_params["api_key"] = {
+            "required": True,
+            "service": "API Ninjas",
+            "expected_key": "API_NINJAS",
+        }
         template_params["style_settings"] = True
         template_params["zodiac_signs"] = ZODIAC_SIGNS
         return template_params
@@ -150,12 +166,14 @@ class DailyHoroscope(BasePlugin):
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
+        api_key = device_config.load_env_key("API_NINJAS")
+
         timezone_name = device_config.get_config("timezone", default="America/New_York")
         tz = pytz.timezone(timezone_name)
         today = datetime.now(tz)
         date_str = today.strftime("%Y-%m-%d")
 
-        data = fetch_horoscope(sign, date_str)
+        data = fetch_horoscope(sign, date_str, api_key)
 
         horoscope_text = labels["fallback"]
         mood = ""
@@ -163,7 +181,7 @@ class DailyHoroscope(BasePlugin):
         lucky_number = ""
 
         if data:
-            description = data.get("description", "")
+            description = data.get("horoscope", "")
             horoscope_text = truncate_text(description) if description else labels["fallback"]
             mood = data.get("mood", "")
             compatibility = data.get("compatibility", "")

@@ -94,3 +94,15 @@ Required for the Image Album plugin for the Immich Provider
     ```
     IMMICH_KEY=your-key
     ```
+
+## API Ninjas Key
+
+Required for the Daily Horoscope Plugin
+
+- Register an account at [API Ninjas](https://api-ninjas.com/)
+- Navigate to My Account and copy your API Key
+- Free tier includes 10,000 requests per month
+- Store your api key in the .env file with the key `API_NINJAS`
+    ```
+    API_NINJAS=your-key
+    ```
