@@ -126,10 +126,8 @@ class DailyHoroscope(BasePlugin):
         if sign not in ZODIAC_SIGNS:
             sign = "aries"
 
-        language = settings.get("language", "en")
-        if language not in LABELS:
-            language = "en"
-        labels = LABELS[language]
+        # Always use English labels
+        labels = LABELS["en"]
 
         # colors: use global styles; plugin no longer reads per-instance colors
         primary_color = None
@@ -147,7 +145,7 @@ class DailyHoroscope(BasePlugin):
         date_str = today.strftime("%Y-%m-%d")
 
 
-        # Se a chave não estiver configurada, lança erro
+        # If the API key is not configured, raise an error
         if not api_key:
             logger.error("API Ninjas API Key not configured")
             raise RuntimeError("API Ninjas API Key not configured.")
@@ -155,10 +153,10 @@ class DailyHoroscope(BasePlugin):
         try:
             data = fetch_horoscope(sign, date_str, api_key, force_fetch=False)
         except RuntimeError:
-            # Propaga erros conhecidos para o sistema de refresh exibir
+            # Re-raise known runtime errors so the refresh system can display them
             raise
 
-        # Se não houver dados, apenas mostra mensagem padrão (sem erro forçado)
+        # If no data is available, use the fallback message (do not force an error)
 
         # --- Parse API Ninjas v1/2 response ---
         api_date = None
