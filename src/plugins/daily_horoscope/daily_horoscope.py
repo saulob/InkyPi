@@ -1,5 +1,6 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
+import hashlib
 from datetime import datetime
 import logging
 import pytz
@@ -54,21 +55,67 @@ LABELS = {
 # In-memory cache: { "sign:YYYY-MM-DD": {...} }
 _horoscope_cache = {}
 
+# Remember last API key fingerprint so we can detect changes and invalidate cache
+_last_key_fingerprint = None
 
-def _cache_key(sign, date_str):
-    return f"{sign}:{date_str}"
+
+def _cache_key(sign, date_str, key_fingerprint=None):
+    base = f"{sign}:{date_str}"
+    if key_fingerprint:
+        return f"{base}:{key_fingerprint}"
+    return base
 
 
-def fetch_horoscope(sign, date_str, api_key):
-    """Fetch horoscope from API Ninjas with daily cache."""
-    key = _cache_key(sign, date_str)
-    if key in _horoscope_cache:
-        logger.info("Returning cached horoscope for %s on %s", sign, date_str)
-        return _horoscope_cache[key]
+def clear_horoscope_cache():
+    """Clear the entire in-memory horoscope cache."""
+    global _horoscope_cache
+    _horoscope_cache.clear()
 
+
+def set_api_key_fingerprint(api_key):
+    """Compute the fingerprint for `api_key`, and if it changed since last seen,
+    clear the cache to avoid reusing entries tied to a different key.
+
+    Returns the current fingerprint.
+    """
+    global _last_key_fingerprint
+    if not api_key:
+        fingerprint = None
+    else:
+        fingerprint = hashlib.sha256(api_key.encode()).hexdigest()[:8]
+
+    # If the fingerprint differs from the last seen value, clear the cache.
+    # This covers transitions from None->value (adding a key) and value->None
+    # (removing a key) so cached entries aren't mistakenly reused.
+    if fingerprint != _last_key_fingerprint:
+        logger.info("API key fingerprint changed (%s -> %s). Clearing horoscope cache.", _last_key_fingerprint, fingerprint)
+        clear_horoscope_cache()
+
+    _last_key_fingerprint = fingerprint
+    return fingerprint
+
+
+def fetch_horoscope(sign, date_str, api_key, force_fetch=False):
+    """Fetch horoscope from API Ninjas with daily cache.
+
+    - Uses an in-memory cache keyed by sign, date, and API key fingerprint.
+    - If `force_fetch` is True the cache is bypassed and a real request is performed.
+    - Raises `RuntimeError` on authorization errors or when forced fetch fails.
+    """
     if not api_key:
         logger.warning("API Ninjas key not configured, cannot fetch horoscope.")
+        if force_fetch:
+            raise RuntimeError("API Ninjas API Key not configured.")
         return None
+
+    # fingerprint the API key so cached entries are scoped per-key
+    key_fingerprint = hashlib.sha256(api_key.encode()).hexdigest()[:8]
+    key = _cache_key(sign, date_str, key_fingerprint)
+
+    # Only allow cache for automatic refresh (force_fetch=False)
+    if not force_fetch and key in _horoscope_cache:
+        logger.info("Returning cached horoscope for %s on %s (fingerprint=%s)", sign, date_str, key_fingerprint)
+        return _horoscope_cache[key]
 
     session = get_http_session()
     try:
@@ -79,11 +126,19 @@ def fetch_horoscope(sign, date_str, api_key):
             headers={"X-Api-Key": api_key},
             timeout=15,
         )
+
+        # Authorization errors should be surfaced as configuration/auth errors
+        if response.status_code in (401, 403):
+            logger.error("API Ninjas authorization error (status %s): %s", response.status_code, response.text)
+            # Always treat as error, never use cache
+            raise RuntimeError("API Ninjas API Key invalid or unauthorized.")
+
         if not response.ok:
-            logger.error(
-                "API Ninjas returned status %s: %s", response.status_code, response.text
-            )
+            logger.error("API Ninjas returned status %s: %s", response.status_code, response.text)
+            if force_fetch:
+                raise RuntimeError("Failed to retrieve horoscope from API Ninjas.")
             return None
+
         data = response.json()
 
         # Normalize response: some endpoints may return a list
@@ -92,15 +147,22 @@ def fetch_horoscope(sign, date_str, api_key):
 
         if not isinstance(data, dict):
             logger.error("Unexpected horoscope response format: %s", type(data))
+            if force_fetch:
+                raise RuntimeError("Unexpected horoscope response format.")
             return None
 
-        # Only cache if we have something useful
+        # Only cache if we have something useful and only after a successful API response
         if data.get("horoscope"):
             _horoscope_cache[key] = data
 
         return data
+    except RuntimeError:
+        # re-raise known runtime errors
+        raise
     except Exception as e:
         logger.error("Failed to fetch horoscope: %s", e)
+        if force_fetch:
+            raise RuntimeError("Failed to retrieve horoscope from API Ninjas.")
         return None
 
 
@@ -152,7 +214,22 @@ class DailyHoroscope(BasePlugin):
         today = datetime.now(tz)
         date_str = today.strftime("%Y-%m-%d")
 
-        data = fetch_horoscope(sign, date_str, api_key)
+
+        # Sempre atualiza a impressão digital da chave e limpa o cache se necessário
+        set_api_key_fingerprint(api_key)
+
+        # Se a chave não estiver configurada, lança erro
+        if not api_key:
+            logger.error("API Ninjas API Key not configured")
+            raise RuntimeError("API Ninjas API Key not configured.")
+
+        try:
+            data = fetch_horoscope(sign, date_str, api_key, force_fetch=False)
+        except RuntimeError:
+            # Propaga erros conhecidos para o sistema de refresh exibir
+            raise
+
+        # Se não houver dados, apenas mostra mensagem padrão (sem erro forçado)
 
         # --- Parse API Ninjas v1/2 response ---
         api_date = None
@@ -181,13 +258,17 @@ class DailyHoroscope(BasePlugin):
         symbol = ZODIAC_SYMBOLS.get(sign, "")
         sign_display = sign.upper()
 
+        # Do not pass internal flags to the template
+        template_settings = dict(settings)
+        template_settings.pop("_manual_update", None)
+
         template_params = {
             "title": labels["title"],
             "symbol": symbol,
             "sign_display": sign_display,
             "horoscope_text": horoscope_text,
             "date_display": date_display,
-            "plugin_settings": settings,
+            "plugin_settings": template_settings,
             "orientation": device_config.get_config("orientation", "horizontal"),
         }
 
