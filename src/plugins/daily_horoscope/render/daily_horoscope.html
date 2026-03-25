@@ -3,19 +3,94 @@
 {% block content %}
 
 <div class="horoscope-container">
-    <div class="horoscope-header">
+    <div class="horoscope-card">
         <h1 class="horoscope-title">{{ title }}</h1>
         <p class="horoscope-date">{{ date_display }}</p>
-    </div>
 
-    <div class="horoscope-sign">
-        <span class="zodiac-symbol">{{ symbol }}</span>
-        <span class="sign-name">{{ sign_display }}</span>
-    </div>
+        <div class="horoscope-sign">
+            <span class="zodiac-symbol">{{ symbol }}</span>
+            <span class="sign-name">{{ sign_display }}</span>
+        </div>
 
-    <div class="horoscope-body">
-        <p class="horoscope-text">{{ horoscope_text }}</p>
+        <div class="horoscope-body">
+            <p class="horoscope-text">{{ horoscope_text }}</p>
+        </div>
     </div>
 </div>
 
+<script>
+// Treat the full card as a single vertical block and center it on the canvas.
+document.addEventListener('DOMContentLoaded', function () {
+    try {
+        const card = document.querySelector('.horoscope-card');
+        const p = document.querySelector('.horoscope-text');
+        if (!card || !p) return;
+
+        const safeMargin = Math.round(window.innerHeight * 0.04); // 4dvh
+        const viewportTop = safeMargin;
+        const viewportBottom = window.innerHeight - safeMargin;
+        const viewportHeight = Math.max(0, viewportBottom - viewportTop);
+        if (viewportHeight <= 0) return;
+
+        // Ensure paragraph wraps at the body width for accurate measurements
+        const body = document.querySelector('.horoscope-body') || card;
+        const bodyWidth = Math.max(0, body.clientWidth);
+        if (bodyWidth > 0) p.style.width = bodyWidth + 'px';
+
+        // Trim and keep original text for truncation attempts
+        const original = (p.textContent || '').trim();
+        p.textContent = original;
+
+        // Reset any previous adjustments
+        card.style.marginTop = '0px';
+        p.style.marginTop = '0px';
+
+        // Measure natural full height of the card
+        const naturalFullHeight = card.scrollHeight;
+
+        function centerCard(finalHeight) {
+            const startingY = viewportTop + Math.floor((viewportHeight - finalHeight) / 2);
+            const currentTop = card.getBoundingClientRect().top;
+            const delta = Math.round(startingY - currentTop);
+            card.style.marginTop = (delta > 0 ? delta : 0) + 'px';
+        }
+
+        if (naturalFullHeight <= viewportHeight) {
+            centerCard(naturalFullHeight);
+            return;
+        }
+
+        // Too tall: compute overhead (everything except paragraph) then binary-search paragraph length
+        const paragraphHeight = p.scrollHeight;
+        const overhead = Math.max(0, naturalFullHeight - paragraphHeight);
+        const availableForParagraph = Math.max(0, viewportHeight - overhead);
+
+        // If no space even for overhead, top-align and clamp paragraph to empty
+        if (availableForParagraph <= 0) {
+            p.textContent = original ? '...' : '';
+            centerCard(overhead + (p.scrollHeight || 0));
+            return;
+        }
+
+        const words = original.split(/\s+/);
+        let low = 0, high = words.length;
+        while (low < high) {
+            const mid = Math.ceil((low + high) / 2);
+            p.textContent = words.slice(0, mid).join(' ') + (mid < words.length ? '...' : '');
+            if (p.scrollHeight <= availableForParagraph) {
+                low = mid;
+            } else {
+                high = mid - 1;
+            }
+        }
+        p.textContent = words.slice(0, low).join(' ') + (low < words.length ? '...' : '');
+
+        // Recompute final height and center
+        const finalHeight = card.scrollHeight;
+        centerCard(finalHeight);
+    } catch (e) {
+        console.warn('Horoscope layout script error', e);
+    }
+});
+</script>
 {% endblock %}

@@ -167,10 +167,7 @@ class DailyHoroscope(BasePlugin):
             else:
                 logger.warning(f"No valid 'horoscope' in API response: {data}")
 
-        # Truncate and wrap (3-5 lines, ~300 chars max)
-        max_chars = 300
-        if len(horoscope_text) > max_chars:
-            horoscope_text = truncate_text(horoscope_text, max_chars)
+        # Do not truncate or limit lines before rendering. Let CSS handle overflow/ellipsis if needed.
 
         # Date display: prefer API date, fallback to system
         if api_date:
