@@ -24,7 +24,7 @@
           <div class="coin-price">{{ row.price }}</div>
           <div class="crypto-currency">{{ vs_currency }}</div>
         </div>
-        {% if show_24h and row.raw_change is not none %}
+        {% if show_24h and (row.raw_change is defined and row.raw_change is not none) %}
           {% set change = row.change %}
           <div class="coin-change {{ 'positive' if row.raw_change >= 0 else 'negative' }}">{{ change }}</div>
         {% endif %}

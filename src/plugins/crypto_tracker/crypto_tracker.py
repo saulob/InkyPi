@@ -149,6 +149,7 @@ class CryptoTracker(BasePlugin):
                     'symbol': (TICKER_MAP.get(c, c[:3].upper()) if show_symbol else ''),
                     'price': 'N/A',
                     'change': None,
+                    'raw_change': None,
                     'icon': icon_path
                 })
                 continue

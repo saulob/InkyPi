@@ -3,11 +3,12 @@
 .crypto-tracker-widget {
   background: #000;
   color: #fff;
-  border-radius: 8px;
-  padding: 28px 28px;
-  width: 100%;
-  height: 100%;
-  margin: 0;
+  border-radius: 6px;
+  /* use nearly full canvas with a tiny inset so we avoid clipping on rounded displays */
+  padding: 16px 16px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
+  margin: 2px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -18,11 +19,11 @@
 .crypto-title {
   font-family: 'Jost', 'DejaVu Sans', Arial, sans-serif;
   color: #fff;
-  font-size: 2.4rem;
+  font-size: 1.85rem; /* reduced to save vertical space */
   font-weight: 800;
-  letter-spacing: 1.6px;
+  letter-spacing: 1.2px;
   text-align: center;
-  margin: 4px 0 24px 0;
+  margin: 6px 0 12px 0; /* tighter vertical spacing */
   text-transform: uppercase;
 }
 
@@ -30,37 +31,38 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 10px; /* smaller gap so 3 rows fit */
   flex: 1 1 auto;
   justify-content: flex-start;
 }
 
 .crypto-coin-row {
   background: #0a0a0a;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid #1f1f1f;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px;
-  min-height: 96px;
+  padding: 12px 16px; /* slightly reduced padding */
+  min-height: 76px; /* slightly reduced height to fit 3 rows */
+  flex: 0 1 auto; /* allow rows to size naturally */
 }
 
 .crypto-left {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
 }
 
 .coin-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 10px;
+  width: 56px; /* reduced icon size */
+  height: 56px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #1a1a1a;
-  flex: 0 0 72px;
+  flex: 0 0 56px;
   overflow: hidden;
 }
 .coin-icon img {
@@ -77,13 +79,10 @@
   font-weight: 900;
   color: #fff;
   background: #2a2a2a;
-  font-size: 1.4rem;
-  border-radius: 10px;
-}
-
-.coin-fallback {
+  font-size: 1.05rem; /* slightly smaller to fit */
+  border-radius: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.5px;
 }
 
 .coin-meta {
@@ -93,7 +92,7 @@
 }
 .coin-symbol {
   color: #fff;
-  font-size: 1.6rem;
+  font-size: 1.35rem; /* reduced so layout compresses less */
   font-weight: 800;
   text-transform: uppercase;
   white-space: nowrap;
@@ -102,9 +101,9 @@
 }
 .coin-name {
   color: #ccc;
-  font-size: 0.98rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  margin-top: 6px;
+  margin-top: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -114,12 +113,12 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
-  min-width: 180px;
+  gap: 6px;
+  min-width: 140px;
 }
 .coin-price {
   color: #fff;
-  font-size: 3.2rem;
+  font-size: 2.4rem; /* reduced but still dominant */
   font-weight: 900;
   white-space: nowrap;
   overflow: hidden;
@@ -141,11 +140,11 @@
 }
 
 .coin-change {
-  font-size: 1.15rem;
+  font-size: 0.95rem; /* more compact */
   font-weight: 800;
-  padding: 8px 14px;
+  padding: 6px 10px;
   border-radius: 999px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 .coin-change.positive {
   color: #002a12;
