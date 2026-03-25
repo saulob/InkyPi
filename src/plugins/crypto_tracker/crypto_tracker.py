@@ -76,9 +76,12 @@ class CryptoTracker(BasePlugin):
                 final.append(d)
         coins = final[:3]
 
-        vs_currency = (settings.get('vs_currency') or 'usd').lower()
-        if vs_currency not in ('usd', 'brl'):
-            vs_currency = 'usd'
+        # Normalize quote currency to lowercase for consistent API keys
+        vs_currency = settings.get('vs_currency') or 'usd'
+        if isinstance(vs_currency, str):
+            vs_currency = vs_currency.strip().lower()
+        else:
+            vs_currency = str(vs_currency).lower()
 
         show_24h = settings.get('show_24h_change', 'true') in ('true', True, 'True')
         show_symbol = settings.get('show_symbol', 'true') in ('true', True, 'True')
@@ -86,13 +89,37 @@ class CryptoTracker(BasePlugin):
             decimal_places = int(settings.get('decimal_places', 2))
         except Exception:
             decimal_places = 2
+        # enforce allowed range 0..4
+        decimal_places = max(0, min(4, decimal_places))
 
-        # Try cache
+        # Try cache - only use if it contains data for the requested vs_currency
         cache = self._read_cache()
+        use_cache = False
+        data = {}
         if self._cache_valid(cache):
-            logger.debug("Using cached CoinGecko data")
-            data = cache.get('data', {})
-        else:
+            cache_data = cache.get('data', {})
+            cache_vs = cache.get('vs')
+            # if cache records a different requested currency, ignore cache
+            if cache_vs and cache_vs != vs_currency:
+                cache_data = {}
+            
+            # ensure cache contains price keys for the requested currency for all coins
+            has_currency = True
+            for c in coins:
+                entry = cache_data.get(c)
+                if not entry:
+                    has_currency = False
+                    break
+                # check for currency key or any 24h change key matching currency
+                if vs_currency not in entry and not any(k.lower().startswith(vs_currency) for k in entry.keys()):
+                    has_currency = False
+                    break
+            if has_currency:
+                logger.debug("Using cached CoinGecko data for currency %s", vs_currency)
+                data = cache_data
+                use_cache = True
+
+        if not use_cache:
             # Build request
             ids = ','.join(coins)
             params = {
@@ -113,8 +140,8 @@ class CryptoTracker(BasePlugin):
                     raise RuntimeError("Failed to retrieve cryptocurrency prices from CoinGecko.")
 
                 data = response.json()
-                # Write cache
-                self._write_cache({'ts': datetime.utcnow().timestamp(), 'data': data})
+                # Write cache with returned data and record which currency was requested
+                self._write_cache({'ts': datetime.utcnow().timestamp(), 'data': data, 'vs': vs_currency})
             except Exception as e:
                 logger.error(f"CoinGecko request failed: {e}")
                 raise RuntimeError("Failed to retrieve data from CoinGecko.")
@@ -154,16 +181,29 @@ class CryptoTracker(BasePlugin):
                 })
                 continue
 
-            price = entry.get(vs_currency)
+            # Read price and 24h change using the selected quote currency keys
+            price = None
             change = None
-            change_key = f"{vs_currency}_24h_change"
-            if change_key in entry:
+            if isinstance(entry, dict):
+                # price key should be the currency code (e.g., 'usd' or 'brl')
+                price = entry.get(vs_currency)
+
+                # robust fallback: check keys case-insensitively
+                if price is None:
+                    for k, v in entry.items():
+                        if k.lower() == vs_currency:
+                            price = v
+                            break
+
+                # change key normally is '<currency>_24h_change'
+                change_key = f"{vs_currency}_24h_change"
                 change = entry.get(change_key)
-            else:
-                for k in entry.keys():
-                    if '24h' in k:
-                        change = entry.get(k)
-                        break
+                if change is None:
+                    # fallback: find any key that contains '24h' (case-insensitive)
+                    for k, v in entry.items():
+                        if '24h' in k.lower():
+                            change = v
+                            break
 
             if price is None:
                 price_display = 'N/A'

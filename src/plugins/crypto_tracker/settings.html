@@ -54,12 +54,20 @@
     <select id="vs_currency" name="vs_currency" class="form-input">
       <option value="usd">USD</option>
       <option value="brl">BRL</option>
+      <option value="eur">EUR</option>
+      <option value="gbp">GBP</option>
+      <option value="jpy">JPY</option>
+      <option value="cad">CAD</option>
+      <option value="aud">AUD</option>
+      <option value="chf">CHF</option>
+      <option value="cny">CNY</option>
+      <option value="ars">ARS</option>
     </select>
   </div>
 
   <div class="form-group">
     <label for="decimal_places" class="form-label">Decimal places</label>
-    <input id="decimal_places" type="number" name="decimal_places" class="form-input" min="0" max="6" value="2" />
+    <input id="decimal_places" type="number" name="decimal_places" class="form-input" min="0" max="4" value="2" />
   </div>
 
   <div class="form-group">
@@ -87,32 +95,109 @@ document.addEventListener('DOMContentLoaded', () => {
     show_symbol: true
   };
 
-  if (typeof loadPluginSettings !== 'undefined' && pluginSettings) {
-    document.getElementById('coin_1').value = pluginSettings.coin_1 || pluginSettings.coin1 || defaults.coin_1;
-    document.getElementById('coin_2').value = pluginSettings.coin_2 || pluginSettings.coin2 || defaults.coin_2;
-    document.getElementById('coin_3').value = pluginSettings.coin_3 || pluginSettings.coin3 || defaults.coin_3;
+  // utility: sort options in a select by the option value (case-insensitive)
+  function sortSelectOptions(selectElem) {
+    if (!selectElem) return;
+    const options = Array.from(selectElem.querySelectorAll('option'));
+    options.sort((a, b) => {
+      const va = (a.value || '').toLowerCase();
+      const vb = (b.value || '').toLowerCase();
+      return va.localeCompare(vb);
+    });
+    // re-append in sorted order
+    options.forEach(opt => selectElem.appendChild(opt));
+  }
 
-    document.getElementById('vs_currency').value = (pluginSettings.vs_currency || defaults.vs_currency).toLowerCase();
-    document.getElementById('decimal_places').value = pluginSettings.decimal_places !== undefined ? pluginSettings.decimal_places : defaults.decimal_places;
+  // Prevent duplicate selection across coin selects by disabling selected options in others
+  function updateCoinOptionAvailability() {
+    const selects = ['coin_1', 'coin_2', 'coin_3'].map(id => document.getElementById(id)).filter(Boolean);
+    const selected = selects.map(s => s.value);
+    selects.forEach((s, idx) => {
+      const opts = Array.from(s.options);
+      opts.forEach(opt => {
+        // keep the option enabled if it's the current select's selected value
+        opt.disabled = false;
+        if (opt.value && opt.value === selected[idx]) {
+          opt.disabled = false;
+        }
+      });
+      // disable options that are selected in other selects
+      opts.forEach(opt => {
+        if (!opt.value) return;
+        for (let j = 0; j < selected.length; j++) {
+          if (j === idx) continue;
+          if (selected[j] && selected[j] === opt.value) {
+            opt.disabled = true;
+            break;
+          }
+        }
+      });
+    });
+  }
 
-    const show24 = (pluginSettings.show_24h_change === 'false' || pluginSettings.show_24h_change === false) ? false : (pluginSettings.show_24h_change === 'true' || pluginSettings.show_24h_change === true) ? pluginSettings.show_24h_change : defaults.show_24h_change;
-    document.getElementById('show_24h_change').checked = show24;
-    document.getElementById('show_24h_change').value = show24 ? 'true' : 'false';
+  // Sort all relevant selects by value
+  ['coin_1', 'coin_2', 'coin_3', 'vs_currency'].forEach(id => {
+    sortSelectOptions(document.getElementById(id));
+  });
 
-    const showsym = (pluginSettings.show_symbol === 'false' || pluginSettings.show_symbol === false) ? false : (pluginSettings.show_symbol === 'true' || pluginSettings.show_symbol === true) ? pluginSettings.show_symbol : defaults.show_symbol;
-    document.getElementById('show_symbol').checked = showsym;
-    document.getElementById('show_symbol').value = showsym ? 'true' : 'false';
-  } else {
-    // set defaults
-    document.getElementById('coin_1').value = defaults.coin_1;
-    document.getElementById('coin_2').value = defaults.coin_2;
-    document.getElementById('coin_3').value = defaults.coin_3;
-    document.getElementById('vs_currency').value = defaults.vs_currency;
-    document.getElementById('decimal_places').value = defaults.decimal_places;
-    document.getElementById('show_24h_change').checked = defaults.show_24h_change;
-    document.getElementById('show_24h_change').value = defaults.show_24h_change ? 'true' : 'false';
-    document.getElementById('show_symbol').checked = defaults.show_symbol;
-    document.getElementById('show_symbol').value = defaults.show_symbol ? 'true' : 'false';
+  // Apply initial values: prefer saved settings, otherwise defaults
+  function applyInitialValues() {
+    const hasSaved = (typeof loadPluginSettings !== 'undefined' && pluginSettings);
+
+    if (hasSaved) {
+      document.getElementById('coin_1').value = pluginSettings.coin_1 || pluginSettings.coin1 || defaults.coin_1;
+      document.getElementById('coin_2').value = pluginSettings.coin_2 || pluginSettings.coin2 || defaults.coin_2;
+      document.getElementById('coin_3').value = pluginSettings.coin_3 || pluginSettings.coin3 || defaults.coin_3;
+
+      document.getElementById('vs_currency').value = (pluginSettings.vs_currency || defaults.vs_currency).toLowerCase();
+      // decimal places: parse, fallback to default, and clamp between 0 and 4
+      let dp = pluginSettings.decimal_places !== undefined ? parseInt(pluginSettings.decimal_places, 10) : defaults.decimal_places;
+      if (isNaN(dp)) dp = defaults.decimal_places;
+      dp = Math.max(0, Math.min(4, dp));
+      document.getElementById('decimal_places').value = dp;
+
+      const show24 = (pluginSettings.show_24h_change === 'false' || pluginSettings.show_24h_change === false) ? false : (pluginSettings.show_24h_change === 'true' || pluginSettings.show_24h_change === true) ? pluginSettings.show_24h_change : defaults.show_24h_change;
+      document.getElementById('show_24h_change').checked = show24;
+      document.getElementById('show_24h_change').value = show24 ? 'true' : 'false';
+
+      const showsym = (pluginSettings.show_symbol === 'false' || pluginSettings.show_symbol === false) ? false : (pluginSettings.show_symbol === 'true' || pluginSettings.show_symbol === true) ? pluginSettings.show_symbol : defaults.show_symbol;
+      document.getElementById('show_symbol').checked = showsym;
+      document.getElementById('show_symbol').value = showsym ? 'true' : 'false';
+    } else {
+      // set defaults
+      document.getElementById('coin_1').value = defaults.coin_1;
+      document.getElementById('coin_2').value = defaults.coin_2;
+      document.getElementById('coin_3').value = defaults.coin_3;
+      document.getElementById('vs_currency').value = defaults.vs_currency;
+      document.getElementById('decimal_places').value = defaults.decimal_places;
+      document.getElementById('show_24h_change').checked = defaults.show_24h_change;
+      document.getElementById('show_24h_change').value = defaults.show_24h_change ? 'true' : 'false';
+      document.getElementById('show_symbol').checked = defaults.show_symbol;
+      document.getElementById('show_symbol').value = defaults.show_symbol ? 'true' : 'false';
+    }
+  }
+
+  applyInitialValues();
+
+  // Update availability to avoid duplicates (optional improvement)
+  updateCoinOptionAvailability();
+
+  // Hook change events to keep availability updated
+  ['coin_1', 'coin_2', 'coin_3'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', () => {
+      // ensure value is lowercase internally
+      el.value = (el.value || '').toLowerCase();
+      updateCoinOptionAvailability();
+    });
+  });
+
+  const vsEl = document.getElementById('vs_currency');
+  if (vsEl) {
+    vsEl.addEventListener('change', () => {
+      vsEl.value = (vsEl.value || '').toLowerCase();
+    });
   }
 });
 </script>
