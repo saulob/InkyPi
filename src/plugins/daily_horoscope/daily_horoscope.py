@@ -72,9 +72,10 @@ def fetch_horoscope(sign, date_str, api_key):
 
     session = get_http_session()
     try:
+        # API expects parameter name `zodiac` with capitalized sign (e.g. Aries)
         response = session.get(
             API_NINJAS_URL,
-            params={"sign": sign},
+            params={"zodiac": sign.capitalize()},
             headers={"X-Api-Key": api_key},
             timeout=15,
         )
@@ -84,7 +85,19 @@ def fetch_horoscope(sign, date_str, api_key):
             )
             return None
         data = response.json()
-        _horoscope_cache[key] = data
+
+        # Normalize response: some endpoints may return a list
+        if isinstance(data, list) and len(data) > 0:
+            data = data[0]
+
+        if not isinstance(data, dict):
+            logger.error("Unexpected horoscope response format: %s", type(data))
+            return None
+
+        # Only cache if we have something useful
+        if data.get("horoscope"):
+            _horoscope_cache[key] = data
+
         return data
     except Exception as e:
         logger.error("Failed to fetch horoscope: %s", e)
@@ -175,38 +188,44 @@ class DailyHoroscope(BasePlugin):
 
         data = fetch_horoscope(sign, date_str, api_key)
 
+        # --- Parse API Ninjas v1/2 response ---
+        api_date = None
         horoscope_text = labels["fallback"]
-        mood = ""
-        compatibility = ""
-        lucky_number = ""
-
         if data:
-            description = data.get("horoscope", "")
-            horoscope_text = truncate_text(description) if description else labels["fallback"]
-            mood = data.get("mood", "")
-            compatibility = data.get("compatibility", "")
-            lucky_number = str(data.get("lucky_number", ""))
+            # Log for debugging if missing/empty
+            logger.info(f"Horoscope API response: {data}")
+            description = data.get("horoscope")
+            if description and isinstance(description, str) and description.strip():
+                horoscope_text = description.strip()
+                api_date = data.get("date")
+            else:
+                logger.warning(f"No valid 'horoscope' in API response: {data}")
+
+        # Truncate and wrap (3-5 lines, ~300 chars max)
+        max_chars = 300
+        if len(horoscope_text) > max_chars:
+            horoscope_text = truncate_text(horoscope_text, max_chars)
+
+        # Date display: prefer API date, fallback to system
+        if api_date:
+            try:
+                date_display = datetime.strptime(api_date, "%Y-%m-%d").strftime("%B %d, %Y")
+            except Exception:
+                date_display = today.strftime("%B %d, %Y")
+        else:
+            date_display = today.strftime("%B %d, %Y")
 
         symbol = ZODIAC_SYMBOLS.get(sign, "")
-        sign_display = sign.capitalize()
+        sign_display = sign.upper()
 
         template_params = {
             "title": labels["title"],
             "symbol": symbol,
             "sign_display": sign_display,
             "horoscope_text": horoscope_text,
-            "mood": mood,
-            "mood_label": labels["mood"],
-            "compatibility": compatibility,
-            "compatibility_label": labels["compatibility"],
-            "lucky_number": lucky_number,
-            "lucky_number_label": labels["lucky_number"],
-            "love_label": labels["love"],
-            "work_label": labels["work"],
-            "money_label": labels["money"],
             "primary_color": primary_color,
             "secondary_color": secondary_color,
-            "date_display": today.strftime("%B %d, %Y"),
+            "date_display": date_display,
             "plugin_settings": settings,
         }
 

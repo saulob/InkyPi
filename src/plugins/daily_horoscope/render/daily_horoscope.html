@@ -16,44 +16,6 @@
     <div class="horoscope-body">
         <p class="horoscope-text">{{ horoscope_text }}</p>
     </div>
-
-    {% if mood or compatibility or lucky_number %}
-    <div class="horoscope-details">
-        {% if mood %}
-        <div class="detail-item">
-            <span class="detail-label" style="color: {{ secondary_color }};">{{ mood_label }}</span>
-            <span class="detail-value">{{ mood }}</span>
-        </div>
-        {% endif %}
-        {% if compatibility %}
-        <div class="detail-item">
-            <span class="detail-label" style="color: {{ secondary_color }};">{{ compatibility_label }}</span>
-            <span class="detail-value">{{ compatibility }}</span>
-        </div>
-        {% endif %}
-        {% if lucky_number %}
-        <div class="detail-item">
-            <span class="detail-label" style="color: {{ secondary_color }};">{{ lucky_number_label }}</span>
-            <span class="detail-value">{{ lucky_number }}</span>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <div class="horoscope-footer">
-        <div class="footer-item">
-            <span class="footer-dot" style="background-color: {{ primary_color }};"></span>
-            <span class="footer-label">{{ love_label }}</span>
-        </div>
-        <div class="footer-item">
-            <span class="footer-dot" style="background-color: {{ primary_color }};"></span>
-            <span class="footer-label">{{ work_label }}</span>
-        </div>
-        <div class="footer-item">
-            <span class="footer-dot" style="background-color: {{ primary_color }};"></span>
-            <span class="footer-label">{{ money_label }}</span>
-        </div>
-    </div>
 </div>
 
 {% endblock %}
