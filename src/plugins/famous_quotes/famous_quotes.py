@@ -37,11 +37,7 @@ class FamousQuotes(BasePlugin):
         api_key = device_config.load_env_key("API_NINJAS")
         if not api_key:
             logger.error("API Ninjas API Key not configured")
-            return self._render_error_image(
-                device_config,
-                settings,
-                "Missing API key"
-            )
+            raise RuntimeError("API Ninjas API Key not configured.")
 
         # Get category setting
         category = settings.get("category", "random")
@@ -51,11 +47,7 @@ class FamousQuotes(BasePlugin):
         
         if not quote_data:
             logger.error("Failed to fetch quote or API returned empty")
-            return self._render_error_image(
-                device_config,
-                settings,
-                "Failed to load quote"
-            )
+            raise RuntimeError("Failed to retrieve quote from API.")
 
         # Parse quote data
         quote_text = quote_data.get("quote", "")
@@ -63,11 +55,7 @@ class FamousQuotes(BasePlugin):
         
         if not quote_text:
             logger.error("API returned empty quote")
-            return self._render_error_image(
-                device_config,
-                settings,
-                "No quote found"
-            )
+            raise RuntimeError("API returned no quote text.")
 
         # Get display settings and normalize types
         raw_show = settings.get("show_author")
