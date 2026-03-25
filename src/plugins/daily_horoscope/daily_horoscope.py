@@ -188,6 +188,7 @@ class DailyHoroscope(BasePlugin):
             "horoscope_text": horoscope_text,
             "date_display": date_display,
             "plugin_settings": settings,
+            "orientation": device_config.get_config("orientation", "horizontal"),
         }
 
         image = self.render_image(

@@ -19,9 +19,12 @@
 </div>
 
 <script>
-// Treat the full card as a single vertical block and center it on the canvas.
+// Treat the full card as a single vertical block and center it on the canvas
+// only when device orientation is vertical. For horizontal devices, keep
+// a fixed top-aligned layout (no vertical centering).
 document.addEventListener('DOMContentLoaded', function () {
     try {
+        const orientation = {{ orientation | tojson }};
         const card = document.querySelector('.horoscope-card');
         const p = document.querySelector('.horoscope-text');
         if (!card || !p) return;
@@ -55,39 +58,58 @@ document.addEventListener('DOMContentLoaded', function () {
             card.style.marginTop = (delta > 0 ? delta : 0) + 'px';
         }
 
+        // For horizontal devices: keep header elements fixed at top and
+        // vertically balance only the horoscope paragraph within the
+        // remaining available space below the sign.
+        if (orientation !== 'vertical') {
+            // Ensure card is top-aligned
+            card.style.marginTop = '0px';
+            // Reset paragraph margin
+            p.style.marginTop = '0px';
+
+            // Measure sizes
+            const paragraphHeight = p.scrollHeight;
+            const headerOverhead = Math.max(0, naturalFullHeight - paragraphHeight);
+            const availableForParagraph = Math.max(0, viewportHeight - headerOverhead);
+
+            // If no space for paragraph, truncate to ellipsis and leave at start
+            if (availableForParagraph <= 0) {
+                p.textContent = original ? '...' : '';
+                return;
+            }
+
+            // If paragraph fits, center it within the available area below the header
+            if (paragraphHeight <= availableForParagraph) {
+                const offset = Math.floor((availableForParagraph - paragraphHeight) / 2);
+                p.style.marginTop = offset + 'px';
+                return;
+            }
+
+            // Paragraph too tall: binary-search truncate to fit availableForParagraph
+            const words = original.split(/\s+/);
+            let low = 0, high = words.length;
+            while (low < high) {
+                const mid = Math.ceil((low + high) / 2);
+                p.textContent = words.slice(0, mid).join(' ') + (mid < words.length ? '...' : '');
+                if (p.scrollHeight <= availableForParagraph) {
+                    low = mid;
+                } else {
+                    high = mid - 1;
+                }
+            }
+            p.textContent = words.slice(0, low).join(' ') + (low < words.length ? '...' : '');
+
+            // After truncation, center the now-fitting paragraph block
+            const finalParagraphHeight = p.scrollHeight;
+            const offset = Math.floor((availableForParagraph - finalParagraphHeight) / 2);
+            p.style.marginTop = offset > 0 ? offset + 'px' : '0px';
+            return;
+        }
+
         if (naturalFullHeight <= viewportHeight) {
             centerCard(naturalFullHeight);
             return;
         }
-
-        // Too tall: compute overhead (everything except paragraph) then binary-search paragraph length
-        const paragraphHeight = p.scrollHeight;
-        const overhead = Math.max(0, naturalFullHeight - paragraphHeight);
-        const availableForParagraph = Math.max(0, viewportHeight - overhead);
-
-        // If no space even for overhead, top-align and clamp paragraph to empty
-        if (availableForParagraph <= 0) {
-            p.textContent = original ? '...' : '';
-            centerCard(overhead + (p.scrollHeight || 0));
-            return;
-        }
-
-        const words = original.split(/\s+/);
-        let low = 0, high = words.length;
-        while (low < high) {
-            const mid = Math.ceil((low + high) / 2);
-            p.textContent = words.slice(0, mid).join(' ') + (mid < words.length ? '...' : '');
-            if (p.scrollHeight <= availableForParagraph) {
-                low = mid;
-            } else {
-                high = mid - 1;
-            }
-        }
-        p.textContent = words.slice(0, low).join(' ') + (low < words.length ? '...' : '');
-
-        // Recompute final height and center
-        const finalHeight = card.scrollHeight;
-        centerCard(finalHeight);
     } catch (e) {
         console.warn('Horoscope layout script error', e);
     }
