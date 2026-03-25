@@ -2,15 +2,15 @@
 
 {% block content %}
 
-<div class="horoscope-container" style="background-color: {{ secondary_color }}; color: {{ primary_color }};">
+<div class="horoscope-container">
     <div class="horoscope-header">
-        <h1 class="horoscope-title" style="color: {{ primary_color }};">{{ title }}</h1>
+        <h1 class="horoscope-title">{{ title }}</h1>
         <p class="horoscope-date">{{ date_display }}</p>
     </div>
 
     <div class="horoscope-sign">
-        <span class="zodiac-symbol" style="color: {{ primary_color }};">{{ symbol }}</span>
-        <span class="sign-name" style="color: {{ primary_color }};">{{ sign_display }}</span>
+        <span class="zodiac-symbol">{{ symbol }}</span>
+        <span class="sign-name">{{ sign_display }}</span>
     </div>
 
     <div class="horoscope-body">

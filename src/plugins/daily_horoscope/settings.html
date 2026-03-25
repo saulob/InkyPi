@@ -16,16 +16,7 @@
         </select>
     </div>
 
-    <div class="form-group">
-        <div class="form-group">
-            <label for="primaryColor" class="form-label">Primary Color:</label>
-            <input type="color" name="primaryColor" class="color-picker" value="#000000" />
-        </div>
-        <div class="form-group">
-            <label for="secondaryColor" class="form-label">Secondary Color:</label>
-            <input type="color" name="secondaryColor" class="color-picker" value="#FFFFFF" />
-        </div>
-    </div>
+    <!-- color options removed: plugin uses global style settings -->
 </div>
 
 <script>
@@ -34,12 +25,7 @@
             document.getElementById('sign').value = pluginSettings.sign || 'aries';
             document.getElementById('language').value = pluginSettings.language || 'en';
 
-            if (pluginSettings.primaryColor) {
-                document.querySelector('[name=primaryColor]').value = pluginSettings.primaryColor;
-            }
-            if (pluginSettings.secondaryColor) {
-                document.querySelector('[name=secondaryColor]').value = pluginSettings.secondaryColor;
-            }
+            // color settings removed; plugin uses global style settings
         }
     });
 </script>
