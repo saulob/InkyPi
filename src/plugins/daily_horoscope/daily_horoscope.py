@@ -1,6 +1,5 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
-import hashlib
 from datetime import datetime
 import logging
 import pytz
@@ -40,82 +39,19 @@ LABELS = {
         "lucky_number": "Lucky Number",
         "fallback": "No horoscope available today.",
     },
-    "pt_br": {
-        "title": "Hor\u00f3scopo do Dia",
-        "love": "Amor",
-        "work": "Trabalho",
-        "money": "Dinheiro",
-        "mood": "Humor",
-        "compatibility": "Compatibilidade",
-        "lucky_number": "N\u00famero da Sorte",
-        "fallback": "Hor\u00f3scopo indispon\u00edvel hoje.",
-    },
 }
 
-# In-memory cache: { "sign:YYYY-MM-DD": {...} }
-_horoscope_cache = {}
 
-# Remember last API key fingerprint so we can detect changes and invalidate cache
-_last_key_fingerprint = None
-
-
-def _cache_key(sign, date_str, key_fingerprint=None):
-    base = f"{sign}:{date_str}"
-    if key_fingerprint:
-        return f"{base}:{key_fingerprint}"
-    return base
-
-
-def clear_horoscope_cache():
-    """Clear the entire in-memory horoscope cache."""
-    global _horoscope_cache
-    _horoscope_cache.clear()
-
-
-def set_api_key_fingerprint(api_key):
-    """Compute the fingerprint for `api_key`, and if it changed since last seen,
-    clear the cache to avoid reusing entries tied to a different key.
-
-    Returns the current fingerprint.
-    """
-    global _last_key_fingerprint
-    if not api_key:
-        fingerprint = None
-    else:
-        fingerprint = hashlib.sha256(api_key.encode()).hexdigest()[:8]
-
-    # If the fingerprint differs from the last seen value, clear the cache.
-    # This covers transitions from None->value (adding a key) and value->None
-    # (removing a key) so cached entries aren't mistakenly reused.
-    if fingerprint != _last_key_fingerprint:
-        logger.info("API key fingerprint changed (%s -> %s). Clearing horoscope cache.", _last_key_fingerprint, fingerprint)
-        clear_horoscope_cache()
-
-    _last_key_fingerprint = fingerprint
-    return fingerprint
 
 
 def fetch_horoscope(sign, date_str, api_key, force_fetch=False):
     """Fetch horoscope from API Ninjas with daily cache.
-
-    - Uses an in-memory cache keyed by sign, date, and API key fingerprint.
-    - If `force_fetch` is True the cache is bypassed and a real request is performed.
-    - Raises `RuntimeError` on authorization errors or when forced fetch fails.
+    - Performs a live request to API Ninjas and returns the result.
+    - Raises `RuntimeError` on authorization errors or when the request fails.
     """
     if not api_key:
         logger.warning("API Ninjas key not configured, cannot fetch horoscope.")
-        if force_fetch:
-            raise RuntimeError("API Ninjas API Key not configured.")
-        return None
-
-    # fingerprint the API key so cached entries are scoped per-key
-    key_fingerprint = hashlib.sha256(api_key.encode()).hexdigest()[:8]
-    key = _cache_key(sign, date_str, key_fingerprint)
-
-    # Only allow cache for automatic refresh (force_fetch=False)
-    if not force_fetch and key in _horoscope_cache:
-        logger.info("Returning cached horoscope for %s on %s (fingerprint=%s)", sign, date_str, key_fingerprint)
-        return _horoscope_cache[key]
+        raise RuntimeError("API Ninjas API Key not configured.")
 
     session = get_http_session()
     try:
@@ -150,10 +86,6 @@ def fetch_horoscope(sign, date_str, api_key, force_fetch=False):
             if force_fetch:
                 raise RuntimeError("Unexpected horoscope response format.")
             return None
-
-        # Only cache if we have something useful and only after a successful API response
-        if data.get("horoscope"):
-            _horoscope_cache[key] = data
 
         return data
     except RuntimeError:
@@ -214,9 +146,6 @@ class DailyHoroscope(BasePlugin):
         today = datetime.now(tz)
         date_str = today.strftime("%Y-%m-%d")
 
-
-        # Sempre atualiza a impressão digital da chave e limpa o cache se necessário
-        set_api_key_fingerprint(api_key)
 
         # Se a chave não estiver configurada, lança erro
         if not api_key:
