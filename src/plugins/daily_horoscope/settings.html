@@ -8,17 +8,12 @@
         </select>
     </div>
 
-    <!-- Language selection removed; plugin uses English by default -->
-
-    <!-- color options removed: plugin uses global style settings -->
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         if (loadPluginSettings) {
             document.getElementById('sign').value = pluginSettings.sign || 'aries';
-
-            // color settings removed; plugin uses global style settings
         }
     });
 </script>
