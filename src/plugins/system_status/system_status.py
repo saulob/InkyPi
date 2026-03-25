@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class SystemStatus(BasePlugin):
+    DISPLAY_NAME_MAP = {
+        "inky": "Inky e-Paper",
+        "mock": "Mock Display",
+        "epd7in3e": "Waveshare 7.3inch e-Paper",
+    }
 
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -36,6 +41,7 @@ class SystemStatus(BasePlugin):
         show_last_boot = settings.get("showLastBoot", "true") == "true"
         show_model = settings.get("showModel", "true") == "true"
         show_os = settings.get("showOS", "true") == "true"
+        show_display = settings.get("showDisplay", "true") == "true"
         metrics = []
 
         if show_cpu:
@@ -108,6 +114,10 @@ class SystemStatus(BasePlugin):
             os_version = self._get_os_version()
             if os_version:
                 metrics.append({"label": "OS", "value_text": os_version, "type": "text"})
+
+        if show_display:
+            display_value = self._get_display_value(device_config) or "N/A"
+            metrics.append({"label": "Display", "value_text": display_value, "type": "text"})
 
         device_name = self._get_device_name()
 
@@ -410,6 +420,30 @@ class SystemStatus(BasePlugin):
         
         # 4. No valid model found
         return None
+
+    def _get_display_value(self, device_config):
+        """Return a human-readable display description derived from the configuration."""
+
+        display_type = device_config.get_config("display_type", default=None)
+        if not display_type:
+            return None
+
+        display_type_value = str(display_type).strip()
+        if not display_type_value:
+            return None
+
+        normalized_type = display_type_value.lower()
+        friendly_name = self.DISPLAY_NAME_MAP.get(normalized_type)
+
+        if normalized_type.startswith("epd"):
+            if friendly_name:
+                return f"{friendly_name} ({display_type_value})"
+            return f"Waveshare e-Paper ({display_type_value})"
+
+        if friendly_name:
+            return friendly_name
+
+        return display_type_value
 
     def _get_os_version(self):
         """Get OS version string.

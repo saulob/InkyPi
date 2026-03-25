@@ -80,6 +80,11 @@
             <input type="checkbox" id="showOS" name="showOS" onclick="this.value=this.checked ? 'true' : 'false';">
             <span>OS</span>
         </div>
+
+        <div class="form-group">
+            <input type="checkbox" id="showDisplay" name="showDisplay" onclick="this.value=this.checked ? 'true' : 'false';">
+            <span>Display</span>
+        </div>
     </div>
 </div>
 
@@ -118,6 +123,9 @@
 
             document.getElementById('showOS').checked = pluginSettings.showOS === 'true';
             document.getElementById('showOS').value = pluginSettings.showOS || 'true';
+
+            document.getElementById('showDisplay').checked = pluginSettings.showDisplay === 'true';
+            document.getElementById('showDisplay').value = pluginSettings.showDisplay || 'true';
         } else {
             document.getElementById('showCpu').checked = true;
             document.getElementById('showCpu').value = 'true';
@@ -151,6 +159,9 @@
 
             document.getElementById('showOS').checked = true;
             document.getElementById('showOS').value = 'true';
+
+            document.getElementById('showDisplay').checked = true;
+            document.getElementById('showDisplay').value = 'true';
         }
     });
 </script>
