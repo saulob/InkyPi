@@ -1,5 +1,23 @@
 /* Full-screen, InkyPi-safe Crypto Tracker Styles */
 
+/* Force full-bleed background and remove outer margins/padding applied inline by plugin.html */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: #000 !important;
+}
+
+.container {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+}
+
+
 .crypto-tracker-widget {
   background: #000;
   color: #fff;
