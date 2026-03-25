@@ -155,7 +155,8 @@ class DailyHoroscope(BasePlugin):
             "expected_key": "API_NINJAS",
         }
         template_params["style_settings"] = True
-        template_params["zodiac_signs"] = ZODIAC_SIGNS
+        # Provide alphabetically sorted zodiac signs (values remain lowercase)
+        template_params["zodiac_signs"] = sorted(ZODIAC_SIGNS)
         return template_params
 
     def generate_image(self, settings, device_config):
