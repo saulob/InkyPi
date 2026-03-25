@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="title">{{ title }}</div>
+      <div class="list">
+        {% for row in rows %}
+        <div class="row">
+          <div class="left">{{ row.symbol }}</div>
+          <div class="center">{{ row.price }} {% if vs_currency %}{{ vs_currency }}{% endif %}</div>
+          <div class="right">{% if show_24h %}{{ row.change }}{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </body>
+</html>

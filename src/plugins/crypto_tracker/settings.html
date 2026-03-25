@@ -1,0 +1,23 @@
+<div>
+  <h3>Crypto Tracker Settings</h3>
+
+  <label>coins (comma separated, max 3)</label>
+  <input type="text" name="coins" placeholder="bitcoin,ethereum,solana" />
+
+  <label>vs_currency</label>
+  <select name="vs_currency">
+    <option value="usd">USD</option>
+    <option value="brl">BRL</option>
+  </select>
+
+  <label>
+    <input type="checkbox" name="show_24h_change" checked /> Show 24h change
+  </label>
+
+  <label>
+    <input type="checkbox" name="show_symbol" checked /> Show symbol (uppercase)
+  </label>
+
+  <label>decimal_places</label>
+  <input type="number" name="decimal_places" min="0" max="6" value="2" />  
+</div>

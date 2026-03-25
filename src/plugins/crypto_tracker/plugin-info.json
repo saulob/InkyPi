@@ -1,0 +1,7 @@
+{
+  "display_name": "Crypto Tracker",
+  "id": "crypto_tracker",
+  "class": "CryptoTracker",
+  "description": "Track up to three cryptocurrencies with live prices and 24h change using CoinGecko (no API key required)."
+}
+
