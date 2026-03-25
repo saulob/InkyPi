@@ -48,12 +48,33 @@ class CryptoTracker(BasePlugin):
     def generate_image(self, settings, device_config):
         logger.info("=== CryptoTracker: generating image ===")
 
-        # Parse settings
-        coins_raw = settings.get('coins') or 'bitcoin,ethereum,solana'
-        coins = [c.strip().lower() for c in coins_raw.split(',') if c.strip()]
+        # Parse settings: prefer coin_1/coin_2/coin_3 fields; fallback to older 'coins' field
+        coins = []
+        for i in range(1, 4):
+            key = f'coin_{i}'
+            val = settings.get(key)
+            if val and isinstance(val, str) and val.strip():
+                coins.append(val.strip().lower())
+
         if not coins:
-            coins = ['bitcoin', 'ethereum', 'solana']
-        coins = coins[:3]
+            # backward compatibility with comma-separated field
+            coins_raw = settings.get('coins') or 'bitcoin,ethereum,solana'
+            coins = [c.strip().lower() for c in coins_raw.split(',') if c.strip()]
+
+        # Ensure at least defaults and limit to 3, avoid duplicates while filling defaults
+        defaults = ['bitcoin', 'ethereum', 'solana']
+        final = []
+        for c in coins:
+            if c not in final:
+                final.append(c)
+            if len(final) >= 3:
+                break
+        for d in defaults:
+            if len(final) >= 3:
+                break
+            if d not in final:
+                final.append(d)
+        coins = final[:3]
 
         vs_currency = (settings.get('vs_currency') or 'usd').lower()
         if vs_currency not in ('usd', 'brl'):
@@ -104,12 +125,30 @@ class CryptoTracker(BasePlugin):
             entry = data.get(c)
             # Try to find a local icon for the coin
             icon_path = self._get_icon_path(c)
+            # Friendly display names and tickers for common coins
+            TICKER_MAP = {
+                'bitcoin': 'BTC',
+                'ethereum': 'ETH',
+                'solana': 'SOL',
+                'litecoin': 'LTC',
+                'ripple': 'XRP',
+                'dogecoin': 'DOGE'
+            }
+            NAME_MAP = {
+                'bitcoin': 'Bitcoin',
+                'ethereum': 'Ethereum',
+                'solana': 'Solana',
+                'litecoin': 'Litecoin',
+                'ripple': 'XRP',
+                'dogecoin': 'Dogecoin'
+            }
             if not entry:
                 rows.append({
                     'coin': c,
-                    'symbol': (c.upper() if show_symbol else c),
+                    'display_name': NAME_MAP.get(c, c.replace('-', ' ').title()),
+                    'symbol': (TICKER_MAP.get(c, c[:3].upper()) if show_symbol else ''),
                     'price': 'N/A',
-                    'change': 'N/A',
+                    'change': None,
                     'icon': icon_path
                 })
                 continue
@@ -138,9 +177,11 @@ class CryptoTracker(BasePlugin):
 
             rows.append({
                 'coin': c,
-                'symbol': (c.upper() if show_symbol else c),
+                'display_name': NAME_MAP.get(c, c.replace('-', ' ').title()),
+                'symbol': (TICKER_MAP.get(c, c[:3].upper()) if show_symbol else ''),
                 'price': price_display,
-                'change': change_display,
+                'change': (None if change is None else change_display),
+                'raw_change': change,
                 'icon': icon_path
             })
 

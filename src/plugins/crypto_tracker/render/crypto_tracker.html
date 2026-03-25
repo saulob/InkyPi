@@ -11,21 +11,22 @@
           {% if row.icon %}
             <img src="{{ row.icon }}" alt="{{ row.symbol }}">
           {% else %}
-            <div class="coin-fallback">{{ row.symbol[:3] }}</div>
+            <div class="coin-fallback">{{ row.symbol or row.display_name[:3]|upper }}</div>
           {% endif %}
         </div>
         <div class="coin-meta">
           <div class="coin-symbol">{{ row.symbol }}</div>
-          <div class="coin-name">{{ row.coin|capitalize }}</div>
+          <div class="coin-name">{{ row.display_name }}</div>
         </div>
       </div>
       <div class="crypto-right">
-        <div class="coin-price">{{ row.price }} <span class="crypto-currency">{{ vs_currency }}</span></div>
-        {% if show_24h %}
+        <div class="price-row">
+          <div class="coin-price">{{ row.price }}</div>
+          <div class="crypto-currency">{{ vs_currency }}</div>
+        </div>
+        {% if show_24h and row.raw_change is not none %}
           {% set change = row.change %}
-          {% if change != 'N/A' %}
-            <div class="coin-change {{ 'positive' if change.startswith('+') else ('negative' if change.startswith('-') else '') }}">{{ change }}</div>
-          {% endif %}
+          <div class="coin-change {{ 'positive' if row.raw_change >= 0 else 'negative' }}">{{ change }}</div>
         {% endif %}
       </div>
     </div>

@@ -1,23 +1,118 @@
 <div>
   <h3>Crypto Tracker Settings</h3>
 
-  <label>coins (comma separated, max 3)</label>
-  <input type="text" name="coins" placeholder="bitcoin,ethereum,solana" />
+  <div class="form-group">
+    <label for="coin_1" class="form-label">Coin 1</label>
+    <select id="coin_1" name="coin_1" class="form-input">
+      <option value="bitcoin">bitcoin</option>
+      <option value="ethereum">ethereum</option>
+      <option value="solana">solana</option>
+      <option value="bnb">bnb</option>
+      <option value="xrp">xrp</option>
+      <option value="cardano">cardano</option>
+      <option value="dogecoin">dogecoin</option>
+      <option value="avalanche-2">avalanche-2</option>
+      <option value="chainlink">chainlink</option>
+      <option value="polkadot">polkadot</option>
+    </select>
+  </div>
 
-  <label>vs_currency</label>
-  <select name="vs_currency">
-    <option value="usd">USD</option>
-    <option value="brl">BRL</option>
-  </select>
+  <div class="form-group">
+    <label for="coin_2" class="form-label">Coin 2</label>
+    <select id="coin_2" name="coin_2" class="form-input">
+      <option value="bitcoin">bitcoin</option>
+      <option value="ethereum">ethereum</option>
+      <option value="solana">solana</option>
+      <option value="bnb">bnb</option>
+      <option value="xrp">xrp</option>
+      <option value="cardano">cardano</option>
+      <option value="dogecoin">dogecoin</option>
+      <option value="avalanche-2">avalanche-2</option>
+      <option value="chainlink">chainlink</option>
+      <option value="polkadot">polkadot</option>
+    </select>
+  </div>
 
-  <label>
-    <input type="checkbox" name="show_24h_change" checked /> Show 24h change
-  </label>
+  <div class="form-group">
+    <label for="coin_3" class="form-label">Coin 3</label>
+    <select id="coin_3" name="coin_3" class="form-input">
+      <option value="bitcoin">bitcoin</option>
+      <option value="ethereum">ethereum</option>
+      <option value="solana">solana</option>
+      <option value="bnb">bnb</option>
+      <option value="xrp">xrp</option>
+      <option value="cardano">cardano</option>
+      <option value="dogecoin">dogecoin</option>
+      <option value="avalanche-2">avalanche-2</option>
+      <option value="chainlink">chainlink</option>
+      <option value="polkadot">polkadot</option>
+    </select>
+  </div>
 
-  <label>
-    <input type="checkbox" name="show_symbol" checked /> Show symbol (uppercase)
-  </label>
+  <div class="form-group">
+    <label for="vs_currency" class="form-label">Quote currency</label>
+    <select id="vs_currency" name="vs_currency" class="form-input">
+      <option value="usd">USD</option>
+      <option value="brl">BRL</option>
+    </select>
+  </div>
 
-  <label>decimal_places</label>
-  <input type="number" name="decimal_places" min="0" max="6" value="2" />  
+  <div class="form-group">
+    <label for="decimal_places" class="form-label">Decimal places</label>
+    <input id="decimal_places" type="number" name="decimal_places" class="form-input" min="0" max="6" value="2" />
+  </div>
+
+  <div class="form-group">
+    <input type="checkbox" id="show_24h_change" name="show_24h_change" value="true" checked onclick="this.value=this.checked ? 'true' : 'false';">
+    <label for="show_24h_change">Show 24h change</label>
+  </div>
+
+  <div class="form-group">
+    <input type="checkbox" id="show_symbol" name="show_symbol" value="true" checked onclick="this.value=this.checked ? 'true' : 'false';">
+    <label for="show_symbol">Show symbol (uppercase)</label>
+  </div>
+
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // defaults
+  const defaults = {
+    coin_1: 'bitcoin',
+    coin_2: 'ethereum',
+    coin_3: 'solana',
+    vs_currency: 'usd',
+    decimal_places: 2,
+    show_24h_change: true,
+    show_symbol: true
+  };
+
+  if (typeof loadPluginSettings !== 'undefined' && pluginSettings) {
+    document.getElementById('coin_1').value = pluginSettings.coin_1 || pluginSettings.coin1 || defaults.coin_1;
+    document.getElementById('coin_2').value = pluginSettings.coin_2 || pluginSettings.coin2 || defaults.coin_2;
+    document.getElementById('coin_3').value = pluginSettings.coin_3 || pluginSettings.coin3 || defaults.coin_3;
+
+    document.getElementById('vs_currency').value = (pluginSettings.vs_currency || defaults.vs_currency).toLowerCase();
+    document.getElementById('decimal_places').value = pluginSettings.decimal_places !== undefined ? pluginSettings.decimal_places : defaults.decimal_places;
+
+    const show24 = (pluginSettings.show_24h_change === 'false' || pluginSettings.show_24h_change === false) ? false : (pluginSettings.show_24h_change === 'true' || pluginSettings.show_24h_change === true) ? pluginSettings.show_24h_change : defaults.show_24h_change;
+    document.getElementById('show_24h_change').checked = show24;
+    document.getElementById('show_24h_change').value = show24 ? 'true' : 'false';
+
+    const showsym = (pluginSettings.show_symbol === 'false' || pluginSettings.show_symbol === false) ? false : (pluginSettings.show_symbol === 'true' || pluginSettings.show_symbol === true) ? pluginSettings.show_symbol : defaults.show_symbol;
+    document.getElementById('show_symbol').checked = showsym;
+    document.getElementById('show_symbol').value = showsym ? 'true' : 'false';
+  } else {
+    // set defaults
+    document.getElementById('coin_1').value = defaults.coin_1;
+    document.getElementById('coin_2').value = defaults.coin_2;
+    document.getElementById('coin_3').value = defaults.coin_3;
+    document.getElementById('vs_currency').value = defaults.vs_currency;
+    document.getElementById('decimal_places').value = defaults.decimal_places;
+    document.getElementById('show_24h_change').checked = defaults.show_24h_change;
+    document.getElementById('show_24h_change').value = defaults.show_24h_change ? 'true' : 'false';
+    document.getElementById('show_symbol').checked = defaults.show_symbol;
+    document.getElementById('show_symbol').value = defaults.show_symbol ? 'true' : 'false';
+  }
+});
+</script>
