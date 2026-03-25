@@ -48,10 +48,9 @@ class CryptoTracker(BasePlugin):
     def generate_image(self, settings, device_config):
         logger.info("=== CryptoTracker: generating image ===")
 
-        # No API key required; use public CoinGecko endpoint
         # Parse settings
         coins_raw = settings.get('coins') or 'bitcoin,ethereum,solana'
-        coins = [c.strip() for c in coins_raw.split(',') if c.strip()]
+        coins = [c.strip().lower() for c in coins_raw.split(',') if c.strip()]
         if not coins:
             coins = ['bitcoin', 'ethereum', 'solana']
         coins = coins[:3]
@@ -88,9 +87,6 @@ class CryptoTracker(BasePlugin):
                 url = 'https://api.coingecko.com/api/v3/simple/price'
                 logger.debug(f"Requesting CoinGecko: ids={ids} vs={vs_currency}")
                 response = session.get(url, params=params, headers=headers, timeout=10)
-                if response.status_code == 401:
-                    logger.error("CoinGecko authentication failed (401)")
-                    raise RuntimeError("CoinGecko API authentication failed. Check COIN_GECKO key.")
                 if response.status_code != 200:
                     logger.error(f"CoinGecko API error: {response.status_code} {response.text}")
                     raise RuntimeError("Failed to retrieve cryptocurrency prices from CoinGecko.")
@@ -98,9 +94,6 @@ class CryptoTracker(BasePlugin):
                 data = response.json()
                 # Write cache
                 self._write_cache({'ts': datetime.utcnow().timestamp(), 'data': data})
-            except RuntimeError:
-                # Re-raise runtime errors to be handled upstream
-                raise
             except Exception as e:
                 logger.error(f"CoinGecko request failed: {e}")
                 raise RuntimeError("Failed to retrieve data from CoinGecko.")
@@ -109,24 +102,24 @@ class CryptoTracker(BasePlugin):
         rows = []
         for c in coins:
             entry = data.get(c)
+            # Try to find a local icon for the coin
+            icon_path = self._get_icon_path(c)
             if not entry:
                 rows.append({
                     'coin': c,
-                    'symbol': c[:8],
+                    'symbol': (c.upper() if show_symbol else c),
                     'price': 'N/A',
-                    'change': 'N/A'
+                    'change': 'N/A',
+                    'icon': icon_path
                 })
                 continue
 
             price = entry.get(vs_currency)
             change = None
-            # CoinGecko uses '<currency>_24h_change' key sometimes; try variations
             change_key = f"{vs_currency}_24h_change"
             if change_key in entry:
                 change = entry.get(change_key)
             else:
-                # older responses sometimes use 'usd_24h_change' pattern already covered
-                # fallback: look for any key that contains '24h'
                 for k in entry.keys():
                     if '24h' in k:
                         change = entry.get(k)
@@ -140,7 +133,6 @@ class CryptoTracker(BasePlugin):
             if change is None:
                 change_display = 'N/A'
             else:
-                # show sign
                 sign = '+' if change >= 0 else '-'
                 change_display = f"{sign}{abs(change):.{decimal_places}f}%"
 
@@ -148,12 +140,12 @@ class CryptoTracker(BasePlugin):
                 'coin': c,
                 'symbol': (c.upper() if show_symbol else c),
                 'price': price_display,
-                'change': change_display
+                'change': change_display,
+                'icon': icon_path
             })
 
         # Render via template
         dimensions = device_config.get_resolution()
-        # Adjust for vertical orientation
         if device_config.get_config('orientation') == 'vertical':
             dimensions = dimensions[::-1]
 
@@ -162,9 +154,23 @@ class CryptoTracker(BasePlugin):
             'rows': rows,
             'vs_currency': vs_currency.upper(),
             'show_24h': show_24h,
-            'show_symbol': show_symbol
+            'show_symbol': show_symbol,
+            'plugin_settings': settings
         }
 
         image = self.render_image(dimensions, 'crypto_tracker.html', 'crypto_tracker.css', template_params)
         logger.info("=== CryptoTracker: image generation complete ===")
         return image
+
+    def _get_icon_path(self, coin):
+        # Try to find a static icon for the coin in static/icons/crypto/
+        # If not found, return None (template will fallback to badge)
+        static_dir = os.path.join('static', 'icons', 'crypto')
+        # Try PNG and SVG
+        for ext in ('.png', '.svg'):
+            rel_path = os.path.join(static_dir, f'{coin}{ext}')
+            abs_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', rel_path)
+            if os.path.isfile(abs_path):
+                # Return as web path for template
+                return f'/static/icons/crypto/{coin}{ext}'
+        return None

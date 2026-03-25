@@ -1,20 +1,35 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-  </head>
-  <body>
-    <div class="wrap">
-      <div class="title">{{ title }}</div>
-      <div class="list">
-        {% for row in rows %}
-        <div class="row">
-          <div class="left">{{ row.symbol }}</div>
-          <div class="center">{{ row.price }} {% if vs_currency %}{{ vs_currency }}{% endif %}</div>
-          <div class="right">{% if show_24h %}{{ row.change }}{% endif %}</div>
+{% extends "plugin.html" %}
+
+{% block content %}
+<div class="crypto-tracker-widget">
+  <div class="crypto-title">{{ title }}</div>
+  <div class="crypto-list">
+    {% for row in rows[:3] %}
+    <div class="crypto-coin-row">
+      <div class="crypto-left">
+        <div class="coin-icon">
+          {% if row.icon %}
+            <img src="{{ row.icon }}" alt="{{ row.symbol }}">
+          {% else %}
+            <div class="coin-fallback">{{ row.symbol[:3] }}</div>
+          {% endif %}
         </div>
-        {% endfor %}
+        <div class="coin-meta">
+          <div class="coin-symbol">{{ row.symbol }}</div>
+          <div class="coin-name">{{ row.coin|capitalize }}</div>
+        </div>
+      </div>
+      <div class="crypto-right">
+        <div class="coin-price">{{ row.price }} <span class="crypto-currency">{{ vs_currency }}</span></div>
+        {% if show_24h %}
+          {% set change = row.change %}
+          {% if change != 'N/A' %}
+            <div class="coin-change {{ 'positive' if change.startswith('+') else ('negative' if change.startswith('-') else '') }}">{{ change }}</div>
+          {% endif %}
+        {% endif %}
       </div>
     </div>
-  </body>
-</html>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
