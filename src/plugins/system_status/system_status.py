@@ -1,6 +1,8 @@
+import fnmatch
 import logging
 import os
 import platform
+import re
 import socket
 import subprocess
 import time
@@ -14,11 +16,20 @@ logger = logging.getLogger(__name__)
 
 
 class SystemStatus(BasePlugin):
+    # Friendly names for non-Waveshare display drivers.
+    # Waveshare EPD codes are parsed dynamically from the epd*in* pattern
+    # (same rule used by display_manager.py) so no hardcoded list is needed.
     DISPLAY_NAME_MAP = {
         "inky": "Inky e-Paper",
         "mock": "Mock Display",
-        "epd7in3e": "Waveshare 7.3inch e-Paper",
     }
+
+    # Regex to extract size and variant from Waveshare EPD codes.
+    # e.g. "epd7in3e" ? groups ("7", "3", "e"), "epd13in3k" ? ("13", "3", "k")
+    _EPD_PATTERN = re.compile(
+        r"^epd(\d+)in(\d+)([a-z]*)(?:_(v\d+|hd))?(?:([a-z]*)(?:_(v\d+|hd))?)?$",
+        re.IGNORECASE,
+    )
 
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -422,7 +433,12 @@ class SystemStatus(BasePlugin):
         return None
 
     def _get_display_value(self, device_config):
-        """Return a human-readable display description derived from the configuration."""
+        """Return a human-readable display description derived from the configuration.
+
+        Uses the same epd*in* pattern as display_manager.py to identify Waveshare
+        displays.  The size is parsed dynamically from the EPD code so that any
+        current or future Waveshare model is resolved without a hardcoded map.
+        """
 
         display_type = device_config.get_config("display_type", default=None)
         if not display_type:
@@ -433,17 +449,49 @@ class SystemStatus(BasePlugin):
             return None
 
         normalized_type = display_type_value.lower()
+
+        # Known non-Waveshare driver (e.g. inky, mock).
         friendly_name = self.DISPLAY_NAME_MAP.get(normalized_type)
-
-        if normalized_type.startswith("epd"):
-            if friendly_name:
-                return f"{friendly_name} ({display_type_value})"
-            return f"Waveshare e-Paper ({display_type_value})"
-
         if friendly_name:
             return friendly_name
 
+        # Mirror the Waveshare detection rule used by display_manager.py.
+        # Only label as Waveshare when the type matches the epd*in* pattern.
+        if fnmatch.fnmatch(normalized_type, "epd*in*"):
+            parsed = self._parse_epd_code(normalized_type)
+            if parsed:
+                return f"{parsed} ({display_type_value})"
+            return f"Waveshare e-Paper ({display_type_value})"
+
+        # Completely unknown ? return the raw configured value without guessing a brand.
         return display_type_value
+
+    @classmethod
+    def _parse_epd_code(cls, code):
+        """Parse a Waveshare EPD code into a friendly name.
+
+        Examples:
+            epd7in3e  ? Waveshare 7.3inch e-Paper
+            epd5in83_v2 ? Waveshare 5.83inch e-Paper V2
+            epd7in5b_hd ? Waveshare 7.5inch e-Paper HD
+            epd13in3k ? Waveshare 13.3inch e-Paper
+        """
+        m = cls._EPD_PATTERN.match(code)
+        if not m:
+            return None
+
+        inches = m.group(1)
+        decimal = m.group(2)
+        size = f"{inches}.{decimal}"
+
+        # Collect version / variant suffixes (e.g. _v2, _hd, b, bc)
+        suffixes = []
+        for g in (m.group(4), m.group(5), m.group(6)):
+            if g:
+                suffixes.append(g.upper())
+
+        suffix_str = f" {' '.join(suffixes)}" if suffixes else ""
+        return f"Waveshare {size}inch e-Paper{suffix_str}"
 
     def _get_os_version(self):
         """Get OS version string.
