@@ -107,35 +107,21 @@
     text-overflow: ellipsis;
 }
 
-/* Dots style: compact 2-row grid with perfect circles */
-.ss-dot-block {
-    display: flex;
-    flex-direction: column;
-    gap: min(0.32dvh, 0.28dvw);
+/* Progress bar */
+.ss-bar-wrap {
     flex: 1 1 auto;
     min-width: 0;
+    height: clamp(12px, 3.2dvh, 26px);
+    background-color: #d0d0d0;
+    border-radius: 999px;
+    overflow: hidden;
 }
 
-.ss-dots-row {
-    display: grid;
-    grid-template-columns: repeat(var(--dots), 1fr);
-    gap: min(0.26dvw, 0.28dvh);
-    align-items: center;
-    width: 100%;
-}
-
-.ss-dot {
-    justify-self: center;
-    width: clamp(6px, min(1.4dvh, 1.4dvw), 12px);
-    aspect-ratio: 1 / 1;
-    border-radius: 50%;
-    background-color: currentColor;
-    opacity: 0.18;
-    box-sizing: border-box;
-}
-
-.ss-dot.filled {
-    opacity: 1;
+.ss-bar-fill {
+    height: 100%;
+    background-color: #111111;
+    border-radius: 999px;
+    min-width: 2%;
 }
 
 /* Text rows (uptime, ip) */

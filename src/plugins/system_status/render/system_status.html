@@ -13,22 +13,9 @@
 
             {% if metric.type == "progress" %}
             <div class="ss-progress">
-                {% set dots_per_row = 20 %}
-                {% set rows = 2 %}
-                {% set total_dots = dots_per_row * rows %}
-                {% set filled_total = ((metric.value / 100.0) * total_dots)|round(0, 'common')|int %}
-
-                <div class="ss-dot-block" style="--dots: {{ dots_per_row }};">
-                    {% for row in range(rows) %}
-                    <div class="ss-dots-row" aria-hidden="false">
-                        {% for i in range(dots_per_row) %}
-                        {% set idx = row * dots_per_row + i %}
-                        <span class="ss-dot{% if idx < filled_total %} filled{% endif %}" aria-hidden="true"></span>
-                        {% endfor %}
-                    </div>
-                    {% endfor %}
+                <div class="ss-bar-wrap">
+                    <div class="ss-bar-fill" style="width: {{ [metric.value, 100]|min }}%;"></div>
                 </div>
-
                 <div class="ss-value">
                     <div class="ss-primary-value">{{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}</div>
                     {% if metric.secondary_text %}
