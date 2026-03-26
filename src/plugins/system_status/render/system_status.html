@@ -6,26 +6,22 @@
     <div class="ss-header">System Status</div>
     <div class="ss-subheader">{{ device_name }}</div>
 
-    <div class="ss-metrics">
+    <div class="ss-grid">
         {% for metric in metrics %}
-        <div class="ss-row">
-            <div class="ss-label">{{ metric.label }}</div>
+        <div class="ss-card">
+            <div class="ss-card-label">{{ metric.label }}</div>
 
             {% if metric.type == "progress" %}
-            <div class="ss-progress">
-                <div class="ss-bar-wrap">
-                    <div class="ss-bar-fill" style="width: {{ [metric.value, 100]|min }}%;"></div>
-                </div>
-                <div class="ss-value">
-                    <div class="ss-primary-value">{{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}</div>
-                    {% if metric.secondary_text %}
-                    <div class="ss-secondary-value">{{ metric.secondary_text }}</div>
-                    {% endif %}
-                </div>
+            <div class="ss-card-value">{{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}</div>
+            {% if metric.secondary_text %}
+            <div class="ss-card-secondary">{{ metric.secondary_text }}</div>
+            {% endif %}
+            <div class="ss-card-bar">
+                <div class="ss-card-bar-fill" style="width: {{ [metric.value, 100]|min }}%;"></div>
             </div>
 
             {% elif metric.type == "text" %}
-            <div class="ss-text-value">{{ metric.value_text }}</div>
+            <div class="ss-card-value">{{ metric.value_text }}</div>
             {% endif %}
         </div>
         {% endfor %}
