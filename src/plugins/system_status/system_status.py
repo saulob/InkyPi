@@ -47,8 +47,6 @@ class SystemStatus(BasePlugin):
         show_uptime = settings.get("showUptime", "true") == "true"
         show_ip = settings.get("showIp", "false") == "true"
         show_disk = settings.get("showDisk", "true") == "true"
-        show_disk_used_total = settings.get("showDiskUsedTotal", "false") == "true"
-        show_ram_used_total = settings.get("showRamUsedTotal", "false") == "true"
         show_last_boot = settings.get("showLastBoot", "true") == "true"
         show_model = settings.get("showModel", "true") == "true"
         show_os = settings.get("showOS", "true") == "true"
@@ -66,10 +64,9 @@ class SystemStatus(BasePlugin):
             vm = psutil.virtual_memory()
             ram_percent = vm.percent
             ram_metric = {"label": "RAM", "value": ram_percent, "type": "progress"}
-            if show_ram_used_total:
-                used = vm.used
-                total = vm.total
-                ram_metric["secondary_text"] = self._format_bytes(used) + " / " + self._format_bytes(total)
+            used = vm.used
+            total = vm.total
+            ram_metric["secondary_text"] = self._format_bytes(used) + " / " + self._format_bytes(total)
             metrics.append(ram_metric)
 
         if show_disk:
@@ -77,10 +74,9 @@ class SystemStatus(BasePlugin):
                 disk = psutil.disk_usage('/')
                 disk_percent = disk.percent
                 metric = {"label": "Disk", "value": disk_percent, "type": "progress"}
-                if show_disk_used_total:
-                    used = disk.used
-                    total = disk.total
-                    metric["secondary_text"] = self._format_bytes(used) + " / " + self._format_bytes(total)
+                used = disk.used
+                total = disk.total
+                metric["secondary_text"] = self._format_bytes(used) + " / " + self._format_bytes(total)
                 metrics.append(metric)
             except Exception:
                 logger.exception("SystemStatus: failed to get disk usage")

@@ -37,11 +37,6 @@
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showRamUsedTotal" name="showRamUsedTotal" onclick="this.value=this.checked ? 'true' : 'false';">
-            <span>RAM show used/total</span>
-        </div>
-
-        <div class="form-group">
             <input type="checkbox" id="showTemp" name="showTemp" onclick="this.value=this.checked ? 'true' : 'false';">
             <span>Temperature</span>
         </div>
@@ -64,11 +59,6 @@
         <div class="form-group">
             <input type="checkbox" id="showDisk" name="showDisk" onclick="this.value=this.checked ? 'true' : 'false';">
             <span>Disk</span>
-        </div>
-
-        <div class="form-group">
-            <input type="checkbox" id="showDiskUsedTotal" name="showDiskUsedTotal" onclick="this.value=this.checked ? 'true' : 'false';">
-            <span>Disk show used/total</span>
         </div>
 
         <div class="form-group">
@@ -97,9 +87,6 @@
             document.getElementById('showRam').checked = pluginSettings.showRam === 'true';
             document.getElementById('showRam').value = pluginSettings.showRam || 'true';
 
-            document.getElementById('showRamUsedTotal').checked = pluginSettings.showRamUsedTotal === 'true';
-            document.getElementById('showRamUsedTotal').value = pluginSettings.showRamUsedTotal || 'true';
-
             document.getElementById('showTemp').checked = pluginSettings.showTemp === 'true';
             document.getElementById('showTemp').value = pluginSettings.showTemp || 'true';
 
@@ -114,9 +101,6 @@
 
             document.getElementById('showDisk').checked = pluginSettings.showDisk === 'true';
             document.getElementById('showDisk').value = pluginSettings.showDisk || 'true';
-
-            document.getElementById('showDiskUsedTotal').checked = pluginSettings.showDiskUsedTotal === 'true';
-            document.getElementById('showDiskUsedTotal').value = pluginSettings.showDiskUsedTotal || 'true';
 
             document.getElementById('showModel').checked = pluginSettings.showModel === 'true';
             document.getElementById('showModel').value = pluginSettings.showModel || 'true';
@@ -133,9 +117,6 @@
             document.getElementById('showRam').checked = true;
             document.getElementById('showRam').value = 'true';
 
-            document.getElementById('showRamUsedTotal').checked = true;
-            document.getElementById('showRamUsedTotal').value = 'true';
-
             document.getElementById('showTemp').checked = true;
             document.getElementById('showTemp').value = 'true';
 
@@ -150,9 +131,6 @@
 
             document.getElementById('showDisk').checked = true;
             document.getElementById('showDisk').value = 'true';
-
-            document.getElementById('showDiskUsedTotal').checked = true;
-            document.getElementById('showDiskUsedTotal').value = 'true';
 
             document.getElementById('showModel').checked = true;
             document.getElementById('showModel').value = 'true';
