@@ -6,9 +6,9 @@
     <div class="ss-header">System Status</div>
     <div class="ss-subheader">{{ device_name }}</div>
 
-    <div class="ss-grid">
+    <div class="ss-grid ss-count-{{ metrics|length }}">
         {% for metric in metrics %}
-        <div class="ss-card">
+        <div class="ss-card{% if metric.type == 'text' %} ss-card--text{% endif %}">
             <div class="ss-card-top">
                 <div class="ss-card-label">{{ metric.label }}</div>
                 {% if metric.type == "progress" %}

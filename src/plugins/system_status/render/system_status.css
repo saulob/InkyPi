@@ -8,19 +8,14 @@
     height: 100%;
     box-sizing: border-box;
     overflow: hidden;
-     /* Slightly reduce top padding (15%) while keeping left/right/bottom
-         unchanged to bring content subtly closer to the top edge. */
-     padding: calc(1.5vw * 0.85) 1.5vw 1.5vw;
+    padding: calc(1.5vw * 0.85) 1.5vw 1.5vw;
     gap: 0;
 }
 
-/* Remove any top margin/padding coming from the wrapper or body
-   so the title starts as close to the top edge as possible. */
+/* Remove any top margin/padding coming from the wrapper or body */
 html, body {
     height: 100%;
 }
-/* Remove base template top padding/margins so the container's padding
-   becomes the authoritative outer spacing (avoids double-padding). */
 body {
     padding: 0 !important;
     margin: 0 !important;
@@ -60,8 +55,9 @@ body {
     margin-bottom: min(0.2dvh, 0.15dvw);
 }
 
-/* Card grid — fixed 2 columns, equal row heights */
+/* ── Scaling factor — default for 10-12 cards (base) ── */
 .ss-grid {
+    --scale: 1;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     grid-auto-rows: 1fr;
@@ -70,6 +66,26 @@ body {
     flex: 1 1 0;
     min-height: 0;
     overflow: hidden;
+}
+
+/* Scale up when fewer cards are shown */
+.ss-grid.ss-count-1,
+.ss-grid.ss-count-2  { --scale: 2.0; }
+.ss-grid.ss-count-3,
+.ss-grid.ss-count-4  { --scale: 1.6; }
+.ss-grid.ss-count-5,
+.ss-grid.ss-count-6  { --scale: 1.3; }
+.ss-grid.ss-count-7,
+.ss-grid.ss-count-8  { --scale: 1.15; }
+
+/* Single card → full width, single column */
+.ss-grid.ss-count-1 {
+    grid-template-columns: 1fr;
+}
+
+/* Last card in an odd-count grid → span full width */
+.ss-grid .ss-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
 }
 
 /* Individual card */
@@ -81,7 +97,7 @@ body {
     background-color: #f0f0f0;
     border: 2px solid #555555;
     border-radius: clamp(5px, 1.2dvh, 12px);
-    padding: min(0.8dvh, 0.7dvw) min(2.0dvw, 1.8dvh);
+    padding: clamp(2px, calc(0.8dvh * var(--scale)), 14px) min(2.0dvw, 1.8dvh);
     overflow: hidden;
     box-sizing: border-box;
 }
@@ -106,9 +122,9 @@ body {
     flex: 0 0 auto;
 }
 
-/* Card label - left side */
+/* Card label — scales via preferred value, hard-capped at 30px */
 .ss-card-label {
-    font-size: clamp(11px, 2.5dvw, 21px);
+    font-size: clamp(11px, calc(2.5dvw * var(--scale)), 30px);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -120,9 +136,9 @@ body {
     flex: 0 0 auto;
 }
 
-/* Card main value - right side, large and prominent */
+/* Card main value — short numeric values (%, °C) can grow large */
 .ss-card-value {
-    font-size: clamp(16px, 4.0dvw, 50px);
+    font-size: clamp(16px, calc(4.0dvw * var(--scale)), 80px);
     font-weight: 800;
     line-height: 1.0;
     white-space: nowrap;
@@ -133,10 +149,25 @@ body {
     min-width: 0;
 }
 
-/* Progress bar — full width, consistent height */
+/* Long text values (IP, boot time, OS, device) — conservative scaling, single row */
+.ss-card--text .ss-card-value {
+    font-size: clamp(12px, calc(2.6dvw * var(--scale)), 30px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    line-height: 1.2;
+}
+
+/* Text cards: strict horizontal layout, label left / value right, vertically centered */
+.ss-card--text .ss-card-top {
+    flex-wrap: nowrap;
+    align-items: center;
+}
+
+/* Progress bar — height scales safely inside clamp */
 .ss-card-bar {
     width: 100%;
-    height: clamp(8px, 2.0dvh, 18px);
+    height: clamp(8px, calc(2.0dvh * var(--scale)), 26px);
     background-color: #cccccc;
     border-radius: 999px;
     overflow: hidden;
@@ -151,9 +182,9 @@ body {
     min-width: 2%;
 }
 
-/* Secondary text — below the bar */
+/* Secondary text — moderate scaling, capped at 32px */
 .ss-card-secondary {
-    font-size: clamp(13px, 2.9dvw, 25px);
+    font-size: clamp(13px, calc(2.9dvw * var(--scale)), 32px);
     font-weight: 600;
     color: #333333;
     white-space: nowrap;
