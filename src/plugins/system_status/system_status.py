@@ -57,6 +57,9 @@ class SystemStatus(BasePlugin):
 
         if show_cpu:
             cpu_metric = {"label": "CPU", "value": self._get_cpu_usage(), "type": "progress"}
+            cpu_freq = self._get_cpu_freq()
+            if cpu_freq:
+                cpu_metric["secondary_text"] = cpu_freq
             metrics.append(cpu_metric)
 
         if show_ram:
@@ -100,7 +103,7 @@ class SystemStatus(BasePlugin):
             try:
                 boot_ts = psutil.boot_time()
                 boot_dt = datetime.fromtimestamp(boot_ts)
-                boot_str = boot_dt.strftime("%Y-%m-%d %H:%M")
+                boot_str = boot_dt.strftime("%b %d %H:%M")
                 metrics.append({"label": "LAST BOOT", "value_text": boot_str, "type": "text"})
             except Exception:
                 logger.exception("SystemStatus: failed to get boot time")
@@ -115,11 +118,11 @@ class SystemStatus(BasePlugin):
         if show_model:
             model = self._get_model()
             if model:
-                metrics.append({"label": "MODEL", "value_text": model, "type": "text"})
+                metrics.append({"label": "DEVICE", "value_text": model, "type": "text"})
             else:
-                # Ensure the Model row is always present when enabled.
+                # Ensure the Device row is always present when enabled.
                 # Show 'N/A' if model information cannot be retrieved.
-                metrics.append({"label": "MODEL", "value_text": "N/A", "type": "text"})
+                metrics.append({"label": "DEVICE", "value_text": "N/A", "type": "text"})
 
         if show_os:
             os_version = self._get_os_version()
@@ -182,6 +185,19 @@ class SystemStatus(BasePlugin):
             except (ValueError, OSError):
                 pass
 
+        return None
+
+    def _get_cpu_freq(self):
+        """Get current CPU frequency as a human-readable string."""
+        try:
+            freq = psutil.cpu_freq()
+            if freq and freq.current:
+                mhz = freq.current
+                if mhz >= 1000:
+                    return f"{mhz / 1000:.1f} GHz"
+                return f"{mhz:.0f} MHz"
+        except Exception:
+            pass
         return None
 
     def _get_cpu_usage(self):

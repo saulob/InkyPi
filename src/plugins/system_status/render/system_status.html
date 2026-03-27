@@ -9,19 +9,24 @@
     <div class="ss-grid">
         {% for metric in metrics %}
         <div class="ss-card">
-            <div class="ss-card-label">{{ metric.label }}</div>
-
-            {% if metric.type == "progress" %}
-            <div class="ss-card-value">{{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}</div>
-            {% if metric.secondary_text %}
-            <div class="ss-card-secondary">{{ metric.secondary_text }}</div>
-            {% endif %}
-            <div class="ss-card-bar">
-                <div class="ss-card-bar-fill" style="width: {{ [metric.value, 100]|min }}%;"></div>
+            <div class="ss-card-top">
+                <div class="ss-card-label">{{ metric.label }}</div>
+                {% if metric.type == "progress" %}
+                <div class="ss-card-value">{{ metric.value|round(0, 'floor')|int }}{% if metric.suffix %}{{ metric.suffix }}{% else %}%{% endif %}</div>
+                {% elif metric.type == "text" %}
+                <div class="ss-card-value">{{ metric.value_text }}</div>
+                {% endif %}
             </div>
 
-            {% elif metric.type == "text" %}
-            <div class="ss-card-value">{{ metric.value_text }}</div>
+            {% if metric.type == "progress" %}
+            <div class="ss-card-bottom">
+                <div class="ss-card-bar">
+                    <div class="ss-card-bar-fill" style="width: {{ [metric.value, 100]|min }}%;"></div>
+                </div>
+                {% if metric.secondary_text %}
+                <div class="ss-card-secondary">{{ metric.secondary_text }}</div>
+                {% endif %}
+            </div>
             {% endif %}
         </div>
         {% endfor %}
