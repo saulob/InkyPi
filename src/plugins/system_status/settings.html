@@ -27,52 +27,62 @@
 
     <div class="display-grid">
         <div class="form-group">
-            <input type="checkbox" id="showCpu" name="showCpu" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showCpu" name="showCpu" value="true">
+            <input type="hidden" name="showCpu" value="false">
             <span>CPU</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showRam" name="showRam" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showRam" name="showRam" value="true">
+            <input type="hidden" name="showRam" value="false">
             <span>RAM</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showTemp" name="showTemp" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showTemp" name="showTemp" value="true">
+            <input type="hidden" name="showTemp" value="false">
             <span>Temperature</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showUptime" name="showUptime" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showUptime" name="showUptime" value="true">
+            <input type="hidden" name="showUptime" value="false">
             <span>Uptime</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showLastBoot" name="showLastBoot" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showLastBoot" name="showLastBoot" value="true">
+            <input type="hidden" name="showLastBoot" value="false">
             <span>Last Boot</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showIp" name="showIp" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showIp" name="showIp" value="true">
+            <input type="hidden" name="showIp" value="false">
             <span>Local IP</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showDisk" name="showDisk" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showDisk" name="showDisk" value="true">
+            <input type="hidden" name="showDisk" value="false">
             <span>Disk</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showModel" name="showModel" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showModel" name="showModel" value="true">
+            <input type="hidden" name="showModel" value="false">
             <span>Model</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showOS" name="showOS" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showOS" name="showOS" value="true">
+            <input type="hidden" name="showOS" value="false">
             <span>OS</span>
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showDisplay" name="showDisplay" onclick="this.value=this.checked ? 'true' : 'false';">
+            <input type="checkbox" id="showDisplay" name="showDisplay" value="true">
+            <input type="hidden" name="showDisplay" value="false">
             <span>Display</span>
         </div>
     </div>
@@ -82,64 +92,26 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (loadPluginSettings) {
             document.getElementById('showCpu').checked = pluginSettings.showCpu === 'true';
-            document.getElementById('showCpu').value = pluginSettings.showCpu || 'true';
-
             document.getElementById('showRam').checked = pluginSettings.showRam === 'true';
-            document.getElementById('showRam').value = pluginSettings.showRam || 'true';
-
             document.getElementById('showTemp').checked = pluginSettings.showTemp === 'true';
-            document.getElementById('showTemp').value = pluginSettings.showTemp || 'true';
-
             document.getElementById('showUptime').checked = pluginSettings.showUptime === 'true';
-            document.getElementById('showUptime').value = pluginSettings.showUptime || 'true';
-
             document.getElementById('showLastBoot').checked = pluginSettings.showLastBoot === 'true';
-            document.getElementById('showLastBoot').value = pluginSettings.showLastBoot || 'true';
-
             document.getElementById('showIp').checked = pluginSettings.showIp === 'true';
-            document.getElementById('showIp').value = pluginSettings.showIp || 'true';
-
             document.getElementById('showDisk').checked = pluginSettings.showDisk === 'true';
-            document.getElementById('showDisk').value = pluginSettings.showDisk || 'true';
-
             document.getElementById('showModel').checked = pluginSettings.showModel === 'true';
-            document.getElementById('showModel').value = pluginSettings.showModel || 'true';
-
             document.getElementById('showOS').checked = pluginSettings.showOS === 'true';
-            document.getElementById('showOS').value = pluginSettings.showOS || 'true';
-
             document.getElementById('showDisplay').checked = pluginSettings.showDisplay === 'true';
-            document.getElementById('showDisplay').value = pluginSettings.showDisplay || 'true';
         } else {
             document.getElementById('showCpu').checked = true;
-            document.getElementById('showCpu').value = 'true';
-
             document.getElementById('showRam').checked = true;
-            document.getElementById('showRam').value = 'true';
-
             document.getElementById('showTemp').checked = true;
-            document.getElementById('showTemp').value = 'true';
-
             document.getElementById('showUptime').checked = true;
-            document.getElementById('showUptime').value = 'true';
-
             document.getElementById('showLastBoot').checked = true;
-            document.getElementById('showLastBoot').value = 'true';
-
             document.getElementById('showIp').checked = true;
-            document.getElementById('showIp').value = 'true';
-
             document.getElementById('showDisk').checked = true;
-            document.getElementById('showDisk').value = 'true';
-
             document.getElementById('showModel').checked = true;
-            document.getElementById('showModel').value = 'true';
-
             document.getElementById('showOS').checked = true;
-            document.getElementById('showOS').value = 'true';
-
             document.getElementById('showDisplay').checked = true;
-            document.getElementById('showDisplay').value = 'true';
         }
     });
 </script>
