@@ -69,9 +69,9 @@
         </div>
 
         <div class="form-group">
-            <input type="checkbox" id="showModel" name="showModel" value="true">
-            <input type="hidden" name="showModel" value="false">
-            <span>Model</span>
+            <input type="checkbox" id="showDevice" name="showDevice" value="true">
+            <input type="hidden" name="showDevice" value="false">
+            <span>Device</span>
         </div>
 
         <div class="form-group">
@@ -98,7 +98,7 @@
             document.getElementById('showLastBoot').checked = pluginSettings.showLastBoot === 'true';
             document.getElementById('showIp').checked = pluginSettings.showIp === 'true';
             document.getElementById('showDisk').checked = pluginSettings.showDisk === 'true';
-            document.getElementById('showModel').checked = pluginSettings.showModel === 'true';
+            document.getElementById('showDevice').checked = pluginSettings.showDevice === 'true';
             document.getElementById('showOS').checked = pluginSettings.showOS === 'true';
             document.getElementById('showDisplay').checked = pluginSettings.showDisplay === 'true';
         } else {
@@ -109,7 +109,7 @@
             document.getElementById('showLastBoot').checked = true;
             document.getElementById('showIp').checked = true;
             document.getElementById('showDisk').checked = true;
-            document.getElementById('showModel').checked = true;
+            document.getElementById('showDevice').checked = true;
             document.getElementById('showOS').checked = true;
             document.getElementById('showDisplay').checked = true;
         }

@@ -48,7 +48,7 @@ class SystemStatus(BasePlugin):
         show_ip = settings.get("showIp", "false") == "true"
         show_disk = settings.get("showDisk", "true") == "true"
         show_last_boot = settings.get("showLastBoot", "true") == "true"
-        show_model = settings.get("showModel", "true") == "true"
+        show_device = settings.get("showDevice", "true") == "true"
         show_os = settings.get("showOS", "true") == "true"
         show_display = settings.get("showDisplay", "true") == "true"
         metrics = []
@@ -111,13 +111,13 @@ class SystemStatus(BasePlugin):
             else:
                 logger.debug("SystemStatus: no valid local IP found; hiding IP metric")
 
-        if show_model:
-            model = self._get_model()
-            if model:
-                metrics.append({"label": "DEVICE", "value_text": model, "type": "text"})
+        if show_device:
+            device = self._get_model()
+            if device:
+                metrics.append({"label": "DEVICE", "value_text": device, "type": "text"})
             else:
                 # Ensure the Device row is always present when enabled.
-                # Show 'N/A' if model information cannot be retrieved.
+                # Show 'N/A' if device information cannot be retrieved.
                 metrics.append({"label": "DEVICE", "value_text": "N/A", "type": "text"})
 
         if show_os:
