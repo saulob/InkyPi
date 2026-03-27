@@ -3,7 +3,7 @@ from PIL import Image, ImageColor, ImageDraw
 from utils.app_utils import get_font
 import calendar
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 DEFAULT_NUM_BARS = 2
@@ -59,45 +59,40 @@ LOCALE_DATA = {
 }
 
 
-def calc_day_progress(dt):
-    elapsed = dt.hour * 3600 + dt.minute * 60 + dt.second
-    return min(round(elapsed / 86400 * 100), 100)
-
-def calc_week_progress(dt):
-    elapsed = dt.weekday() * 86400 + dt.hour * 3600 + dt.minute * 60 + dt.second
-    return min(round(elapsed / (7 * 86400) * 100), 100)
-
-def calc_month_progress(dt):
-    days_in_month = calendar.monthrange(dt.year, dt.month)[1]
-    elapsed = (dt.day - 1) + (dt.hour * 3600 + dt.minute * 60 + dt.second) / 86400
-    return min(round(elapsed / days_in_month * 100), 100)
-
-def calc_year_progress(dt):
-    # Handle naive and timezone-aware datetimes safely.
-    # For naive datetimes, keep naive arithmetic.
-    if dt.tzinfo is None:
-        start = datetime(dt.year, 1, 1)
-        end = datetime(dt.year + 1, 1, 1)
-        total = (end - start).total_seconds()
-        elapsed = (dt - start).total_seconds()
-        return min(round(elapsed / total * 100), 100)
-
-    # For tz-aware datetimes, prefer using the timezone object to localize
-    # the naive boundary datetimes. This avoids incorrect offsets with pytz
-    # when reusing a tzinfo instance from a different date.
-    tz = dt.tzinfo
+def _localize(naive_dt, tz):
+    """Localize a naive datetime safely for both pytz and stdlib tzinfo."""
     try:
-        # pytz provides `localize` for correct localization
-        start = tz.localize(datetime(dt.year, 1, 1))
-        end = tz.localize(datetime(dt.year + 1, 1, 1))
-    except Exception:
-        # Fallback: construct with tzinfo (works for zoneinfo / stdlib tzinfo)
-        start = datetime(dt.year, 1, 1, tzinfo=tz)
-        end = datetime(dt.year + 1, 1, 1, tzinfo=tz)
+        return tz.localize(naive_dt)
+    except AttributeError:
+        return naive_dt.replace(tzinfo=tz)
 
+
+def calc_day_progress(dt):
+    if dt.tzinfo is None:
+        elapsed = dt.hour * 3600 + dt.minute * 60 + dt.second
+        return min(round(elapsed / 86400 * 100), 100)
+    tz = dt.tzinfo
+    start = _localize(datetime(dt.year, dt.month, dt.day), tz)
+    tomorrow = dt.date() + timedelta(days=1)
+    end = _localize(datetime(tomorrow.year, tomorrow.month, tomorrow.day), tz)
     total = (end - start).total_seconds()
     elapsed = (dt - start).total_seconds()
     return min(round(elapsed / total * 100), 100)
+
+
+def calc_week_progress(dt):
+    return min(round((dt.weekday() + 1) / 7 * 100), 100)
+
+
+def calc_month_progress(dt):
+    days_in_month = calendar.monthrange(dt.year, dt.month)[1]
+    return min(round(dt.day / days_in_month * 100), 100)
+
+
+def calc_year_progress(dt):
+    total_days = 366 if calendar.isleap(dt.year) else 365
+    day_of_year = dt.timetuple().tm_yday
+    return min(round(day_of_year / total_days * 100), 100)
 
 def get_labels(dt, language):
     locale = LOCALE_DATA.get(language)
@@ -180,8 +175,11 @@ class FlowProgress(BasePlugin):
         TEXT = FILLED
         DIM = tuple((fg * 2 + bg * 6) // 8 for fg, bg in zip(FILLED, BG))
 
-        tz_name = device_config.get_config("timezone", default="America/New_York")
-        tz = pytz.timezone(tz_name)
+        tz_name = device_config.get_config("timezone", default="UTC") or "UTC"
+        try:
+            tz = pytz.timezone(tz_name)
+        except pytz.exceptions.UnknownTimeZoneError:
+            tz = pytz.UTC
         now = datetime.now(tz)
         labels = get_labels(now, language)
         pcts = [
