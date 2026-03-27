@@ -38,6 +38,7 @@ body {
     flex: 0 0 auto;
     margin-top: 0;
     padding-top: 0;
+    transform: translateY(-7%);
 }
 
 .ss-subheader {
@@ -53,6 +54,7 @@ body {
     opacity: 0.75;
     margin-top: min(0.08dvh, 0.06dvw);
     margin-bottom: min(0.2dvh, 0.15dvw);
+    transform: translateY(-7%);
 }
 
 /* ── Scaling factor — default for 10-12 cards (base) ── */
