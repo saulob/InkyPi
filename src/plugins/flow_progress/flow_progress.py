@@ -70,29 +70,28 @@ def _localize(naive_dt, tz):
 def calc_day_progress(dt):
     if dt.tzinfo is None:
         elapsed = dt.hour * 3600 + dt.minute * 60 + dt.second
-        return min(round(elapsed / 86400 * 100), 100)
+        return min(max(elapsed / 86400, 0.0), 1.0)
     tz = dt.tzinfo
     start = _localize(datetime(dt.year, dt.month, dt.day), tz)
     tomorrow = dt.date() + timedelta(days=1)
     end = _localize(datetime(tomorrow.year, tomorrow.month, tomorrow.day), tz)
     total = (end - start).total_seconds()
     elapsed = (dt - start).total_seconds()
-    return min(round(elapsed / total * 100), 100)
+    return min(max(elapsed / total, 0.0), 1.0)
 
 
 def calc_week_progress(dt):
-    return min(round((dt.weekday() + 1) / 7 * 100), 100)
+    return min(max((dt.weekday() + 1) / 7, 0.0), 1.0)
 
 
 def calc_month_progress(dt):
     days_in_month = calendar.monthrange(dt.year, dt.month)[1]
-    return min(round(dt.day / days_in_month * 100), 100)
+    return min(max(dt.day / days_in_month, 0.0), 1.0)
 
 
 def calc_year_progress(dt):
     total_days = 366 if calendar.isleap(dt.year) else 365
-    day_of_year = dt.timetuple().tm_yday
-    return min(round(day_of_year / total_days * 100), 100)
+    return min(max(dt.timetuple().tm_yday / total_days, 0.0), 1.0)
 
 def get_labels(dt, language):
     locale = LOCALE_DATA.get(language)
@@ -182,12 +181,14 @@ class FlowProgress(BasePlugin):
             tz = pytz.UTC
         now = datetime.now(tz)
         labels = get_labels(now, language)
-        pcts = [
+        progresses = [
             calc_day_progress(now),
             calc_week_progress(now),
             calc_month_progress(now),
             calc_year_progress(now),
         ]
+        pcts = [min(max(round(p * 100), 0), 100) for p in progresses]
+        filled_counts = [min(max(round(p * num_dots), 0), num_dots) for p in progresses]
         scale = 2
         rw, rh = width * scale, height * scale
         img = Image.new("RGB", (rw, rh), BG)
@@ -231,7 +232,7 @@ class FlowProgress(BasePlugin):
             ty = cy - text_h / 2
             l_dots, _, _ = label_info[i]
             render_dots(draw, l_dots, pad_x, ty, dot_spacing, dot_radius, TEXT)
-            filled = round(num_dots * pcts[i] / 100)
+            filled = filled_counts[i]
             bars_total_h = num_bars * (bar_dot_r * 2) + (num_bars - 1) * bar_gap
             top_y = cy - bars_total_h / 2 + bar_dot_r
             for bar_index in range(num_bars):
