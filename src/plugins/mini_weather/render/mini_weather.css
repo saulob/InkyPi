@@ -244,15 +244,15 @@
 }
 
 .no-icons .current-temp {
-  font-size: var(--temp-base);
+  font-size: calc(var(--temp-base) * 1.22);
 }
 
 .no-icons .current-temp.digits-2 {
-  font-size: calc(var(--temp-base) * 0.92);
+  font-size: calc(var(--temp-base) * 1.14);
 }
 
 .no-icons .current-temp.digits-3 {
-  font-size: calc(var(--temp-base) * 0.72);
+  font-size: calc(var(--temp-base) * 0.92);
 }
 
 .no-icons .forecast-left {
