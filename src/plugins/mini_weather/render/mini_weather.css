@@ -238,6 +238,27 @@
   }
 }
 
+/* --- No-icons mode --- */
+.no-icons .current-main {
+  justify-content: center;
+}
+
+.no-icons .current-temp {
+  font-size: var(--temp-base);
+}
+
+.no-icons .current-temp.digits-2 {
+  font-size: calc(var(--temp-base) * 0.92);
+}
+
+.no-icons .current-temp.digits-3 {
+  font-size: calc(var(--temp-base) * 0.72);
+}
+
+.no-icons .forecast-left {
+  gap: 0;
+}
+
 @media (max-width: 250px) {
   .mini-weather-shell {
     font-family: "Dogica";

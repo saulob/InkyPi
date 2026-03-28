@@ -364,6 +364,7 @@ class MiniWeather(Weather):
                 "forecast_rows": self._localize_forecast_rows(forecast_rows, labels),
                 "provider_timezone": provider_tz.zone,
                 "plugin_settings": settings,
+                "show_icons": settings.get("showIcons", "true") != "false",
             }
         )
 

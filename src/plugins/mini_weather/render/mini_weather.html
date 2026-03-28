@@ -1,7 +1,7 @@
 {% extends "plugin.html" %}
 
 {% block content %}
-<div class="mini-weather-shell">
+<div class="mini-weather-shell{% if not show_icons %} no-icons{% endif %}">
     <div class="mini-weather-title">{{ title }}</div>
     <div class="mini-weather-date">{{ date }}</div>
 
@@ -23,7 +23,9 @@
         <section class="current-card">
             <div class="current-label">{{ current_label }}</div>
                         <div class="current-main">
+                                {% if show_icons %}
                                 <img class="current-icon" src="{{ current_day_icon }}" alt="Current weather icon">
+                                {% endif %}
                                 {# determine number of digits (ignore leading '-') and clamp to 3 #}
                                 {% set temp_str = current_temperature|string %}
                                 {% set temp_digits = (temp_str|replace('-', ''))|length %}
@@ -44,7 +46,9 @@
             {% for day in forecast_rows %}
             <div class="forecast-row">
                 <div class="forecast-left">
+                    {% if show_icons %}
                     <img class="forecast-icon" src="{{ day.icon }}" alt="{{ day.day }} icon">
+                    {% endif %}
                     <span class="forecast-day">{{ day.day }}</span>
                 </div>
                 <div class="forecast-range">

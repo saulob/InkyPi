@@ -76,6 +76,15 @@
 </div>
 
 <div class="form-group">
+    <label for="showIcons" class="form-label">Show icons:</label>
+    <div class="toggle-container">
+        <input type="hidden" id="showIconsValue" name="showIcons" value="true">
+        <input type="checkbox" id="showIcons" class="toggle-checkbox" checked onclick="document.getElementById('showIconsValue').value = this.checked ? 'true' : 'false';">
+        <label for="showIcons" class="toggle-label"></label>
+    </div>
+</div>
+
+<div class="form-group">
     <label for="weatherTimeZone" class="form-label">Time Zone:</label>
     <select id="weatherTimeZone" name="weatherTimeZone" class="form-input">
         <option value="locationTimeZone">Use Location Time Zone</option>
@@ -217,6 +226,11 @@
             document.getElementById('weatherProvider').value = pluginSettings.weatherProvider || 'OpenMeteo';
             document.getElementById('units').value = pluginSettings.units || 'imperial';
             document.getElementById('weatherTimeZone').value = pluginSettings.weatherTimeZone || 'locationTimeZone';
+
+            const showIconsVal = pluginSettings.showIcons;
+            const showIconsChecked = showIconsVal === undefined || showIconsVal === null || showIconsVal === 'true' || showIconsVal === true;
+            document.getElementById('showIcons').checked = showIconsChecked;
+            document.getElementById('showIconsValue').value = showIconsChecked ? 'true' : 'false';
 
             selectedTitle = pluginSettings.titleSelection || 'location';
             weatherProvider = pluginSettings.weatherProvider || 'OpenMeteo';
