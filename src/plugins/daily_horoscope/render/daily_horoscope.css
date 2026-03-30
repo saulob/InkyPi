@@ -2,19 +2,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Start content at top so paragraph fills downward, keep horizontal centering */
   font-family: "Jost";
   height: 100%;
   width: 100%;
   text-align: center;
-  gap: 1.5dvh;
-  justify-content: flex-start;
 }
 
 .horoscope-header {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0.3dvh;
+  flex-shrink: 0;
 }
 
 .horoscope-title {
@@ -31,18 +30,27 @@
   margin: 0;
 }
 
+.horoscope-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.horoscope-content-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5dvh;
+}
+
 .horoscope-sign {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5dvh;
-}
-
-.horoscope-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5dvh;
 }
 
 .zodiac-symbol {
@@ -61,8 +69,6 @@
 .horoscope-body {
   width: 85%;
   max-width: 85%;
-  /* Ensure body starts below sign and fills downward */
-  flex-grow: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -72,14 +78,9 @@
 .horoscope-text {
   font-size: min(4dvw, 4dvh);
   line-height: 1.4;
-  margin-bottom: 4dvh; /* Safe bottom margin for e-paper */
-  /* Let text fill downward, no artificial max-height or overflow */
   text-align: center;
   overflow-wrap: break-word;
-  /* Add ellipsis only if text truly overflows the available space */
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: unset;
   white-space: normal;
+  margin: 0;
 }
 

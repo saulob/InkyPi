@@ -3,113 +3,96 @@
 {% block content %}
 
 <div class="horoscope-container">
-    <div class="horoscope-card">
+    <!-- Fixed header zone: stays anchored at top -->
+    <div class="horoscope-header">
         <h1 class="horoscope-title">{{ title }}</h1>
         <p class="horoscope-date">{{ date_display }}</p>
+    </div>
 
-        <div class="horoscope-sign">
-            <span class="zodiac-symbol">{{ symbol }}</span>
-            <span class="sign-name">{{ sign_display }}</span>
-        </div>
+    <!-- Flexible content zone: vertically balanced via JS -->
+    <div class="horoscope-content">
+        <div class="horoscope-content-inner" id="contentInner">
+            <div class="horoscope-sign">
+                <span class="zodiac-symbol">{{ symbol }}</span>
+                <span class="sign-name">{{ sign_display }}</span>
+            </div>
 
-        <div class="horoscope-body">
-            <p class="horoscope-text">{{ horoscope_text }}</p>
+            <div class="horoscope-body">
+                <p class="horoscope-text" id="horoscopeText">{{ horoscope_text }}</p>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-// Treat the full card as a single vertical block and center it on the canvas
-// only when device orientation is vertical. For horizontal devices, keep
-// a fixed top-aligned layout (no vertical centering).
 document.addEventListener('DOMContentLoaded', function () {
     try {
-        const orientation = {{ orientation | tojson }};
-        const card = document.querySelector('.horoscope-card');
-        const p = document.querySelector('.horoscope-text');
-        if (!card || !p) return;
+        const header = document.querySelector('.horoscope-header');
+        const contentZone = document.querySelector('.horoscope-content');
+        const inner = document.getElementById('contentInner');
+        const p = document.getElementById('horoscopeText');
+        if (!header || !contentZone || !inner || !p) return;
 
-        const safeMargin = Math.round(window.innerHeight * 0.04); // 4dvh
-        const viewportTop = safeMargin;
-        const viewportBottom = window.innerHeight - safeMargin;
-        const viewportHeight = Math.max(0, viewportBottom - viewportTop);
-        if (viewportHeight <= 0) return;
+        const vh = window.innerHeight;
 
-        // Ensure paragraph wraps at the body width for accurate measurements
-        const body = document.querySelector('.horoscope-body') || card;
-        const bodyWidth = Math.max(0, body.clientWidth);
+        // Minimum gap between header (date) and content (symbol)
+        var minGap = Math.round(vh * 0.025);
+        // Minimum bottom margin to keep content from touching edge
+        var minBottom = Math.round(vh * 0.02);
+
+        // Available vertical space for the content zone
+        var headerBottom = header.getBoundingClientRect().bottom;
+        var availableHeight = vh - headerBottom - minBottom;
+        if (availableHeight <= 0) return;
+
+        // Set content zone to fill the available space
+        contentZone.style.height = availableHeight + 'px';
+
+        // Ensure paragraph wraps at the body width for accurate measurement
+        var body = document.querySelector('.horoscope-body') || inner;
+        var bodyWidth = Math.max(0, body.clientWidth);
         if (bodyWidth > 0) p.style.width = bodyWidth + 'px';
 
-        // Trim and keep original text for truncation attempts
-        const original = (p.textContent || '').trim();
+        // Keep original text for truncation
+        var original = (p.textContent || '').trim();
         p.textContent = original;
 
-        // Reset any previous adjustments
-        card.style.marginTop = '0px';
-        p.style.marginTop = '0px';
+        // Measure natural height of the content block
+        var contentHeight = inner.scrollHeight;
 
-        // Measure natural full height of the card
-        const naturalFullHeight = card.scrollHeight;
-
-        function centerCard(finalHeight) {
-            const startingY = viewportTop + Math.floor((viewportHeight - finalHeight) / 2);
-            const currentTop = card.getBoundingClientRect().top;
-            const delta = Math.round(startingY - currentTop);
-            card.style.marginTop = (delta > 0 ? delta : 0) + 'px';
-        }
-
-        // For horizontal devices: keep header elements fixed at top and
-        // vertically balance only the horoscope paragraph within the
-        // remaining available space below the sign.
-        if (orientation !== 'vertical') {
-            // Ensure card is top-aligned
-            card.style.marginTop = '0px';
-            // Reset paragraph margin
-            p.style.marginTop = '0px';
-
-            // Measure sizes
-            const paragraphHeight = p.scrollHeight;
-            const headerOverhead = Math.max(0, naturalFullHeight - paragraphHeight);
-            const availableForParagraph = Math.max(0, viewportHeight - headerOverhead);
-
-            // If no space for paragraph, truncate to ellipsis and leave at start
-            if (availableForParagraph <= 0) {
-                p.textContent = original ? '...' : '';
-                return;
-            }
-
-            // If paragraph fits, center it within the available area below the header
-            if (paragraphHeight <= availableForParagraph) {
-                const offset = Math.floor((availableForParagraph - paragraphHeight) / 2);
-                p.style.marginTop = offset + 'px';
-                return;
-            }
-
-            // Paragraph too tall: binary-search truncate to fit availableForParagraph
-            const words = original.split(/\s+/);
-            let low = 0, high = words.length;
+        // Truncate if content truly exceeds available space (minus minGap at top)
+        var usable = availableHeight - minGap;
+        if (contentHeight > usable && original) {
+            var words = original.split(/\s+/);
+            var low = 0, high = words.length;
             while (low < high) {
-                const mid = Math.ceil((low + high) / 2);
+                var mid = Math.ceil((low + high) / 2);
                 p.textContent = words.slice(0, mid).join(' ') + (mid < words.length ? '...' : '');
-                if (p.scrollHeight <= availableForParagraph) {
+                if (inner.scrollHeight <= usable) {
                     low = mid;
                 } else {
                     high = mid - 1;
                 }
             }
             p.textContent = words.slice(0, low).join(' ') + (low < words.length ? '...' : '');
-
-            // After truncation, center the now-fitting paragraph block
-            const finalParagraphHeight = p.scrollHeight;
-            const offset = Math.floor((availableForParagraph - finalParagraphHeight) / 2);
-            p.style.marginTop = offset > 0 ? offset + 'px' : '0px';
-            return;
+            contentHeight = inner.scrollHeight;
         }
 
-        if (naturalFullHeight <= viewportHeight) {
-            centerCard(naturalFullHeight);
-            return;
-        }
+        // Adaptive centering:
+        // ratio = how much of the usable space the content fills (0..1)
+        // When ratio is low (short text) -> center perfectly
+        // When ratio approaches 1 (long text) -> shift toward top smoothly
+        // The centering factor eases from 0.5 (centered) to ~0.15 (near top but not glued)
+        var freeSpace = Math.max(0, usable - contentHeight);
+        var ratio = usable > 0 ? Math.min(1, contentHeight / usable) : 1;
+
+        // Smooth easing: use a quadratic curve to transition from 0.5 to 0.15
+        // centerFactor = 0.5 when ratio=0, 0.15 when ratio=1
+        var centerFactor = 0.5 - 0.35 * (ratio * ratio);
+        var topOffset = minGap + Math.round(freeSpace * centerFactor);
+
+        contentZone.style.paddingTop = topOffset + 'px';
+
     } catch (e) {
         console.warn('Horoscope layout script error', e);
     }
