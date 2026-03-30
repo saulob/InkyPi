@@ -1,7 +1,10 @@
+import io
 import logging
 import math
 import random
 
+import cairosvg
+import svgwrite
 from PIL import Image, ImageColor, ImageDraw
 
 from plugins.base_plugin.base_plugin import BasePlugin
@@ -1730,6 +1733,241 @@ def _draw_default_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
 
 
 # ---------------------------------------------------------------------------
+# SVG-based dinosaur rendering
+# ---------------------------------------------------------------------------
+
+def create_dino_svg(width, height, primary_color, secondary_color):
+    """Create a cute doodle dinosaur sticker as SVG.
+
+    Design: chubby bean body, short thick neck merging into a rounded
+    head, stubby leg stumps, smooth tapered tail, small rounded spikes.
+    Side-view, calm pose, minimal face — inspired by kawaii sticker dinosaurs.
+    """
+    primary = ("rgb({},{},{})".format(*primary_color)
+               if isinstance(primary_color, tuple) else primary_color)
+    secondary = ("rgb({},{},{})".format(*secondary_color)
+                 if isinstance(secondary_color, tuple) else secondary_color)
+
+    dwg = svgwrite.Drawing(size=(width, height))
+    dwg.add(dwg.rect(insert=(0, 0), size=(width, height), fill=secondary))
+
+    u = min(width, height)
+    sw = max(round(u * 0.007), 2)
+
+    # ── layout anchor — dino centred with room for tail left ─────────
+    cx = width * 0.47
+    cy = height * 0.52
+
+    # ── proportions (all relative to u) ──────────────────────────────
+    # Body: large horizontal bean — the dominant shape
+    body_rx = 0.26 * u
+    body_ry = 0.19 * u
+    bx, by = cx, cy
+
+    # Head: clearly smaller than body, rounded, sits close to body
+    head_rx = 0.108 * u
+    head_ry = 0.100 * u
+    # Head positioned: closely merged into body top-right area
+    hx = bx + body_rx * 0.52
+    hy = by - body_ry * 0.40
+
+    # Legs: short rounded stumps
+    leg_w = 0.032 * u           # half-width
+    leg_h = 0.052 * u           # half-height
+
+    # Tail: medium, thick base tapering — not too long
+    tail_tip_x = bx - 0.36 * u
+    tail_tip_y = by - 0.08 * u
+
+    def body_bottom_y(x):
+        dx = (x - bx) / body_rx
+        t = max(0.0, 1.0 - dx * dx)
+        return by + body_ry * math.sqrt(t)
+
+    def body_top_y(x):
+        dx = (x - bx) / body_rx
+        t = max(0.0, 1.0 - dx * dx)
+        return by - body_ry * math.sqrt(t)
+
+    # ── 1. TAIL (behind everything) ──────────────────────────────────
+    # Thick at body, tapers to rounded tip, curves gently left-up
+    t_base_x = bx - body_rx * 0.82
+    t_base_y = by - body_ry * 0.05
+    t_thick = 0.050 * u         # half-thickness at base
+    t_thin  = 0.014 * u         # half-thickness at tip
+    tx, ty = tail_tip_x, tail_tip_y
+
+    dwg.add(dwg.path(
+        d=(
+            "M {bxt},{byt} "                      # base top
+            "C {c1x},{c1y} {c2x},{c2y} {tx},{tyt} "  # curve to tip top
+            "Q {qx},{qy} {tx},{tyb} "             # rounded tip
+            "C {c4x},{c4y} {c3x},{c3y} {bxb},{byb} " # curve back
+            "Z"
+        ).format(
+            bxt=t_base_x,  byt=t_base_y - t_thick,
+            c1x=t_base_x - 0.08 * u, c1y=t_base_y - 0.08 * u,
+            c2x=tx + 0.08 * u,       c2y=ty - 0.03 * u,
+            tx=tx,  tyt=ty - t_thin,
+            qx=tx - 0.012 * u,       qy=ty,
+            tyb=ty + t_thin,
+            c4x=tx + 0.08 * u,       c4y=ty + 0.05 * u,
+            c3x=t_base_x - 0.06 * u, c3y=t_base_y + 0.06 * u,
+            bxb=t_base_x,  byb=t_base_y + t_thick,
+        ),
+        fill=secondary, stroke=primary, stroke_width=sw,
+        stroke_linejoin="round", stroke_linecap="round",
+    ))
+
+    # ── 2. LEGS (drawn BEFORE body so body fill hides their tops) ────
+    # 4 short stumps evenly spread under the body
+    leg_positions = [bx - 0.15 * u, bx - 0.06 * u,
+                     bx + 0.06 * u, bx + 0.15 * u]
+    for lx in leg_positions:
+        bb_y = body_bottom_y(lx)
+        # Rounded rectangle stump via path with arcs
+        lx0 = lx - leg_w
+        lx1 = lx + leg_w
+        ly0 = bb_y - sw * 0.5           # start inside body
+        ly1 = bb_y + leg_h              # bottom of stump
+        r = leg_w * 0.85                # corner radius for bottom
+        dwg.add(dwg.path(
+            d=(
+                "M {lx0},{ly0} "
+                "L {lx0},{bot_arc_y} "
+                "Q {lx0},{ly1} {lx},{ly1} "
+                "Q {lx1},{ly1} {lx1},{bot_arc_y} "
+                "L {lx1},{ly0} Z"
+            ).format(
+                lx0=lx0, lx1=lx1, lx=lx,
+                ly0=ly0, ly1=ly1,
+                bot_arc_y=ly1 - r,
+            ),
+            fill=secondary, stroke=primary, stroke_width=sw,
+            stroke_linejoin="round",
+        ))
+
+    # ── 3. NECK (short thick connection — drawn before body & head) ──
+    # A thick stroked curve from inside body to inside head.
+    # Body will cover the base end; head will cover the top end.
+    neck_th = 0.18 * u
+    nk_sx = bx + body_rx * 0.42       # start well inside body
+    nk_sy = by - body_ry * 0.20
+    nk_ex = hx - head_rx * 0.10       # end well inside head
+    nk_ey = hy + head_ry * 0.55
+
+    nk_d = "M {},{} Q {},{} {},{}".format(
+        nk_sx, nk_sy,
+        (nk_sx + nk_ex) / 2, nk_sy - 0.01 * u,
+        nk_ex, nk_ey)
+
+    # Outer stroke (border colour)
+    dwg.add(dwg.path(
+        d=nk_d, fill="none", stroke=primary,
+        stroke_width=neck_th, stroke_linecap="round",
+    ))
+    # Inner stroke (fill colour) — creates the tube appearance
+    dwg.add(dwg.path(
+        d=nk_d, fill="none", stroke=secondary,
+        stroke_width=max(neck_th - 2 * sw, 1),
+        stroke_linecap="round",
+    ))
+
+    # ── 4. BODY (large rounded bean — covers leg tops & neck base) ───
+    dwg.add(dwg.ellipse(
+        center=(bx, by), r=(body_rx, body_ry),
+        fill=secondary, stroke=primary, stroke_width=sw,
+    ))
+
+    # Erase body stroke where legs poke through
+    for lx in leg_positions:
+        bb_y = body_bottom_y(lx)
+        dwg.add(dwg.rect(
+            insert=(lx - leg_w * 0.90, bb_y - sw * 1.0),
+            size=(leg_w * 1.80, sw * 2.0),
+            fill=secondary, stroke="none",
+        ))
+
+    # Erase body stroke where neck meets body (top-right area)
+    # Draw head-sized white ellipse to fully erase the body outline inside head area
+    dwg.add(dwg.ellipse(
+        center=(hx, hy),
+        r=(head_rx + sw * 0.5, head_ry + sw * 0.5),
+        fill=secondary, stroke="none",
+    ))
+
+    # ── 5. SPIKES (small rounded bumps on the back) ─────────────────
+    spike_data = [
+        (bx - 0.06 * u, 0.018 * u),
+        (bx + 0.03 * u, 0.022 * u),
+        (bx + 0.11 * u, 0.019 * u),
+    ]
+    for sx, sr in spike_data:
+        sy = body_top_y(sx)
+        # Small rounded bump (semi-ellipse arc)
+        dwg.add(dwg.path(
+            d="M {},{} A {},{} 0 0 0 {},{} Z".format(
+                sx - sr, sy,
+                sr, sr * 1.1,
+                sx + sr, sy),
+            fill=secondary, stroke=primary, stroke_width=sw,
+            stroke_linejoin="round",
+        ))
+
+    # ── 6. HEAD (rounded, covers neck top) ───────────────────────────
+    dwg.add(dwg.ellipse(
+        center=(hx, hy), r=(head_rx, head_ry),
+        fill=secondary, stroke=primary, stroke_width=sw,
+    ))
+
+    # ── 7. EYE (tiny solid black dot with small highlight) ───────────
+    eye_x = hx + head_rx * 0.22
+    eye_y = hy - head_ry * 0.02
+    eye_r = max(0.015 * u, 2.8)
+
+    dwg.add(dwg.circle(center=(eye_x, eye_y), r=eye_r, fill=primary))
+    # Tiny white highlight
+    dwg.add(dwg.circle(
+        center=(eye_x - eye_r * 0.30, eye_y - eye_r * 0.30),
+        r=max(eye_r * 0.35, 1.2), fill=secondary,
+    ))
+
+    # ── 8. SMILE (tiny gentle curve) ─────────────────────────────────
+    sm_len = head_rx * 0.35
+    sm_x = hx + head_rx * 0.22
+    sm_y = hy + head_ry * 0.30
+    dwg.add(dwg.path(
+        d="M {},{} Q {},{} {},{}".format(
+            sm_x, sm_y,
+            sm_x + sm_len * 0.5, sm_y + sm_len * 0.50,
+            sm_x + sm_len, sm_y - sm_len * 0.05),
+        fill="none", stroke=primary,
+        stroke_width=max(sw * 0.75, 1.4),
+        stroke_linecap="round",
+    ))
+
+    # ── 9. CHEEK BLUSH (optional subtle circle) ─────────────────────
+    dwg.add(dwg.circle(
+        center=(hx + head_rx * 0.58, hy + head_ry * 0.38),
+        r=head_ry * 0.14, fill=primary, opacity=0.10,
+    ))
+
+    return dwg.tostring()
+
+
+def render_svg_to_pil(svg_string):
+    """Convert an SVG string to a PIL Image using CairoSVG.
+
+    Renders to PNG bytes in memory and returns a PIL Image.
+    Dimensions come from the SVG's own width/height attributes.
+    """
+    if isinstance(svg_string, str):
+        svg_string = svg_string.encode("utf-8")
+    png_data = cairosvg.svg2png(bytestring=svg_string)
+    return Image.open(io.BytesIO(png_data)).convert("RGB")
+
+
+# ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
 
@@ -1790,19 +2028,25 @@ class TinyMonsters(BasePlugin):
         monster_name = generate_monster_name()
         archetype = _pick_archetype(archetype_mode)
 
-        # Render monster at 2x resolution for smooth anti-aliased edges
-        ss = 2
-        monster_img = Image.new("RGB",
-                                (width * ss, monster_zone_h * ss),
-                                secondary_color)
-        monster_draw = ImageDraw.Draw(monster_img)
-        drawer = ARCHETYPE_DRAWERS[archetype]
-        drawer(monster_draw,
-               (width // 2) * ss, (monster_zone_h // 2) * ss,
-               width * ss, monster_zone_h * ss,
-               primary_color, secondary_color, line_w * ss)
-        monster_img = monster_img.resize((width, monster_zone_h), Image.LANCZOS)
-        image.paste(monster_img, (0, title_zone_h))
+        # Render monster
+        if archetype == "dinosaur":
+            svg_data = create_dino_svg(width, monster_zone_h, primary_color, secondary_color)
+            monster_img = render_svg_to_pil(svg_data)
+            image.paste(monster_img, (0, title_zone_h))
+        else:
+            # Render non-dinosaur at 2x resolution for smooth anti-aliased edges
+            ss = 2
+            monster_img = Image.new("RGB",
+                                    (width * ss, monster_zone_h * ss),
+                                    secondary_color)
+            monster_draw = ImageDraw.Draw(monster_img)
+            drawer = ARCHETYPE_DRAWERS[archetype]
+            drawer(monster_draw,
+                   (width // 2) * ss, (monster_zone_h // 2) * ss,
+                   width * ss, monster_zone_h * ss,
+                   primary_color, secondary_color, line_w * ss)
+            monster_img = monster_img.resize((width, monster_zone_h), Image.LANCZOS)
+            image.paste(monster_img, (0, title_zone_h))
 
         name_font = get_font("Jost", max(int(height * 0.045), 14))
         if name_font:
