@@ -1732,227 +1732,624 @@ def _draw_default_archetype(draw, cx, cy, zone_w, zone_h, primary, secondary, li
                 style=template["mouth_style"])
 
 
+
 # ---------------------------------------------------------------------------
-# SVG-based dinosaur rendering
+# Curated dinosaur SVG template system
+# ---------------------------------------------------------------------------
+#
+# Each template is a fixed, hand-designed dinosaur with specific proportions.
+# NO procedural generation — all coordinates are curated constants.
+# All values are fractions of u = min(width, height).
+# Offsets (dx, dy) are relative to the composition anchor (cx, cy).
+#
+# Two styles:
+#   "chubby"   — big round body, small head, very short legs, compact
+#   "longneck" — rounded body, short thick neck, small head, calm pose
+#
+# Runtime: pick a random template, apply cosmetic-only variations
+# (flip, eye/mouth micro-changes, blush, spots, spike toggle, ±10% scale).
+# The base silhouette is NEVER altered.
 # ---------------------------------------------------------------------------
 
-def create_dino_svg(width, height, primary_color, secondary_color):
-    """Create a cute doodle dinosaur sticker as SVG.
+DINO_SVG_TEMPLATES = [
+    # ── 1. Chubby Classic ────────────────────────────────────────────
+    {
+        "name": "chubby_classic",
+        "style": "chubby",
+        "cx_frac": 0.47,
+        "cy_frac": 0.52,
+        "body": (0.0, 0.0, 0.260, 0.190),
+        "head": (0.135, -0.076, 0.108, 0.100),
+        "neck": (0.109, -0.038, 0.124, -0.021, 0.117, -0.048, 0.180),
+        "legs": [
+            (-0.150, 0.032, 0.052),
+            (-0.060, 0.032, 0.052),
+            ( 0.060, 0.032, 0.052),
+            ( 0.150, 0.032, 0.052),
+        ],
+        "tail": {
+            "base": (-0.213, -0.010),
+            "tip": (-0.360, -0.080),
+            "base_thick": 0.050,
+            "tip_thick": 0.014,
+            "c1_off": (-0.080, -0.080),
+            "c2_off": ( 0.080, -0.030),
+            "c3_off": (-0.060,  0.060),
+            "c4_off": ( 0.080,  0.050),
+            "q_off":  (-0.012,  0.000),
+        },
+        "spikes": [(-0.060, 0.018), (0.030, 0.022), (0.110, 0.019)],
+        "eye": (0.22, -0.02, 0.015),
+        "smile": (0.22, 0.30, 0.35),
+        "blush": (0.58, 0.38, 0.14),
+    },
 
-    Design: chubby bean body, short thick neck merging into a rounded
-    head, stubby leg stumps, smooth tapered tail, small rounded spikes.
-    Side-view, calm pose, minimal face — inspired by kawaii sticker dinosaurs.
+    # ── 2. Chubby Round ──────────────────────────────────────────────
+    {
+        "name": "chubby_round",
+        "style": "chubby",
+        "cx_frac": 0.48,
+        "cy_frac": 0.52,
+        "body": (0.0, 0.0, 0.230, 0.215),
+        "head": (0.115, -0.115, 0.095, 0.090),
+        "neck": (0.097, -0.043, 0.106, -0.066, 0.101, -0.053, 0.160),
+        "legs": [
+            (-0.130, 0.028, 0.045),
+            (-0.050, 0.028, 0.045),
+            ( 0.050, 0.028, 0.045),
+            ( 0.130, 0.028, 0.045),
+        ],
+        "tail": {
+            "base": (-0.189, -0.011),
+            "tip": (-0.319, -0.061),
+            "base_thick": 0.044,
+            "tip_thick": 0.012,
+            "c1_off": (-0.065, -0.065),
+            "c2_off": ( 0.065, -0.025),
+            "c3_off": (-0.050,  0.050),
+            "c4_off": ( 0.065,  0.040),
+            "q_off":  (-0.010,  0.000),
+        },
+        "spikes": [(-0.040, 0.016), (0.050, 0.018)],
+        "eye": (0.24, -0.04, 0.014),
+        "smile": (0.22, 0.28, 0.32),
+        "blush": (0.55, 0.36, 0.13),
+    },
+
+    # ── 3. Chubby Baby ───────────────────────────────────────────────
+    {
+        "name": "chubby_baby",
+        "style": "chubby",
+        "cx_frac": 0.47,
+        "cy_frac": 0.52,
+        "body": (0.0, 0.015, 0.200, 0.175),
+        "head": (0.100, -0.095, 0.125, 0.115),
+        "neck": (0.084, -0.020, 0.088, -0.032, 0.086, -0.028, 0.165),
+        "legs": [
+            (-0.120, 0.026, 0.040),
+            (-0.045, 0.026, 0.040),
+            ( 0.045, 0.026, 0.040),
+            ( 0.120, 0.026, 0.040),
+        ],
+        "tail": {
+            "base": (-0.164, 0.006),
+            "tip": (-0.264, -0.034),
+            "base_thick": 0.036,
+            "tip_thick": 0.010,
+            "c1_off": (-0.050, -0.050),
+            "c2_off": ( 0.050, -0.020),
+            "c3_off": (-0.040,  0.040),
+            "c4_off": ( 0.050,  0.035),
+            "q_off":  (-0.008,  0.000),
+        },
+        "spikes": [(0.020, 0.014)],
+        "eye": (0.20, -0.03, 0.016),
+        "smile": (0.18, 0.28, 0.30),
+        "blush": (0.52, 0.35, 0.15),
+    },
+
+    # ── 4. Chubby Sitting ────────────────────────────────────────────
+    {
+        "name": "chubby_sitting",
+        "style": "chubby",
+        "cx_frac": 0.48,
+        "cy_frac": 0.50,
+        "body": (0.0, 0.020, 0.195, 0.230),
+        "head": (0.080, -0.200, 0.100, 0.095),
+        "neck": (0.082, -0.026, 0.070, -0.148, 0.078, -0.065, 0.148),
+        "legs": [
+            (-0.100, 0.030, 0.048),
+            ( 0.100, 0.030, 0.048),
+        ],
+        "tail": {
+            "base": (-0.160, 0.066),
+            "tip": (-0.280, 0.100),
+            "base_thick": 0.038,
+            "tip_thick": 0.011,
+            "c1_off": (-0.060,  0.010),
+            "c2_off": ( 0.055,  0.010),
+            "c3_off": (-0.050,  0.045),
+            "c4_off": ( 0.055,  0.040),
+            "q_off":  (-0.010,  0.000),
+        },
+        "spikes": [(-0.030, 0.016), (0.040, 0.018)],
+        "eye": (0.24, -0.02, 0.015),
+        "smile": (0.22, 0.30, 0.34),
+        "blush": (0.56, 0.38, 0.14),
+    },
+
+    # ── 5. Chubby Waddle ─────────────────────────────────────────────
+    {
+        "name": "chubby_waddle",
+        "style": "chubby",
+        "cx_frac": 0.46,
+        "cy_frac": 0.52,
+        "body": (0.0, 0.0, 0.250, 0.185),
+        "head": (0.155, -0.085, 0.100, 0.095),
+        "neck": (0.105, -0.037, 0.145, -0.033, 0.125, -0.047, 0.170),
+        "legs": [
+            (-0.155, 0.031, 0.054),
+            (-0.065, 0.031, 0.050),
+            ( 0.055, 0.031, 0.054),
+            ( 0.145, 0.031, 0.050),
+        ],
+        "tail": {
+            "base": (-0.205, -0.009),
+            "tip": (-0.350, -0.065),
+            "base_thick": 0.046,
+            "tip_thick": 0.013,
+            "c1_off": (-0.075, -0.075),
+            "c2_off": ( 0.075, -0.028),
+            "c3_off": (-0.060,  0.055),
+            "c4_off": ( 0.075,  0.045),
+            "q_off":  (-0.011,  0.000),
+        },
+        "spikes": [(-0.050, 0.017), (0.035, 0.020), (0.105, 0.017)],
+        "eye": (0.22, -0.02, 0.015),
+        "smile": (0.22, 0.30, 0.36),
+        "blush": (0.58, 0.38, 0.14),
+    },
+
+    # ── 6. Chubby Plump ──────────────────────────────────────────────
+    {
+        "name": "chubby_plump",
+        "style": "chubby",
+        "cx_frac": 0.48,
+        "cy_frac": 0.52,
+        "body": (0.0, 0.0, 0.240, 0.225),
+        "head": (0.125, -0.100, 0.088, 0.084),
+        "neck": (0.101, -0.045, 0.113, -0.052, 0.107, -0.058, 0.148),
+        "legs": [
+            (-0.135, 0.025, 0.042),
+            (-0.050, 0.025, 0.042),
+            ( 0.050, 0.025, 0.042),
+            ( 0.135, 0.025, 0.042),
+        ],
+        "tail": {
+            "base": (-0.197, -0.008),
+            "tip": (-0.308, -0.055),
+            "base_thick": 0.040,
+            "tip_thick": 0.011,
+            "c1_off": (-0.055, -0.055),
+            "c2_off": ( 0.055, -0.022),
+            "c3_off": (-0.045,  0.045),
+            "c4_off": ( 0.055,  0.038),
+            "q_off":  (-0.009,  0.000),
+        },
+        "spikes": [],
+        "eye": (0.24, -0.04, 0.014),
+        "smile": (0.24, 0.30, 0.30),
+        "blush": (0.54, 0.36, 0.14),
+    },
+
+    # ── 7. Long-Neck Gentle ──────────────────────────────────────────
+    {
+        "name": "longneck_gentle",
+        "style": "longneck",
+        "cx_frac": 0.44,
+        "cy_frac": 0.54,
+        "body": (0.0, 0.040, 0.250, 0.165),
+        "head": (0.255, -0.160, 0.078, 0.073),
+        "neck": (0.105, 0.007, 0.247, -0.120, 0.170, -0.060, 0.120),
+        "legs": [
+            (-0.150, 0.030, 0.058),
+            (-0.060, 0.030, 0.058),
+            ( 0.060, 0.030, 0.058),
+            ( 0.150, 0.030, 0.058),
+        ],
+        "tail": {
+            "base": (-0.205, 0.032),
+            "tip": (-0.385, -0.038),
+            "base_thick": 0.048,
+            "tip_thick": 0.012,
+            "c1_off": (-0.090, -0.090),
+            "c2_off": ( 0.090, -0.032),
+            "c3_off": (-0.070,  0.070),
+            "c4_off": ( 0.090,  0.055),
+            "q_off":  (-0.012,  0.000),
+        },
+        "spikes": [(-0.070, 0.016), (0.010, 0.019), (0.080, 0.017), (0.140, 0.015)],
+        "eye": (0.24, -0.04, 0.012),
+        "smile": (0.24, 0.28, 0.33),
+        "blush": (0.55, 0.35, 0.13),
+    },
+
+    # ── 8. Long-Neck Tall ────────────────────────────────────────────
+    {
+        "name": "longneck_tall",
+        "style": "longneck",
+        "cx_frac": 0.45,
+        "cy_frac": 0.56,
+        "body": (0.0, 0.050, 0.235, 0.160),
+        "head": (0.185, -0.235, 0.072, 0.068),
+        "neck": (0.099, 0.018, 0.178, -0.198, 0.140, -0.080, 0.115),
+        "legs": [
+            (-0.140, 0.030, 0.056),
+            (-0.055, 0.030, 0.056),
+            ( 0.055, 0.030, 0.056),
+            ( 0.140, 0.030, 0.056),
+        ],
+        "tail": {
+            "base": (-0.193, 0.042),
+            "tip": (-0.370, -0.015),
+            "base_thick": 0.044,
+            "tip_thick": 0.012,
+            "c1_off": (-0.085, -0.080),
+            "c2_off": ( 0.085, -0.030),
+            "c3_off": (-0.068,  0.065),
+            "c4_off": ( 0.085,  0.050),
+            "q_off":  (-0.012,  0.000),
+        },
+        "spikes": [(-0.060, 0.015), (0.020, 0.018), (0.090, 0.016)],
+        "eye": (0.25, -0.04, 0.012),
+        "smile": (0.24, 0.30, 0.32),
+        "blush": (0.56, 0.36, 0.12),
+    },
+
+    # ── 9. Long-Neck Grazing ─────────────────────────────────────────
+    {
+        "name": "longneck_grazing",
+        "style": "longneck",
+        "cx_frac": 0.42,
+        "cy_frac": 0.52,
+        "body": (-0.030, 0.025, 0.240, 0.170),
+        "head": (0.295, -0.010, 0.076, 0.072),
+        "neck": (0.071, -0.009, 0.287, 0.030, 0.170, -0.020, 0.115),
+        "legs": [
+            (-0.155, 0.030, 0.058),
+            (-0.065, 0.030, 0.058),
+            ( 0.065, 0.030, 0.058),
+            ( 0.155, 0.030, 0.058),
+        ],
+        "tail": {
+            "base": (-0.227, 0.017),
+            "tip": (-0.387, -0.038),
+            "base_thick": 0.046,
+            "tip_thick": 0.012,
+            "c1_off": (-0.080, -0.075),
+            "c2_off": ( 0.080, -0.028),
+            "c3_off": (-0.065,  0.060),
+            "c4_off": ( 0.080,  0.048),
+            "q_off":  (-0.011,  0.000),
+        },
+        "spikes": [(-0.065, 0.016), (0.015, 0.019), (0.085, 0.016)],
+        "eye": (0.25, -0.04, 0.012),
+        "smile": (0.24, 0.30, 0.33),
+        "blush": (0.56, 0.36, 0.13),
+    },
+
+    # ── 10. Long-Neck Proud ──────────────────────────────────────────
+    {
+        "name": "longneck_proud",
+        "style": "longneck",
+        "cx_frac": 0.46,
+        "cy_frac": 0.55,
+        "body": (0.0, 0.045, 0.240, 0.168),
+        "head": (0.195, -0.210, 0.074, 0.070),
+        "neck": (0.101, 0.010, 0.182, -0.170, 0.155, -0.070, 0.118),
+        "legs": [
+            (-0.145, 0.030, 0.057),
+            (-0.058, 0.030, 0.057),
+            ( 0.058, 0.030, 0.057),
+            ( 0.145, 0.030, 0.057),
+        ],
+        "tail": {
+            "base": (-0.197, 0.035),
+            "tip": (-0.375, -0.025),
+            "base_thick": 0.046,
+            "tip_thick": 0.012,
+            "c1_off": (-0.085, -0.085),
+            "c2_off": ( 0.085, -0.030),
+            "c3_off": (-0.068,  0.065),
+            "c4_off": ( 0.085,  0.050),
+            "q_off":  (-0.012,  0.000),
+        },
+        "spikes": [(-0.060, 0.015), (0.015, 0.018), (0.085, 0.016), (0.140, 0.014)],
+        "eye": (0.25, -0.04, 0.012),
+        "smile": (0.24, 0.30, 0.33),
+        "blush": (0.56, 0.36, 0.12),
+    },
+]
+
+
+def _dino_color_str(color):
+    """Convert a color value to an SVG-compatible string."""
+    if isinstance(color, tuple):
+        return "rgb({},{},{})".format(*color)
+    return color
+
+
+def _dino_body_y(by, body_rx, body_ry, x, bx, top=True):
+    """Y coordinate on the body ellipse outline at a given x position."""
+    dx = (x - bx) / body_rx if body_rx else 0
+    t = max(0.0, 1.0 - dx * dx)
+    offset = body_ry * math.sqrt(t)
+    return (by - offset) if top else (by + offset)
+
+
+def _apply_dino_variations(template):
+    """Return a shallow copy with random cosmetic variations applied.
+
+    Only cosmetic changes — the silhouette is never altered.
     """
-    primary = ("rgb({},{},{})".format(*primary_color)
-               if isinstance(primary_color, tuple) else primary_color)
-    secondary = ("rgb({},{},{})".format(*secondary_color)
-                 if isinstance(secondary_color, tuple) else secondary_color)
+    t = dict(template)
+    t["flip"] = random.random() < 0.5
+    t["scale"] = random.uniform(0.92, 1.08)
+    t["eye_variant"] = random.randint(0, 2)
+    t["mouth_variant"] = random.randint(0, 2)
+    t["show_blush"] = random.random() < 0.6
+    t["show_spots"] = random.random() < 0.2
+    t["show_spikes"] = bool(t.get("spikes")) and random.random() < 0.7
+    return t
 
-    dwg = svgwrite.Drawing(size=(width, height))
-    dwg.add(dwg.rect(insert=(0, 0), size=(width, height), fill=secondary))
+
+def _render_dino_template(tmpl, width, height, primary, secondary):
+    """Render a curated dinosaur template to an SVG string.
+
+    All shapes come from the fixed template data.  The only runtime
+    decisions are cosmetic overlay variations (eye/mouth style, blush,
+    spots, spike visibility).
+    """
+    pri = _dino_color_str(primary)
+    sec = _dino_color_str(secondary)
 
     u = min(width, height)
-    sw = max(round(u * 0.007), 2)
+    scale = tmpl.get("scale", 1.0)
+    s = u * scale
+    sw = max(round(s * 0.007), 2)
 
-    # ── layout anchor — dino centred with room for tail left ─────────
-    cx = width * 0.47
-    cy = height * 0.52
+    # Composition anchor
+    cx = width * tmpl["cx_frac"]
+    cy = height * tmpl["cy_frac"]
 
-    # ── proportions (all relative to u) ──────────────────────────────
-    # Body: large horizontal bean — the dominant shape
-    body_rx = 0.26 * u
-    body_ry = 0.19 * u
-    bx, by = cx, cy
+    dwg = svgwrite.Drawing(size=(width, height))
+    dwg.add(dwg.rect(insert=(0, 0), size=(width, height), fill=sec))
 
-    # Head: clearly smaller than body, rounded, sits close to body
-    head_rx = 0.108 * u
-    head_ry = 0.100 * u
-    # Head positioned: closely merged into body top-right area
-    hx = bx + body_rx * 0.52
-    hy = by - body_ry * 0.40
+    # All dino parts go in a group (flipped via SVG transform if needed)
+    g = dwg.g()
+    if tmpl.get("flip"):
+        g.attribs["transform"] = "translate({}, 0) scale(-1, 1)".format(width)
 
-    # Legs: short rounded stumps
-    leg_w = 0.032 * u           # half-width
-    leg_h = 0.052 * u           # half-height
+    # ── Unpack body geometry ─────────────────────────────────────────
+    bdx, bdy, brx_f, bry_f = tmpl["body"]
+    body_rx = brx_f * s
+    body_ry = bry_f * s
+    bx = cx + bdx * s
+    by = cy + bdy * s
 
-    # Tail: medium, thick base tapering — not too long
-    tail_tip_x = bx - 0.36 * u
-    tail_tip_y = by - 0.08 * u
+    # ── Unpack head geometry ─────────────────────────────────────────
+    hdx, hdy, hrx_f, hry_f = tmpl["head"]
+    head_rx = hrx_f * s
+    head_ry = hry_f * s
+    hx = cx + hdx * s
+    hy = cy + hdy * s
 
+    # ── Unpack neck geometry ─────────────────────────────────────────
+    nsx, nsy, nex, ney, ncx_f, ncy_f, nthick = tmpl["neck"]
+    neck_th = nthick * s
+    neck_sx = cx + nsx * s
+    neck_sy = cy + nsy * s
+    neck_ex = cx + nex * s
+    neck_ey = cy + ney * s
+    neck_cx = cx + ncx_f * s
+    neck_cy = cy + ncy_f * s
+
+    # ── Helper: body edge y at a given x ─────────────────────────────
     def body_bottom_y(x):
-        dx = (x - bx) / body_rx
-        t = max(0.0, 1.0 - dx * dx)
-        return by + body_ry * math.sqrt(t)
+        return _dino_body_y(by, body_rx, body_ry, x, bx, top=False)
 
     def body_top_y(x):
-        dx = (x - bx) / body_rx
-        t = max(0.0, 1.0 - dx * dx)
-        return by - body_ry * math.sqrt(t)
+        return _dino_body_y(by, body_rx, body_ry, x, bx, top=True)
 
-    # ── 1. TAIL (behind everything) ──────────────────────────────────
-    # Thick at body, tapers to rounded tip, curves gently left-up
-    t_base_x = bx - body_rx * 0.82
-    t_base_y = by - body_ry * 0.05
-    t_thick = 0.050 * u         # half-thickness at base
-    t_thin  = 0.014 * u         # half-thickness at tip
-    tx, ty = tail_tip_x, tail_tip_y
+    # ==================================================================
+    # DRAW ORDER: tail → legs → neck → body → erasers → spikes → head
+    #             → face details
+    # ==================================================================
 
-    dwg.add(dwg.path(
+    # ── 1. TAIL ──────────────────────────────────────────────────────
+    tail = tmpl["tail"]
+    t_bx = cx + tail["base"][0] * s
+    t_by = cy + tail["base"][1] * s
+    t_tx = cx + tail["tip"][0] * s
+    t_ty = cy + tail["tip"][1] * s
+    t_bt = tail["base_thick"] * s
+    t_tt = tail["tip_thick"] * s
+
+    tc1x = t_bx + tail["c1_off"][0] * s
+    tc1y = t_by + tail["c1_off"][1] * s
+    tc2x = t_tx + tail["c2_off"][0] * s
+    tc2y = t_ty + tail["c2_off"][1] * s
+    tc3x = t_bx + tail["c3_off"][0] * s
+    tc3y = t_by + tail["c3_off"][1] * s
+    tc4x = t_tx + tail["c4_off"][0] * s
+    tc4y = t_ty + tail["c4_off"][1] * s
+    tqx = t_tx + tail["q_off"][0] * s
+    tqy = t_ty + tail["q_off"][1] * s
+
+    g.add(dwg.path(
         d=(
-            "M {bxt},{byt} "                      # base top
-            "C {c1x},{c1y} {c2x},{c2y} {tx},{tyt} "  # curve to tip top
-            "Q {qx},{qy} {tx},{tyb} "             # rounded tip
-            "C {c4x},{c4y} {c3x},{c3y} {bxb},{byb} " # curve back
-            "Z"
+            "M {bxt},{byt} "
+            "C {c1x},{c1y} {c2x},{c2y} {tx},{tyt} "
+            "Q {qx},{qy} {tx},{tyb} "
+            "C {c4x},{c4y} {c3x},{c3y} {bxb},{byb} Z"
         ).format(
-            bxt=t_base_x,  byt=t_base_y - t_thick,
-            c1x=t_base_x - 0.08 * u, c1y=t_base_y - 0.08 * u,
-            c2x=tx + 0.08 * u,       c2y=ty - 0.03 * u,
-            tx=tx,  tyt=ty - t_thin,
-            qx=tx - 0.012 * u,       qy=ty,
-            tyb=ty + t_thin,
-            c4x=tx + 0.08 * u,       c4y=ty + 0.05 * u,
-            c3x=t_base_x - 0.06 * u, c3y=t_base_y + 0.06 * u,
-            bxb=t_base_x,  byb=t_base_y + t_thick,
+            bxt=t_bx, byt=t_by - t_bt,
+            c1x=tc1x, c1y=tc1y,
+            c2x=tc2x, c2y=tc2y,
+            tx=t_tx, tyt=t_ty - t_tt,
+            qx=tqx, qy=tqy,
+            tyb=t_ty + t_tt,
+            c4x=tc4x, c4y=tc4y,
+            c3x=tc3x, c3y=tc3y,
+            bxb=t_bx, byb=t_by + t_bt,
         ),
-        fill=secondary, stroke=primary, stroke_width=sw,
+        fill=sec, stroke=pri, stroke_width=sw,
         stroke_linejoin="round", stroke_linecap="round",
     ))
 
-    # ── 2. LEGS (drawn BEFORE body so body fill hides their tops) ────
-    # 4 short stumps evenly spread under the body
-    leg_positions = [bx - 0.15 * u, bx - 0.06 * u,
-                     bx + 0.06 * u, bx + 0.15 * u]
-    for lx in leg_positions:
+    # ── 2. LEGS ──────────────────────────────────────────────────────
+    leg_data = []
+    for ldx, lw_f, lh_f in tmpl["legs"]:
+        lx = cx + ldx * s
+        lw = lw_f * s
+        lh = lh_f * s
         bb_y = body_bottom_y(lx)
-        # Rounded rectangle stump via path with arcs
-        lx0 = lx - leg_w
-        lx1 = lx + leg_w
-        ly0 = bb_y - sw * 0.5           # start inside body
-        ly1 = bb_y + leg_h              # bottom of stump
-        r = leg_w * 0.85                # corner radius for bottom
-        dwg.add(dwg.path(
+        r = lw * 0.85
+        lx0, lx1 = lx - lw, lx + lw
+        ly0 = bb_y - sw * 0.5
+        ly1 = bb_y + lh
+        leg_data.append((lx, lw, bb_y))
+        g.add(dwg.path(
             d=(
-                "M {lx0},{ly0} "
-                "L {lx0},{bot_arc_y} "
+                "M {lx0},{ly0} L {lx0},{bay} "
                 "Q {lx0},{ly1} {lx},{ly1} "
-                "Q {lx1},{ly1} {lx1},{bot_arc_y} "
+                "Q {lx1},{ly1} {lx1},{bay} "
                 "L {lx1},{ly0} Z"
-            ).format(
-                lx0=lx0, lx1=lx1, lx=lx,
-                ly0=ly0, ly1=ly1,
-                bot_arc_y=ly1 - r,
-            ),
-            fill=secondary, stroke=primary, stroke_width=sw,
+            ).format(lx0=lx0, lx1=lx1, lx=lx,
+                     ly0=ly0, ly1=ly1, bay=ly1 - r),
+            fill=sec, stroke=pri, stroke_width=sw,
             stroke_linejoin="round",
         ))
 
-    # ── 3. NECK (short thick connection — drawn before body & head) ──
-    # A thick stroked curve from inside body to inside head.
-    # Body will cover the base end; head will cover the top end.
-    neck_th = 0.18 * u
-    nk_sx = bx + body_rx * 0.42       # start well inside body
-    nk_sy = by - body_ry * 0.20
-    nk_ex = hx - head_rx * 0.10       # end well inside head
-    nk_ey = hy + head_ry * 0.55
-
+    # ── 3. NECK ──────────────────────────────────────────────────────
     nk_d = "M {},{} Q {},{} {},{}".format(
-        nk_sx, nk_sy,
-        (nk_sx + nk_ex) / 2, nk_sy - 0.01 * u,
-        nk_ex, nk_ey)
+        neck_sx, neck_sy, neck_cx, neck_cy, neck_ex, neck_ey)
+    # Outer stroke (border)
+    g.add(dwg.path(d=nk_d, fill="none", stroke=pri,
+                   stroke_width=neck_th, stroke_linecap="round"))
+    # Inner stroke (fill colour — tube appearance)
+    g.add(dwg.path(d=nk_d, fill="none", stroke=sec,
+                   stroke_width=max(neck_th - 2 * sw, 1),
+                   stroke_linecap="round"))
 
-    # Outer stroke (border colour)
-    dwg.add(dwg.path(
-        d=nk_d, fill="none", stroke=primary,
-        stroke_width=neck_th, stroke_linecap="round",
-    ))
-    # Inner stroke (fill colour) — creates the tube appearance
-    dwg.add(dwg.path(
-        d=nk_d, fill="none", stroke=secondary,
-        stroke_width=max(neck_th - 2 * sw, 1),
-        stroke_linecap="round",
-    ))
+    # ── 4. BODY ──────────────────────────────────────────────────────
+    g.add(dwg.ellipse(center=(bx, by), r=(body_rx, body_ry),
+                      fill=sec, stroke=pri, stroke_width=sw))
 
-    # ── 4. BODY (large rounded bean — covers leg tops & neck base) ───
-    dwg.add(dwg.ellipse(
-        center=(bx, by), r=(body_rx, body_ry),
-        fill=secondary, stroke=primary, stroke_width=sw,
-    ))
-
-    # Erase body stroke where legs poke through
-    for lx in leg_positions:
-        bb_y = body_bottom_y(lx)
-        dwg.add(dwg.rect(
-            insert=(lx - leg_w * 0.90, bb_y - sw * 1.0),
-            size=(leg_w * 1.80, sw * 2.0),
-            fill=secondary, stroke="none",
+    # Erase body stroke at leg junctions
+    for lx, lw, bb_y in leg_data:
+        g.add(dwg.rect(
+            insert=(lx - lw * 0.90, bb_y - sw),
+            size=(lw * 1.80, sw * 2.0),
+            fill=sec, stroke="none",
         ))
 
-    # Erase body stroke where neck meets body (top-right area)
-    # Draw head-sized white ellipse to fully erase the body outline inside head area
-    dwg.add(dwg.ellipse(
+    # Erase body stroke inside head area
+    g.add(dwg.ellipse(
         center=(hx, hy),
         r=(head_rx + sw * 0.5, head_ry + sw * 0.5),
-        fill=secondary, stroke="none",
+        fill=sec, stroke="none",
     ))
 
-    # ── 5. SPIKES (small rounded bumps on the back) ─────────────────
-    spike_data = [
-        (bx - 0.06 * u, 0.018 * u),
-        (bx + 0.03 * u, 0.022 * u),
-        (bx + 0.11 * u, 0.019 * u),
-    ]
-    for sx, sr in spike_data:
-        sy = body_top_y(sx)
-        # Small rounded bump (semi-ellipse arc)
-        dwg.add(dwg.path(
-            d="M {},{} A {},{} 0 0 0 {},{} Z".format(
-                sx - sr, sy,
-                sr, sr * 1.1,
-                sx + sr, sy),
-            fill=secondary, stroke=primary, stroke_width=sw,
-            stroke_linejoin="round",
-        ))
+    # ── 5. SPIKES ────────────────────────────────────────────────────
+    if tmpl.get("show_spikes", True):
+        for sdx, sr_f in tmpl.get("spikes", []):
+            sx = cx + sdx * s
+            sr = sr_f * s
+            sy = body_top_y(sx)
+            g.add(dwg.path(
+                d="M {},{} A {},{} 0 0 0 {},{} Z".format(
+                    sx - sr, sy, sr, sr * 1.1, sx + sr, sy),
+                fill=sec, stroke=pri, stroke_width=sw,
+                stroke_linejoin="round",
+            ))
 
-    # ── 6. HEAD (rounded, covers neck top) ───────────────────────────
-    dwg.add(dwg.ellipse(
-        center=(hx, hy), r=(head_rx, head_ry),
-        fill=secondary, stroke=primary, stroke_width=sw,
-    ))
+    # ── 6. HEAD ──────────────────────────────────────────────────────
+    g.add(dwg.ellipse(center=(hx, hy), r=(head_rx, head_ry),
+                      fill=sec, stroke=pri, stroke_width=sw))
 
-    # ── 7. EYE (tiny solid black dot with small highlight) ───────────
-    eye_x = hx + head_rx * 0.22
-    eye_y = hy - head_ry * 0.02
-    eye_r = max(0.015 * u, 2.8)
+    # ── 7. EYE ───────────────────────────────────────────────────────
+    eye_h, eye_v, eye_r_f = tmpl["eye"]
+    variant = tmpl.get("eye_variant", 0)
+    r_mult = [1.0, 1.15, 0.90][variant]
+    h_shift = [0.0, 0.02, -0.01][variant]
 
-    dwg.add(dwg.circle(center=(eye_x, eye_y), r=eye_r, fill=primary))
-    # Tiny white highlight
-    dwg.add(dwg.circle(
+    eye_x = hx + head_rx * (eye_h + h_shift)
+    eye_y = hy + head_ry * eye_v
+    eye_r = max(eye_r_f * s * r_mult, 2.5)
+
+    g.add(dwg.circle(center=(eye_x, eye_y), r=eye_r, fill=pri))
+    # Tiny highlight
+    g.add(dwg.circle(
         center=(eye_x - eye_r * 0.30, eye_y - eye_r * 0.30),
-        r=max(eye_r * 0.35, 1.2), fill=secondary,
+        r=max(eye_r * 0.35, 1.2), fill=sec,
     ))
 
-    # ── 8. SMILE (tiny gentle curve) ─────────────────────────────────
-    sm_len = head_rx * 0.35
-    sm_x = hx + head_rx * 0.22
-    sm_y = hy + head_ry * 0.30
-    dwg.add(dwg.path(
+    # ── 8. SMILE ─────────────────────────────────────────────────────
+    sm_h, sm_v, sm_len_f = tmpl["smile"]
+    mouth_var = tmpl.get("mouth_variant", 0)
+    len_mult = [1.0, 1.20, 0.80][mouth_var]
+    curve_mult = [1.0, 0.80, 1.30][mouth_var]
+
+    sm_len = head_rx * sm_len_f * len_mult
+    sm_x = hx + head_rx * sm_h
+    sm_y = hy + head_ry * sm_v
+
+    g.add(dwg.path(
         d="M {},{} Q {},{} {},{}".format(
             sm_x, sm_y,
-            sm_x + sm_len * 0.5, sm_y + sm_len * 0.50,
+            sm_x + sm_len * 0.5, sm_y + sm_len * 0.50 * curve_mult,
             sm_x + sm_len, sm_y - sm_len * 0.05),
-        fill="none", stroke=primary,
+        fill="none", stroke=pri,
         stroke_width=max(sw * 0.75, 1.4),
         stroke_linecap="round",
     ))
 
-    # ── 9. CHEEK BLUSH (optional subtle circle) ─────────────────────
-    dwg.add(dwg.circle(
-        center=(hx + head_rx * 0.58, hy + head_ry * 0.38),
-        r=head_ry * 0.14, fill=primary, opacity=0.10,
-    ))
+    # ── 9. BLUSH ─────────────────────────────────────────────────────
+    if tmpl.get("show_blush", False):
+        bh, bv, br_f = tmpl["blush"]
+        g.add(dwg.circle(
+            center=(hx + head_rx * bh, hy + head_ry * bv),
+            r=head_ry * br_f, fill=pri, opacity=0.10,
+        ))
 
+    # ── 10. SPOTS (cosmetic overlay on body) ─────────────────────────
+    if tmpl.get("show_spots", False):
+        spot_positions = [
+            (bx + body_rx * 0.30, by - body_ry * 0.10),
+            (bx - body_rx * 0.20, by + body_ry * 0.15),
+            (bx + body_rx * 0.05, by + body_ry * 0.30),
+        ]
+        for spx, spy in spot_positions:
+            g.add(dwg.circle(
+                center=(spx, spy), r=body_ry * 0.06,
+                fill=pri, opacity=0.08,
+            ))
+
+    dwg.add(g)
     return dwg.tostring()
+
+
+def create_dino_svg(width, height, primary_color, secondary_color):
+    """Create a cute doodle dinosaur from curated SVG templates.
+
+    Selects a random template and applies minor cosmetic variations.
+    The base silhouette is never altered — only eye style, mouth shape,
+    blush, spots, horizontal flip, and slight scale (±8%) change.
+    """
+    template = random.choice(DINO_SVG_TEMPLATES)
+    varied = _apply_dino_variations(template)
+    return _render_dino_template(varied, width, height, primary_color, secondary_color)
 
 
 def render_svg_to_pil(svg_string):
