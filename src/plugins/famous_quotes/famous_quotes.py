@@ -8,7 +8,8 @@ Supports real-time translation via Argos Translate.
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
 from utils.app_utils import get_font
-from flask import current_app, request as flask_request, jsonify
+from flask import request as flask_request, jsonify
+from blueprints.plugin import plugin_bp
 from PIL import Image, ImageDraw
 import logging
 import os
@@ -71,9 +72,8 @@ def _translate_text(text, target_lang):
 
 
 # ===================================================================
-# Translation package management routes (self-registered from plugin)
+# Translation package management routes (registered on plugin_bp at import time)
 # ===================================================================
-_translation_routes_registered = False
 
 
 def _get_argos_package_size(pkg):
@@ -88,6 +88,7 @@ def _get_argos_package_size(pkg):
     return round(total / (1024 * 1024), 1)
 
 
+@plugin_bp.route('/translation_packages', methods=['GET'])
 def _handle_list_packages():
     """GET /translation_packages — list installed Argos en→X packages."""
     try:
@@ -108,6 +109,7 @@ def _handle_list_packages():
         return jsonify({"error": str(e)}), 500
 
 
+@plugin_bp.route('/translation_packages/install', methods=['POST'])
 def _handle_install_package():
     """POST /translation_packages/install — download & install an en→X package."""
     try:
@@ -140,6 +142,7 @@ def _handle_install_package():
         return jsonify({"error": str(e)}), 500
 
 
+@plugin_bp.route('/translation_packages/delete', methods=['POST'])
 def _handle_delete_package():
     """POST /translation_packages/delete — uninstall an en→X package."""
     try:
@@ -165,40 +168,8 @@ def _handle_delete_package():
         return jsonify({"error": str(e)}), 500
 
 
-def _register_translation_routes():
-    """Lazily register translation package management routes on the Flask app."""
-    global _translation_routes_registered
-    if _translation_routes_registered:
-        return
-    try:
-        app = current_app._get_current_object()
-        app.add_url_rule(
-            "/translation_packages",
-            endpoint="list_translation_packages",
-            view_func=_handle_list_packages,
-            methods=["GET"],
-        )
-        app.add_url_rule(
-            "/translation_packages/install",
-            endpoint="install_translation_package",
-            view_func=_handle_install_package,
-            methods=["POST"],
-        )
-        app.add_url_rule(
-            "/translation_packages/delete",
-            endpoint="delete_translation_package",
-            view_func=_handle_delete_package,
-            methods=["POST"],
-        )
-        _translation_routes_registered = True
-        logger.info("Translation package routes registered successfully")
-    except Exception as e:
-        logger.warning(f"Could not register translation routes: {e}")
-
-
 class FamousQuotes(BasePlugin):
     def generate_settings_template(self):
-        _register_translation_routes()
         template_params = super().generate_settings_template()
         template_params['api_key'] = {
             "required": True,
