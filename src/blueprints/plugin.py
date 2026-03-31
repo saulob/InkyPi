@@ -256,3 +256,101 @@ def update_now():
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
     return jsonify({"success": True, "message": "Display updated"}), 200
+
+
+# =============================================================================
+# Argos Translate – language package management
+# =============================================================================
+
+def _get_argos_package_size(pkg):
+    """Return the disk size of an installed Argos Translate package in bytes."""
+    total = 0
+    pkg_path = pkg.package_path
+    for dirpath, _dirnames, filenames in os.walk(pkg_path):
+        for f in filenames:
+            total += os.path.getsize(os.path.join(dirpath, f))
+    return total
+
+
+@plugin_bp.route('/translation_packages', methods=['GET'])
+def list_translation_packages():
+    """Return installed en→XX Argos Translate packages with size info."""
+    try:
+        import argostranslate.package
+        installed = argostranslate.package.get_installed_packages()
+        packages = []
+        for p in installed:
+            if p.from_code == "en":
+                size_bytes = _get_argos_package_size(p)
+                packages.append({
+                    "from_code": p.from_code,
+                    "to_code": p.to_code,
+                    "to_name": p.to_name,
+                    "size_mb": round(size_bytes / (1024 * 1024), 1),
+                })
+        return jsonify({"success": True, "packages": packages}), 200
+    except Exception as e:
+        logger.error(f"Error listing translation packages: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@plugin_bp.route('/translation_packages/install', methods=['POST'])
+def install_translation_package():
+    """Download and install an en→XX Argos Translate package."""
+    data = request.get_json(silent=True) or {}
+    lang_code = data.get("lang_code", "").strip()
+    if not lang_code or lang_code == "en":
+        return jsonify({"error": "Invalid language code"}), 400
+
+    try:
+        import argostranslate.package
+
+        # Check if already installed
+        installed = argostranslate.package.get_installed_packages()
+        if any(p.from_code == "en" and p.to_code == lang_code for p in installed):
+            return jsonify({"success": True, "message": f"Package en→{lang_code} already installed"}), 200
+
+        argostranslate.package.update_package_index()
+        available = argostranslate.package.get_available_packages()
+        pkg = next(
+            (p for p in available if p.from_code == "en" and p.to_code == lang_code),
+            None,
+        )
+        if pkg is None:
+            return jsonify({"error": f"No package available for en→{lang_code}"}), 404
+
+        argostranslate.package.install_from_path(pkg.download())
+        logger.info(f"Installed Argos Translate package: en -> {lang_code}")
+        return jsonify({"success": True, "message": f"Package en→{lang_code} installed successfully"}), 200
+
+    except Exception as e:
+        logger.error(f"Error installing translation package en->{lang_code}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@plugin_bp.route('/translation_packages/delete', methods=['POST'])
+def delete_translation_package():
+    """Remove an installed en→XX Argos Translate package."""
+    data = request.get_json(silent=True) or {}
+    lang_code = data.get("lang_code", "").strip()
+    if not lang_code or lang_code == "en":
+        return jsonify({"error": "Invalid language code"}), 400
+
+    try:
+        import argostranslate.package
+
+        installed = argostranslate.package.get_installed_packages()
+        pkg = next(
+            (p for p in installed if p.from_code == "en" and p.to_code == lang_code),
+            None,
+        )
+        if pkg is None:
+            return jsonify({"error": f"Package en→{lang_code} is not installed"}), 404
+
+        argostranslate.package.uninstall(pkg)
+        logger.info(f"Uninstalled Argos Translate package: en -> {lang_code}")
+        return jsonify({"success": True, "message": f"Package en→{lang_code} removed"}), 200
+
+    except Exception as e:
+        logger.error(f"Error removing translation package en->{lang_code}: {e}")
+        return jsonify({"error": str(e)}), 500

@@ -13,6 +13,15 @@
         </select>
     </div>
 
+    <!-- Translation Packages Manager -->
+    <div class="form-group">
+        <label class="form-label">Translation Packages</label>
+        <div id="translation-pkg-list" style="margin-top: 6px;">
+            <span style="color: var(--text-secondary, #888); font-size: 0.9rem;">Loading…</span>
+        </div>
+        <div id="translation-pkg-status" style="margin-top: 8px; font-size: 0.9rem; display: none;"></div>
+    </div>
+
     <div class="form-group">
         <label for="category" class="form-label">Quote Category</label>
         <select id="category" name="category" class="form-input">
@@ -53,7 +62,200 @@
     </div>
 </div>
 
+<style>
+    .pkg-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        border-radius: 6px;
+        margin-bottom: 4px;
+        background: var(--button-bg, #f4f4f9);
+        font-size: 0.9rem;
+    }
+    .pkg-row .pkg-info { flex: 1; }
+    .pkg-row .pkg-size { color: var(--text-secondary, #888); margin-left: 8px; font-size: 0.85rem; }
+    .pkg-row .pkg-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-left: 8px;
+    }
+    .pkg-badge.downloaded { background: #2ecc7133; color: #27ae60; }
+    .pkg-badge.not-downloaded { background: #e74c3c22; color: var(--text-secondary, #888); }
+    .pkg-delete-btn {
+        background: none;
+        border: none;
+        color: var(--remove-btn-color, #e74c3c);
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        transition: color 0.2s;
+    }
+    .pkg-delete-btn:hover { color: var(--remove-btn-hover, #c0392b); }
+    #translation-pkg-status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        background: var(--button-bg, #f4f4f9);
+    }
+</style>
+
 <script>
+    const LANG_NAMES = {
+        nl: 'Dutch', en: 'English', fr: 'French', de: 'German',
+        id: 'Indonesian', it: 'Italian', pt: 'Portuguese', es: 'Spanish'
+    };
+
+    let installedPackages = {};  // { lang_code: { size_mb, to_name } }
+
+    // --- Fetch & render installed packages ---
+    async function refreshPackageList() {
+        const container = document.getElementById('translation-pkg-list');
+        try {
+            const res = await fetch('/translation_packages');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to load packages');
+
+            installedPackages = {};
+            (data.packages || []).forEach(p => {
+                installedPackages[p.to_code] = { size_mb: p.size_mb, to_name: p.to_name };
+            });
+
+            renderPackageList();
+            updateLanguageDropdown();
+        } catch (e) {
+            container.innerHTML = '<span style="color:var(--remove-btn-color,#e74c3c);">Failed to load packages</span>';
+        }
+    }
+
+    function renderPackageList() {
+        const container = document.getElementById('translation-pkg-list');
+        const langs = Object.keys(LANG_NAMES).filter(c => c !== 'en').sort((a, b) => LANG_NAMES[a].localeCompare(LANG_NAMES[b]));
+
+        let html = '';
+        for (const code of langs) {
+            const installed = installedPackages[code];
+            if (installed) {
+                html += `<div class="pkg-row">
+                    <span class="pkg-info">
+                        en → ${LANG_NAMES[code]}
+                        <span class="pkg-badge downloaded">downloaded</span>
+                        <span class="pkg-size">${installed.size_mb} MB</span>
+                    </span>
+                    <button type="button" class="pkg-delete-btn" onclick="deletePackage('${code}')" title="Remove package">✕</button>
+                </div>`;
+            } else {
+                html += `<div class="pkg-row">
+                    <span class="pkg-info">
+                        en → ${LANG_NAMES[code]}
+                        <span class="pkg-badge not-downloaded">not downloaded</span>
+                    </span>
+                </div>`;
+            }
+        }
+
+        container.innerHTML = html || '<span style="color:var(--text-secondary,#888);">No translation packages installed</span>';
+    }
+
+    // --- Update dropdown labels with download status ---
+    function updateLanguageDropdown() {
+        const select = document.getElementById('language');
+        for (const opt of select.options) {
+            const code = opt.value;
+            if (code === 'en') continue;
+            const baseName = LANG_NAMES[code] || code;
+            if (installedPackages[code]) {
+                opt.textContent = baseName + ' ✓';
+            } else {
+                opt.textContent = baseName;
+            }
+        }
+    }
+
+    // --- Show/hide status message ---
+    function showPkgStatus(msg, isError) {
+        const el = document.getElementById('translation-pkg-status');
+        el.style.display = 'block';
+        el.style.color = isError ? 'var(--remove-btn-color, #e74c3c)' : 'var(--text-color, #333)';
+        el.textContent = msg;
+    }
+
+    function hidePkgStatus() {
+        document.getElementById('translation-pkg-status').style.display = 'none';
+    }
+
+    // --- Install package (called from language change) ---
+    async function installPackage(langCode) {
+        showPkgStatus(`Downloading en → ${LANG_NAMES[langCode]}… This may take a minute.`, false);
+
+        try {
+            const res = await fetch('/translation_packages/install', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lang_code: langCode })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Install failed');
+
+            showPkgStatus(`✓ ${LANG_NAMES[langCode]} package installed successfully!`, false);
+            await refreshPackageList();
+            setTimeout(hidePkgStatus, 4000);
+        } catch (e) {
+            showPkgStatus(`✕ Failed to install: ${e.message}`, true);
+        }
+    }
+
+    // --- Delete package ---
+    async function deletePackage(langCode) {
+        if (!confirm(`Remove the ${LANG_NAMES[langCode]} translation package?`)) return;
+
+        showPkgStatus(`Removing en → ${LANG_NAMES[langCode]}…`, false);
+
+        try {
+            const res = await fetch('/translation_packages/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lang_code: langCode })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Delete failed');
+
+            // If the currently selected language was deleted, reset to English
+            const select = document.getElementById('language');
+            if (select.value === langCode) {
+                select.value = 'en';
+            }
+
+            showPkgStatus(`✓ ${LANG_NAMES[langCode]} package removed.`, false);
+            await refreshPackageList();
+            setTimeout(hidePkgStatus, 4000);
+        } catch (e) {
+            showPkgStatus(`✕ Failed to remove: ${e.message}`, true);
+        }
+    }
+
+    // --- Handle language dropdown change ---
+    function onLanguageChange() {
+        const langCode = document.getElementById('language').value;
+        if (langCode === 'en') return;
+
+        if (!installedPackages[langCode]) {
+            const ok = confirm(
+                `The ${LANG_NAMES[langCode]} translation package is not downloaded yet.\n\n` +
+                `Download now? (~80-100 MB, may take a minute)`
+            );
+            if (ok) {
+                installPackage(langCode);
+            } else {
+                document.getElementById('language').value = 'en';
+            }
+        }
+    }
+
+    // --- Init ---
     document.addEventListener('DOMContentLoaded', () => {
         if (loadPluginSettings) {
             document.getElementById('language').value = pluginSettings.language || 'en';
@@ -62,5 +264,9 @@
             document.getElementById('show_author').value = document.getElementById('show_author').checked ? 'true' : 'false';
             document.getElementById('max_lines').value = pluginSettings.max_lines || '3';
         }
+
+        document.getElementById('language').addEventListener('change', onLanguageChange);
+
+        refreshPackageList();
     });
 </script>
