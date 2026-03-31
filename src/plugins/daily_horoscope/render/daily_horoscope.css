@@ -53,12 +53,6 @@
   gap: 0.5dvh;
 }
 
-.zodiac-symbol {
-  /* increased ~10% twice to make symbol slightly more prominent */
-  font-size: min(19.36dvw, 19.36dvh);
-  line-height: 1;
-}
-
 .zodiac-icon {
   width: min(19.36dvw, 19.36dvh);
   height: min(19.36dvw, 19.36dvh);

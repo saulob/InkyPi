@@ -8,37 +8,6 @@
         </select>
     </div>
 
-    <div class="form-group">
-        <label class="form-label">Zodiac Icons</label>
-        <p style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 8px;">
-            Generate each zodiac icon individually, then download to add to the project.
-        </p>
-        <div id="zodiacIconList" style="display: flex; flex-direction: column; gap: 6px;">
-            {% for s in zodiac_signs %}
-            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(128,128,128,0.2);">
-                <span style="min-width: 110px; font-weight: bold; text-transform: capitalize;">{{ s }}</span>
-                <span id="status-{{ s }}" style="font-size: 0.8rem; opacity: 0.6; min-width: 70px;">
-                    {% if icons_generated %}generated{% else %}?{% endif %}
-                </span>
-                <button type="button"
-                    id="gen-{{ s }}"
-                    class="action-button compact"
-                    style="padding: 6px 12px; font-size: 0.8rem;"
-                    onclick="generateIcon('{{ s }}')">
-                    Generate
-                </button>
-                <button type="button"
-                    id="dl-{{ s }}"
-                    class="action-button compact"
-                    style="padding: 6px 12px; font-size: 0.8rem; background-color: var(--accent-secondary, #555);"
-                    onclick="downloadIcon('{{ s }}')">
-                    Download
-                </button>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
 </div>
 
 <script>
@@ -47,35 +16,4 @@
             document.getElementById('sign').value = pluginSettings.sign || 'aries';
         }
     });
-
-    async function generateIcon(sign) {
-        const btn = document.getElementById('gen-' + sign);
-        const status = document.getElementById('status-' + sign);
-        btn.disabled = true;
-        btn.textContent = 'Generating...';
-
-        try {
-            const response = await fetch(`/generate_zodiac_icon/${sign}`, {
-                method: 'POST'
-            });
-            const result = await response.json();
-
-            if (response.ok) {
-                showResponseModal('success', 'Success! ' + result.message);
-                status.textContent = 'generated';
-            } else {
-                showResponseModal('failure', 'Error! ' + (result.error || 'Failed.'));
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showResponseModal('failure', 'Error! An unexpected error occurred.');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Generate';
-        }
-    }
-
-    function downloadIcon(sign) {
-        window.location.href = `/download_zodiac_icon/${sign}`;
-    }
 </script>

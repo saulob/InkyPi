@@ -1,7 +1,5 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
-from utils.image_utils import take_screenshot_html
-from utils.app_utils import get_fonts
 from datetime import datetime
 import logging
 import os
@@ -15,21 +13,6 @@ ZODIAC_SIGNS = [
     "aries", "taurus", "gemini", "cancer", "leo", "virgo",
     "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"
 ]
-
-ZODIAC_SYMBOLS = {
-    "aries": "\u2648",
-    "taurus": "\u2649",
-    "gemini": "\u264A",
-    "cancer": "\u264B",
-    "leo": "\u264C",
-    "virgo": "\u264D",
-    "libra": "\u264E",
-    "scorpio": "\u264F",
-    "sagittarius": "\u2650",
-    "capricorn": "\u2651",
-    "aquarius": "\u2652",
-    "pisces": "\u2653",
-}
 
 LABELS = {
     "en": {
@@ -122,88 +105,10 @@ class DailyHoroscope(BasePlugin):
         template_params["style_settings"] = True
         # Provide alphabetically sorted zodiac signs (values remain lowercase)
         template_params["zodiac_signs"] = sorted(ZODIAC_SIGNS)
-        template_params["icons_generated"] = self._icons_exist()
         return template_params
 
-    def _icons_dir(self):
-        return self.get_plugin_dir("icons")
-
     def _icon_path(self, sign):
-        return os.path.join(self._icons_dir(), f"{sign}.png")
-
-    def _icons_exist(self):
-        """Check if all 12 zodiac icon PNGs exist."""
-        icons_dir = self._icons_dir()
-        if not os.path.isdir(icons_dir):
-            return False
-        return all(
-            os.path.isfile(os.path.join(icons_dir, f"{sign}.png"))
-            for sign in ZODIAC_SIGNS
-        )
-
-    def generate_zodiac_icons(self):
-        """Render all 12 zodiac symbols via browser screenshot and save as PNGs.
-
-        Uses the same Chromium rendering pipeline as plugin image generation
-        to capture the styled Unicode symbol exactly as the browser renders it.
-        """
-        generated = []
-        for sign in ZODIAC_SIGNS:
-            if self.generate_single_icon(sign):
-                generated.append(sign)
-        return generated
-
-    def generate_single_icon(self, sign):
-        """Render a single zodiac symbol via browser screenshot and save as PNG.
-
-        Returns True on success, False on failure.
-        """
-        if sign not in ZODIAC_SYMBOLS:
-            logger.error("Unknown zodiac sign: %s", sign)
-            return False
-
-        icon_size = 256
-        icons_dir = self._icons_dir()
-        os.makedirs(icons_dir, exist_ok=True)
-
-        font_faces = get_fonts()
-        font_face_css = ""
-        for f in font_faces:
-            font_face_css += (
-                f'@font-face {{ font-family: "{f["font_family"]}"; '
-                f'font-weight: {f["font_weight"]}; '
-                f'font-style: {f["font_style"]}; '
-                f'src: url({f["url"]}) format("truetype"); }}\n'
-            )
-
-        symbol = ZODIAC_SYMBOLS[sign]
-        html = f"""<html><head><style>
-            {font_face_css}
-            * {{ margin: 0; padding: 0; }}
-            body {{
-                width: {icon_size}px;
-                height: {icon_size}px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: transparent;
-            }}
-            .symbol {{
-                font-family: "Jost", sans-serif;
-                font-size: {int(icon_size * 0.75)}px;
-                line-height: 1;
-                text-align: center;
-            }}
-        </style></head><body><span class="symbol">{symbol}</span></body></html>"""
-
-        img = take_screenshot_html(html, (icon_size, icon_size))
-        if img:
-            img.save(self._icon_path(sign), "PNG")
-            logger.info("Generated zodiac icon: %s", sign)
-            return True
-        else:
-            logger.error("Failed to generate zodiac icon: %s", sign)
-            return False
+        return self.get_plugin_dir(os.path.join("icons", f"{sign}.png"))
 
     def generate_image(self, settings, device_config):
         sign = settings.get("sign", "aries").lower()
@@ -266,12 +171,8 @@ class DailyHoroscope(BasePlugin):
         else:
             date_display = today.strftime("%B %d, %Y")
 
-        symbol = ZODIAC_SYMBOLS.get(sign, "")
         sign_display = sign.upper()
-
-        # Prefer pre-rendered icon PNG; fall back to Unicode symbol
         icon_path = self._icon_path(sign)
-        use_icon = os.path.isfile(icon_path)
 
         # Do not pass internal flags to the template
         template_settings = dict(settings)
@@ -279,8 +180,7 @@ class DailyHoroscope(BasePlugin):
 
         template_params = {
             "title": labels["title"],
-            "symbol": symbol,
-            "icon_path": icon_path if use_icon else "",
+            "icon_path": icon_path,
             "sign_display": sign_display,
             "horoscope_text": horoscope_text,
             "date_display": date_display,
