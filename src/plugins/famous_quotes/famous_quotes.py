@@ -8,8 +8,10 @@ Supports real-time translation via Argos Translate.
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
 from utils.app_utils import get_font
+from flask import current_app, request as flask_request, jsonify
 from PIL import Image, ImageDraw
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +70,135 @@ def _translate_text(text, target_lang):
         return text
 
 
+# ===================================================================
+# Translation package management routes (self-registered from plugin)
+# ===================================================================
+_translation_routes_registered = False
+
+
+def _get_argos_package_size(pkg):
+    """Calculate installed Argos package size in MB."""
+    pkg_path = getattr(pkg, "package_path", None)
+    if not pkg_path or not os.path.isdir(pkg_path):
+        return 0
+    total = 0
+    for dirpath, _dirnames, filenames in os.walk(pkg_path):
+        for f in filenames:
+            total += os.path.getsize(os.path.join(dirpath, f))
+    return round(total / (1024 * 1024), 1)
+
+
+def _handle_list_packages():
+    """GET /translation_packages — list installed Argos en→X packages."""
+    try:
+        import argostranslate.package
+        installed = argostranslate.package.get_installed_packages()
+        packages = []
+        for p in installed:
+            if p.from_code == "en" and p.to_code in SUPPORTED_LANGUAGES:
+                packages.append({
+                    "from_code": p.from_code,
+                    "to_code": p.to_code,
+                    "to_name": SUPPORTED_LANGUAGES.get(p.to_code, p.to_code),
+                    "size_mb": _get_argos_package_size(p),
+                })
+        return jsonify({"packages": packages}), 200
+    except Exception as e:
+        logger.error(f"Error listing translation packages: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def _handle_install_package():
+    """POST /translation_packages/install — download & install an en→X package."""
+    try:
+        data = flask_request.get_json(silent=True) or {}
+        lang_code = data.get("lang_code", "").strip()
+        if not lang_code or lang_code not in SUPPORTED_LANGUAGES:
+            return jsonify({"error": "Invalid language code"}), 400
+
+        import argostranslate.package
+        installed = argostranslate.package.get_installed_packages()
+        already = any(p.from_code == "en" and p.to_code == lang_code for p in installed)
+        if already:
+            return jsonify({"success": True, "message": "Package already installed"}), 200
+
+        argostranslate.package.update_package_index()
+        available = argostranslate.package.get_available_packages()
+        pkg = next(
+            (p for p in available if p.from_code == "en" and p.to_code == lang_code),
+            None,
+        )
+        if pkg is None:
+            return jsonify({"error": f"No package found for en → {lang_code}"}), 404
+
+        logger.info(f"Installing Argos package: en -> {lang_code}")
+        argostranslate.package.install_from_path(pkg.download())
+        logger.info(f"Installed Argos package: en -> {lang_code}")
+        return jsonify({"success": True, "message": f"Installed en → {lang_code}"}), 200
+    except Exception as e:
+        logger.error(f"Error installing translation package: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def _handle_delete_package():
+    """POST /translation_packages/delete — uninstall an en→X package."""
+    try:
+        data = flask_request.get_json(silent=True) or {}
+        lang_code = data.get("lang_code", "").strip()
+        if not lang_code or lang_code not in SUPPORTED_LANGUAGES:
+            return jsonify({"error": "Invalid language code"}), 400
+
+        import argostranslate.package
+        installed = argostranslate.package.get_installed_packages()
+        pkg = next(
+            (p for p in installed if p.from_code == "en" and p.to_code == lang_code),
+            None,
+        )
+        if pkg is None:
+            return jsonify({"error": "Package not installed"}), 404
+
+        argostranslate.package.uninstall(pkg)
+        logger.info(f"Uninstalled Argos package: en -> {lang_code}")
+        return jsonify({"success": True, "message": f"Removed en → {lang_code}"}), 200
+    except Exception as e:
+        logger.error(f"Error deleting translation package: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+def _register_translation_routes():
+    """Lazily register translation package management routes on the Flask app."""
+    global _translation_routes_registered
+    if _translation_routes_registered:
+        return
+    try:
+        app = current_app._get_current_object()
+        app.add_url_rule(
+            "/translation_packages",
+            endpoint="list_translation_packages",
+            view_func=_handle_list_packages,
+            methods=["GET"],
+        )
+        app.add_url_rule(
+            "/translation_packages/install",
+            endpoint="install_translation_package",
+            view_func=_handle_install_package,
+            methods=["POST"],
+        )
+        app.add_url_rule(
+            "/translation_packages/delete",
+            endpoint="delete_translation_package",
+            view_func=_handle_delete_package,
+            methods=["POST"],
+        )
+        _translation_routes_registered = True
+        logger.info("Translation package routes registered successfully")
+    except Exception as e:
+        logger.warning(f"Could not register translation routes: {e}")
+
+
 class FamousQuotes(BasePlugin):
     def generate_settings_template(self):
+        _register_translation_routes()
         template_params = super().generate_settings_template()
         template_params['api_key'] = {
             "required": True,

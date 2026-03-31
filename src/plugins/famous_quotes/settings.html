@@ -109,7 +109,7 @@
         id: 'Indonesian', it: 'Italian', pt: 'Portuguese', es: 'Spanish'
     };
 
-    let installedPackages = {};  // { lang_code: { size_mb, to_name } }
+    let installedPackages = {};
 
     // --- Fetch & render installed packages ---
     async function refreshPackageList() {
@@ -167,11 +167,7 @@
             const code = opt.value;
             if (code === 'en') continue;
             const baseName = LANG_NAMES[code] || code;
-            if (installedPackages[code]) {
-                opt.textContent = baseName + ' ✓';
-            } else {
-                opt.textContent = baseName;
-            }
+            opt.textContent = installedPackages[code] ? baseName + ' ✓' : baseName;
         }
     }
 
@@ -187,9 +183,11 @@
         document.getElementById('translation-pkg-status').style.display = 'none';
     }
 
-    // --- Install package (called from language change) ---
+    // --- Install package ---
     async function installPackage(langCode) {
-        showPkgStatus(`Downloading en → ${LANG_NAMES[langCode]}… This may take a minute.`, false);
+        document.getElementById('language').disabled = true;
+        document.querySelectorAll('.pkg-delete-btn').forEach(btn => btn.disabled = true);
+        showPkgStatus(`⏳ Downloading en → ${LANG_NAMES[langCode]}… This may take a minute.`, false);
 
         try {
             const res = await fetch('/translation_packages/install', {
@@ -205,6 +203,10 @@
             setTimeout(hidePkgStatus, 4000);
         } catch (e) {
             showPkgStatus(`✕ Failed to install: ${e.message}`, true);
+            document.getElementById('language').value = 'en';
+        } finally {
+            document.getElementById('language').disabled = false;
+            document.querySelectorAll('.pkg-delete-btn').forEach(btn => btn.disabled = false);
         }
     }
 
@@ -223,10 +225,8 @@
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Delete failed');
 
-            // If the currently selected language was deleted, reset to English
-            const select = document.getElementById('language');
-            if (select.value === langCode) {
-                select.value = 'en';
+            if (document.getElementById('language').value === langCode) {
+                document.getElementById('language').value = 'en';
             }
 
             showPkgStatus(`✓ ${LANG_NAMES[langCode]} package removed.`, false);
@@ -266,7 +266,6 @@
         }
 
         document.getElementById('language').addEventListener('change', onLanguageChange);
-
         refreshPackageList();
     });
 </script>
