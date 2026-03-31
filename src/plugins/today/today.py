@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 
 import pytz
@@ -6,8 +5,6 @@ from PIL import Image, ImageColor, ImageDraw
 
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font
-
-logger = logging.getLogger(__name__)
 
 # Default colors
 DEFAULT_PRIMARY = "#ffffff"
