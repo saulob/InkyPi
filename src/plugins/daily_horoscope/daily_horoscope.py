@@ -28,12 +28,6 @@ ZODIAC_SIGNS = [
 LABELS = {
     "en": {
         "title": "Daily Horoscope",
-        "love": "Love",
-        "work": "Work",
-        "money": "Money",
-        "mood": "Mood",
-        "compatibility": "Compatibility",
-        "lucky_number": "Lucky Number",
         "fallback": "No horoscope available today.",
     },
 }
