@@ -14,14 +14,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 SUPPORTED_LANGUAGES = {
+    "nl": "Dutch",
     "en": "English",
-    "pt": "Portuguese",
-    "es": "Spanish",
     "fr": "French",
     "de": "German",
-    "it": "Italian",
-    "nl": "Dutch",
     "id": "Indonesian",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "es": "Spanish",
 }
 
 
