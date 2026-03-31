@@ -2,6 +2,7 @@
 Famous Quotes Plugin for InkyPi
 This plugin fetches famous quotes from the API Ninjas Quotes API v2
 and displays them on the InkyPi device with optional category filtering.
+Supports real-time translation via Argos Translate.
 """
 
 from plugins.base_plugin.base_plugin import BasePlugin
@@ -12,12 +13,59 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+SUPPORTED_LANGUAGES = {
+    "en": "English",
+    "pt": "Portuguese",
+    "es": "Spanish",
+    "fr": "French",
+    "de": "German",
+    "it": "Italian",
+    "nl": "Dutch",
+    "id": "Indonesian",
+}
+
 
 def _build_api_url(category):
     base_url = "https://api.api-ninjas.com/v2/randomquotes"
     if category and category != "random":
         return f"{base_url}?categories={category}"
     return base_url
+
+
+def _translate_text(text, target_lang):
+    """Translate text from English to target language using Argos Translate."""
+    if not text or target_lang == "en":
+        return text
+    try:
+        import argostranslate.package
+        import argostranslate.translate
+
+        # Check if the required package is already installed
+        installed = argostranslate.package.get_installed_packages()
+        pkg_exists = any(
+            p.from_code == "en" and p.to_code == target_lang
+            for p in installed
+        )
+
+        if not pkg_exists:
+            logger.info(f"Downloading Argos Translate package: en -> {target_lang}")
+            argostranslate.package.update_package_index()
+            available = argostranslate.package.get_available_packages()
+            pkg = next(
+                (p for p in available if p.from_code == "en" and p.to_code == target_lang),
+                None,
+            )
+            if pkg is None:
+                logger.warning(f"No Argos Translate package available for en -> {target_lang}")
+                return text
+            argostranslate.package.install_from_path(pkg.download())
+            logger.info(f"Installed Argos Translate package: en -> {target_lang}")
+
+        translated = argostranslate.translate.translate(text, "en", target_lang)
+        return translated
+    except Exception as e:
+        logger.error(f"Translation failed (en -> {target_lang}): {e}")
+        return text
 
 
 class FamousQuotes(BasePlugin):
@@ -56,6 +104,14 @@ class FamousQuotes(BasePlugin):
         if not quote_text:
             logger.error("API returned empty quote")
             raise RuntimeError("API returned no quote text.")
+
+        # Translate if a non-English language is selected
+        language = settings.get("language", "en")
+        if language != "en":
+            logger.info(f"Translating quote to {SUPPORTED_LANGUAGES.get(language, language)}")
+            quote_text = _translate_text(quote_text, language)
+            if author:
+                author = _translate_text(author, language)
 
         # Get display settings and normalize types
         raw_show = settings.get("show_author")
