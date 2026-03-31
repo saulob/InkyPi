@@ -9,6 +9,17 @@ logger = logging.getLogger(__name__)
 
 API_NINJAS_URL = "https://api.api-ninjas.com/v1/horoscope"
 
+SUPPORTED_LANGUAGES = {
+    "nl": "Dutch",
+    "en": "English",
+    "fr": "French",
+    "de": "German",
+    "id": "Indonesian",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "es": "Spanish",
+}
+
 ZODIAC_SIGNS = [
     "aries", "taurus", "gemini", "cancer", "leo", "virgo",
     "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"
@@ -111,6 +122,41 @@ def _get_sign_display(sign, language):
     if lang_signs:
         return lang_signs.get(sign, sign).upper()
     return sign.upper()
+
+
+def _translate_text(text, target_lang):
+    """Translate text from English to target language using Argos Translate."""
+    if not text or target_lang == "en":
+        return text
+    try:
+        import argostranslate.package
+        import argostranslate.translate
+
+        installed = argostranslate.package.get_installed_packages()
+        pkg_exists = any(
+            p.from_code == "en" and p.to_code == target_lang
+            for p in installed
+        )
+
+        if not pkg_exists:
+            logger.info(f"Downloading Argos Translate package: en -> {target_lang}")
+            argostranslate.package.update_package_index()
+            available = argostranslate.package.get_available_packages()
+            pkg = next(
+                (p for p in available if p.from_code == "en" and p.to_code == target_lang),
+                None,
+            )
+            if pkg is None:
+                logger.warning(f"No Argos Translate package available for en -> {target_lang}")
+                return text
+            argostranslate.package.install_from_path(pkg.download())
+            logger.info(f"Installed Argos Translate package: en -> {target_lang}")
+
+        translated = argostranslate.translate.translate(text, "en", target_lang)
+        return translated
+    except Exception as e:
+        logger.error(f"Translation failed (en -> {target_lang}): {e}")
+        return text
 
 
 
@@ -248,6 +294,11 @@ class DailyHoroscope(BasePlugin):
                 logger.warning(f"No valid 'horoscope' in API response: {data}")
 
         # Do not truncate or limit lines before rendering. Let CSS handle overflow/ellipsis if needed.
+
+        # Translate only the horoscope text via Argos Translate
+        if language != "en" and horoscope_text != labels["fallback"]:
+            logger.info(f"Translating horoscope text to {SUPPORTED_LANGUAGES.get(language, language)}")
+            horoscope_text = _translate_text(horoscope_text, language)
 
         # Date display: prefer API date, fallback to system
         if api_date:
