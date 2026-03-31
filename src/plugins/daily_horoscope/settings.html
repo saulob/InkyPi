@@ -10,16 +10,33 @@
 
     <div class="form-group">
         <label class="form-label">Zodiac Icons</label>
-        <p id="iconsStatus" style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 8px;">
-            {% if icons_generated %}
-                Icons generated. Click below to regenerate.
-            {% else %}
-                No icons generated yet. Generate icons to ensure consistent rendering.
-            {% endif %}
+        <p style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 8px;">
+            Generate each zodiac icon individually, then download to add to the project.
         </p>
-        <button type="button" id="generateIconsBtn" class="action-button compact" onclick="generateZodiacIcons()">
-            Generate Zodiac Icons
-        </button>
+        <div id="zodiacIconList" style="display: flex; flex-direction: column; gap: 6px;">
+            {% for s in zodiac_signs %}
+            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(128,128,128,0.2);">
+                <span style="min-width: 110px; font-weight: bold; text-transform: capitalize;">{{ s }}</span>
+                <span id="status-{{ s }}" style="font-size: 0.8rem; opacity: 0.6; min-width: 70px;">
+                    {% if icons_generated %}generated{% else %}?{% endif %}
+                </span>
+                <button type="button"
+                    id="gen-{{ s }}"
+                    class="action-button compact"
+                    style="padding: 6px 12px; font-size: 0.8rem;"
+                    onclick="generateIcon('{{ s }}')">
+                    Generate
+                </button>
+                <button type="button"
+                    id="dl-{{ s }}"
+                    class="action-button compact"
+                    style="padding: 6px 12px; font-size: 0.8rem; background-color: var(--accent-secondary, #555);"
+                    onclick="downloadIcon('{{ s }}')">
+                    Download
+                </button>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 
 </div>
@@ -31,30 +48,34 @@
         }
     });
 
-    async function generateZodiacIcons() {
-        const btn = document.getElementById('generateIconsBtn');
-        const status = document.getElementById('iconsStatus');
+    async function generateIcon(sign) {
+        const btn = document.getElementById('gen-' + sign);
+        const status = document.getElementById('status-' + sign);
         btn.disabled = true;
         btn.textContent = 'Generating...';
 
         try {
-            const response = await fetch("{{ url_for('plugin.generate_zodiac_icons') }}", {
+            const response = await fetch(`/generate_zodiac_icon/${sign}`, {
                 method: 'POST'
             });
             const result = await response.json();
 
             if (response.ok) {
                 showResponseModal('success', 'Success! ' + result.message);
-                status.textContent = 'Icons generated. Click below to regenerate.';
+                status.textContent = 'generated';
             } else {
-                showResponseModal('failure', 'Error! ' + (result.error || 'Failed to generate icons.'));
+                showResponseModal('failure', 'Error! ' + (result.error || 'Failed.'));
             }
         } catch (error) {
-            console.error('Error generating icons:', error);
+            console.error('Error:', error);
             showResponseModal('failure', 'Error! An unexpected error occurred.');
         } finally {
             btn.disabled = false;
-            btn.textContent = 'Generate Zodiac Icons';
+            btn.textContent = 'Generate';
         }
+    }
+
+    function downloadIcon(sign) {
+        window.location.href = `/download_zodiac_icon/${sign}`;
     }
 </script>

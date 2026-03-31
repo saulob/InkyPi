@@ -147,6 +147,21 @@ class DailyHoroscope(BasePlugin):
         Uses the same Chromium rendering pipeline as plugin image generation
         to capture the styled Unicode symbol exactly as the browser renders it.
         """
+        generated = []
+        for sign in ZODIAC_SIGNS:
+            if self.generate_single_icon(sign):
+                generated.append(sign)
+        return generated
+
+    def generate_single_icon(self, sign):
+        """Render a single zodiac symbol via browser screenshot and save as PNG.
+
+        Returns True on success, False on failure.
+        """
+        if sign not in ZODIAC_SYMBOLS:
+            logger.error("Unknown zodiac sign: %s", sign)
+            return False
+
         icon_size = 256
         icons_dir = self._icons_dir()
         os.makedirs(icons_dir, exist_ok=True)
@@ -161,37 +176,34 @@ class DailyHoroscope(BasePlugin):
                 f'src: url({f["url"]}) format("truetype"); }}\n'
             )
 
-        generated = []
-        for sign in ZODIAC_SIGNS:
-            symbol = ZODIAC_SYMBOLS.get(sign, "")
-            html = f"""<html><head><style>
-                {font_face_css}
-                * {{ margin: 0; padding: 0; }}
-                body {{
-                    width: {icon_size}px;
-                    height: {icon_size}px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: transparent;
-                }}
-                .symbol {{
-                    font-family: "Jost", sans-serif;
-                    font-size: {int(icon_size * 0.75)}px;
-                    line-height: 1;
-                    text-align: center;
-                }}
-            </style></head><body><span class="symbol">{symbol}</span></body></html>"""
+        symbol = ZODIAC_SYMBOLS[sign]
+        html = f"""<html><head><style>
+            {font_face_css}
+            * {{ margin: 0; padding: 0; }}
+            body {{
+                width: {icon_size}px;
+                height: {icon_size}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: transparent;
+            }}
+            .symbol {{
+                font-family: "Jost", sans-serif;
+                font-size: {int(icon_size * 0.75)}px;
+                line-height: 1;
+                text-align: center;
+            }}
+        </style></head><body><span class="symbol">{symbol}</span></body></html>"""
 
-            img = take_screenshot_html(html, (icon_size, icon_size))
-            if img:
-                img.save(self._icon_path(sign), "PNG")
-                generated.append(sign)
-                logger.info("Generated zodiac icon: %s", sign)
-            else:
-                logger.error("Failed to generate zodiac icon: %s", sign)
-
-        return generated
+        img = take_screenshot_html(html, (icon_size, icon_size))
+        if img:
+            img.save(self._icon_path(sign), "PNG")
+            logger.info("Generated zodiac icon: %s", sign)
+            return True
+        else:
+            logger.error("Failed to generate zodiac icon: %s", sign)
+            return False
 
     def generate_image(self, settings, device_config):
         sign = settings.get("sign", "aries").lower()
