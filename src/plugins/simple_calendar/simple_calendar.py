@@ -154,7 +154,7 @@ _DIGIT_PATTERNS = {
     ],
 }
 
-# 3×5 compact letter patterns for weekday abbreviations
+# 5×7 dot-matrix letter patterns for weekday abbreviations
 _LETTER_W, _LETTER_H = 5, 7
 
 _LETTER_PATTERNS = {
