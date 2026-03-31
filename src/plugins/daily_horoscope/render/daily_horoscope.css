@@ -59,6 +59,12 @@
   line-height: 1;
 }
 
+.zodiac-icon {
+  width: min(19.36dvw, 19.36dvh);
+  height: min(19.36dvw, 19.36dvh);
+  object-fit: contain;
+}
+
 .sign-name {
   font-size: min(5dvw, 5dvh);
   font-weight: bold;

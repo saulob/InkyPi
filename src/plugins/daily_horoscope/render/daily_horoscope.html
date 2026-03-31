@@ -13,7 +13,11 @@
     <div class="horoscope-content">
         <div class="horoscope-content-inner" id="contentInner">
             <div class="horoscope-sign">
+                {% if icon_path %}
+                <img class="zodiac-icon" src="{{ icon_path }}" alt="{{ symbol }}">
+                {% else %}
                 <span class="zodiac-symbol">{{ symbol }}</span>
+                {% endif %}
                 <span class="sign-name">{{ sign_display }}</span>
             </div>
 

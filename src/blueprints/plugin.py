@@ -256,3 +256,23 @@ def update_now():
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
     return jsonify({"success": True, "message": "Display updated"}), 200
+
+@plugin_bp.route('/generate_zodiac_icons', methods=['POST'])
+def generate_zodiac_icons():
+    device_config = current_app.config['DEVICE_CONFIG']
+
+    try:
+        plugin_config = device_config.get_plugin("daily_horoscope")
+        if not plugin_config:
+            return jsonify({"error": "Daily Horoscope plugin not found"}), 404
+
+        plugin = get_plugin_instance(plugin_config)
+        generated = plugin.generate_zodiac_icons()
+
+        if len(generated) == 12:
+            return jsonify({"success": True, "message": f"Generated {len(generated)} zodiac icons."}), 200
+        else:
+            return jsonify({"error": f"Only generated {len(generated)}/12 icons. Check server logs."}), 500
+    except Exception as e:
+        logger.exception(f"Error generating zodiac icons: {str(e)}")
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500

@@ -8,6 +8,20 @@
         </select>
     </div>
 
+    <div class="form-group">
+        <label class="form-label">Zodiac Icons</label>
+        <p id="iconsStatus" style="font-size: 0.85rem; opacity: 0.7; margin-bottom: 8px;">
+            {% if icons_generated %}
+                Icons generated. Click below to regenerate.
+            {% else %}
+                No icons generated yet. Generate icons to ensure consistent rendering.
+            {% endif %}
+        </p>
+        <button type="button" id="generateIconsBtn" class="action-button compact" onclick="generateZodiacIcons()">
+            Generate Zodiac Icons
+        </button>
+    </div>
+
 </div>
 
 <script>
@@ -16,4 +30,31 @@
             document.getElementById('sign').value = pluginSettings.sign || 'aries';
         }
     });
+
+    async function generateZodiacIcons() {
+        const btn = document.getElementById('generateIconsBtn');
+        const status = document.getElementById('iconsStatus');
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+
+        try {
+            const response = await fetch("{{ url_for('plugin.generate_zodiac_icons') }}", {
+                method: 'POST'
+            });
+            const result = await response.json();
+
+            if (response.ok) {
+                showResponseModal('success', 'Success! ' + result.message);
+                status.textContent = 'Icons generated. Click below to regenerate.';
+            } else {
+                showResponseModal('failure', 'Error! ' + (result.error || 'Failed to generate icons.'));
+            }
+        } catch (error) {
+            console.error('Error generating icons:', error);
+            showResponseModal('failure', 'Error! An unexpected error occurred.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Generate Zodiac Icons';
+        }
+    }
 </script>
