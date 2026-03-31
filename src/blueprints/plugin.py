@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app, render_template, send_from_directory, send_file
+from flask import Blueprint, request, jsonify, current_app, render_template, send_from_directory
 from plugins.plugin_registry import get_plugin_instance
 from utils.app_utils import resolve_path, handle_request_files, parse_form
 from refresh_task import ManualRefresh, PlaylistRefresh
@@ -256,41 +256,3 @@ def update_now():
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
     return jsonify({"success": True, "message": "Display updated"}), 200
-
-@plugin_bp.route('/generate_zodiac_icon/<string:sign>', methods=['POST'])
-def generate_zodiac_icon(sign):
-    device_config = current_app.config['DEVICE_CONFIG']
-
-    try:
-        plugin_config = device_config.get_plugin("daily_horoscope")
-        if not plugin_config:
-            return jsonify({"error": "Daily Horoscope plugin not found"}), 404
-
-        plugin = get_plugin_instance(plugin_config)
-        if plugin.generate_single_icon(sign):
-            return jsonify({"success": True, "message": f"Generated icon for {sign}."}), 200
-        else:
-            return jsonify({"error": f"Failed to generate icon for {sign}."}), 500
-    except Exception as e:
-        logger.exception(f"Error generating zodiac icon: {str(e)}")
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
-
-@plugin_bp.route('/download_zodiac_icon/<string:sign>')
-def download_zodiac_icon(sign):
-    device_config = current_app.config['DEVICE_CONFIG']
-
-    try:
-        plugin_config = device_config.get_plugin("daily_horoscope")
-        if not plugin_config:
-            return jsonify({"error": "Daily Horoscope plugin not found"}), 404
-
-        plugin = get_plugin_instance(plugin_config)
-        icon_path = plugin._icon_path(sign)
-
-        if not os.path.isfile(icon_path):
-            return jsonify({"error": f"Icon for {sign} not found. Generate it first."}), 404
-
-        return send_file(icon_path, as_attachment=True, download_name=f"{sign}.png")
-    except Exception as e:
-        logger.exception(f"Error downloading zodiac icon: {str(e)}")
-        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
