@@ -505,10 +505,11 @@ class SimpleCalendar(BasePlugin):
             fill=dark,
         )
 
-        # Clean edge: redraw light bg over the overlap area on the right side
+        # Clean edge: redraw light background over the overlap area on the right
+        # side so the left panel has a sharp vertical edge (cover full corner_r)
         draw.rectangle(
-            [left_right_edge, card_top, left_right_edge + 1, card_bottom],
-            fill=dark,
+            [left_right_edge, card_top, left_right_edge + corner_r, card_bottom],
+            fill=light_bg,
         )
 
         # === LEFT PANEL CONTENT (dot-matrix day + weekday) ===
