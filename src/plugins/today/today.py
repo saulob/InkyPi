@@ -170,10 +170,14 @@ class Today(BasePlugin):
         max_clock_w = cw * 0.90
         ghost = ''.join('8' if c.isdigit() else c for c in time_digits)
         clock_size = int(dim * 0.50)
+        # Pre-compute gap and initialize fonts so they're always defined
+        gap = int(dim * 0.015)
+        clock_fnt = get_font("DS-Digital", clock_size)
+        period_fnt = get_font("Jost", int(clock_size * 0.164), "bold")
+        # Reduce font size until it fits (loop may override the provisional fonts)
         while clock_size > 16:
             clock_fnt = get_font("DS-Digital", clock_size)
             period_fnt = get_font("Jost", int(clock_size * 0.164), "bold")
-            gap = int(dim * 0.015)
             test_w = draw.textlength(ghost, font=clock_fnt)
             if period:
                 test_w += gap + draw.textlength(period, font=period_fnt)
