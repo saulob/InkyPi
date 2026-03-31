@@ -27,6 +27,91 @@ LABELS = {
     },
 }
 
+# Sign name translations keyed by language code then English sign name.
+SIGN_NAMES = {
+    "de": {
+        "aries": "Widder", "taurus": "Stier", "gemini": "Zwillinge",
+        "cancer": "Krebs", "leo": "Löwe", "virgo": "Jungfrau",
+        "libra": "Waage", "scorpio": "Skorpion", "sagittarius": "Schütze",
+        "capricorn": "Steinbock", "aquarius": "Wassermann", "pisces": "Fische",
+    },
+    "es": {
+        "aries": "Aries", "taurus": "Tauro", "gemini": "Géminis",
+        "cancer": "Cáncer", "leo": "Leo", "virgo": "Virgo",
+        "libra": "Libra", "scorpio": "Escorpio", "sagittarius": "Sagitario",
+        "capricorn": "Capricornio", "aquarius": "Acuario", "pisces": "Piscis",
+    },
+    "fr": {
+        "aries": "Bélier", "taurus": "Taureau", "gemini": "Gémeaux",
+        "cancer": "Cancer", "leo": "Lion", "virgo": "Vierge",
+        "libra": "Balance", "scorpio": "Scorpion", "sagittarius": "Sagittaire",
+        "capricorn": "Capricorne", "aquarius": "Verseau", "pisces": "Poissons",
+    },
+    "id": {
+        "aries": "Aries", "taurus": "Taurus", "gemini": "Gemini",
+        "cancer": "Cancer", "leo": "Leo", "virgo": "Virgo",
+        "libra": "Libra", "scorpio": "Scorpio", "sagittarius": "Sagitarius",
+        "capricorn": "Capricorn", "aquarius": "Aquarius", "pisces": "Pisces",
+    },
+    "it": {
+        "aries": "Ariete", "taurus": "Toro", "gemini": "Gemelli",
+        "cancer": "Cancro", "leo": "Leone", "virgo": "Vergine",
+        "libra": "Bilancia", "scorpio": "Scorpione", "sagittarius": "Sagittario",
+        "capricorn": "Capricorno", "aquarius": "Acquario", "pisces": "Pesci",
+    },
+    "nl": {
+        "aries": "Ram", "taurus": "Stier", "gemini": "Tweelingen",
+        "cancer": "Kreeft", "leo": "Leeuw", "virgo": "Maagd",
+        "libra": "Weegschaal", "scorpio": "Schorpioen", "sagittarius": "Boogschutter",
+        "capricorn": "Steenbok", "aquarius": "Waterman", "pisces": "Vissen",
+    },
+    "pt": {
+        "aries": "Áries", "taurus": "Touro", "gemini": "Gêmeos",
+        "cancer": "Câncer", "leo": "Leão", "virgo": "Virgem",
+        "libra": "Libra", "scorpio": "Escorpião", "sagittarius": "Sagitário",
+        "capricorn": "Capricórnio", "aquarius": "Aquário", "pisces": "Peixes",
+    },
+}
+
+# Month names for date formatting, keyed by language code.
+MONTH_NAMES = {
+    "de": ["Januar", "Februar", "März", "April", "Mai", "Juni",
+           "Juli", "August", "September", "Oktober", "November", "Dezember"],
+    "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+           "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+    "fr": ["janvier", "février", "mars", "avril", "mai", "juin",
+           "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
+    "id": ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
+           "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
+    "it": ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+           "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"],
+    "nl": ["januari", "februari", "maart", "april", "mei", "juni",
+           "juli", "augustus", "september", "oktober", "november", "december"],
+    "pt": ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
+           "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"],
+}
+
+
+def _format_date(dt, language):
+    """Format a date according to language conventions."""
+    months = MONTH_NAMES.get(language)
+    if months:
+        month_name = months[dt.month - 1]
+        # day month year for most languages
+        if language == "en":
+            return dt.strftime("%B %d, %Y")
+        return f"{dt.day} de {month_name} de {dt.year}" if language in ("pt", "es") else f"{dt.day} {month_name} {dt.year}"
+    # English default
+    return dt.strftime("%B %d, %Y")
+
+
+def _get_sign_display(sign, language):
+    """Return the translated sign name, uppercased."""
+    lang_signs = SIGN_NAMES.get(language)
+    if lang_signs:
+        return lang_signs.get(sign, sign).upper()
+    return sign.upper()
+
 
 
 
@@ -115,6 +200,8 @@ class DailyHoroscope(BasePlugin):
         if sign not in ZODIAC_SIGNS:
             sign = "aries"
 
+        language = str(settings.get("language", "en")).strip() or "en"
+
         # Always use English labels
         labels = LABELS["en"]
 
@@ -165,13 +252,13 @@ class DailyHoroscope(BasePlugin):
         # Date display: prefer API date, fallback to system
         if api_date:
             try:
-                date_display = datetime.strptime(api_date, "%Y-%m-%d").strftime("%B %d, %Y")
+                date_display = _format_date(datetime.strptime(api_date, "%Y-%m-%d"), language)
             except Exception:
-                date_display = today.strftime("%B %d, %Y")
+                date_display = _format_date(today, language)
         else:
-            date_display = today.strftime("%B %d, %Y")
+            date_display = _format_date(today, language)
 
-        sign_display = sign.upper()
+        sign_display = _get_sign_display(sign, language)
         icon_path = self._icon_path(sign)
 
         # Do not pass internal flags to the template
