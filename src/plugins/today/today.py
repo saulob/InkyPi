@@ -98,11 +98,11 @@ class Today(BasePlugin):
         secondary_color = ImageColor.getcolor(settings.get("secondaryColor") or DEFAULT_SECONDARY, "RGB")
         progress_bar_color = ImageColor.getcolor(settings.get("progressBarColor") or DEFAULT_PROGRESS_BAR, "RGB")
 
-        # Full day progress (00:00 to 23:59)
-        total_day = 23 * 60 + 59
-        cur = now.hour * 60 + now.minute
-        progress = min(cur / total_day, 1.0)
-        remaining = max(total_day - cur, 0)
+        # Full day progress (00:00:00 to 23:59:59) — use seconds for accuracy
+        total_seconds_day = 24 * 60 * 60
+        cur_seconds = now.hour * 3600 + now.minute * 60 + now.second
+        progress = min(cur_seconds / total_seconds_day, 1.0)
+        remaining_seconds = max(total_seconds_day - cur_seconds, 0)
 
         # Format time based on system time format setting
         if time_format == "24h":
@@ -118,10 +118,14 @@ class Today(BasePlugin):
         month_abbr = locale["months_short"][now.month - 1].upper()
         date_str = f"{day_name}, {month_abbr} {now.day}"
 
-        # Remaining time
-        h, m = divmod(remaining, 60)
+        # Remaining time (derived from seconds for better accuracy)
+        h, rem = divmod(remaining_seconds, 3600)
+        m, s = divmod(rem, 60)
         remain_word = locale["remaining"]
-        remain_str = f"{h}h {m:02d}m {remain_word}" if h > 0 else f"{m}m {remain_word}"
+        if h > 0:
+            remain_str = f"{h}h {m:02d}m {remain_word}"
+        else:
+            remain_str = f"{m}m {remain_word}"
 
         return self._render(dimensions, locale["title"], time_digits, period, date_str, progress, remain_str,
                            primary_color, secondary_color, progress_bar_color)
