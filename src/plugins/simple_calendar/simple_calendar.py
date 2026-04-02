@@ -519,25 +519,58 @@ class SimpleCalendar(BasePlugin):
         day_str = str(now.day)
         weekday_str = self._get_weekday_abbrev(now, locale_data, language)
 
-        # Scale dots relative to card height for consistent sizing
-        ref = min(card_h, left_panel_w)
+        # --- Fit dot-matrix content to maximise usage of the left panel ---
+        # Available drawing area — tighter inset for better fill.
+        avail_h = card_h * 0.92
+        avail_w = left_panel_w * 0.88
 
-        # Day number — large dots
-        day_dot_r = max(int(ref * 0.024), 2)
-        day_dot_spacing = max(int(ref * 0.014), 1)
+        # Glyph column counts — each glyph is 5 dots wide; inter-char gaps
+        # expressed in dot-cell units (1.5 for digits, 0.9 for letters).
+        n_day = len(day_str)
+        day_glyph_cols = _DIGIT_W * n_day + 1.5 * max(n_day - 1, 0)
+        n_wk = len(weekday_str)
+        wk_glyph_cols = _LETTER_W * n_wk + 0.9 * max(n_wk - 1, 0)
 
-        # Weekday — smaller dots
-        wk_dot_r = max(int(ref * 0.013), 1)
-        wk_dot_spacing = max(int(ref * 0.008), 1)
+        # Scale factors:
+        #   DAY_SCALE  — day-number cell is this many times the base unit.
+        #   WK_SCALE   — weekday cell is smaller for clear visual hierarchy.
+        #   GAP_SCALE  — gap between the two blocks in base-unit steps (tighter).
+        DAY_SCALE = 1.85
+        WK_SCALE = 0.85
+        GAP_SCALE = 1.2
+        # Total height in base 'u' units
+        total_u = _DIGIT_H * DAY_SCALE + GAP_SCALE + _LETTER_H * WK_SCALE  # ~20.1
 
-        # Vertical arrangement: day number above centre, weekday below
+        # Base unit 'u': largest value satisfying all three bounds.
+        u_from_h = avail_h / total_u
+        u_from_day_w = (avail_w / (day_glyph_cols * DAY_SCALE)) if day_glyph_cols else u_from_h
+        u_from_wk_w = (avail_w / (wk_glyph_cols * WK_SCALE)) if wk_glyph_cols else u_from_h
+        u = min(u_from_h, u_from_day_w, u_from_wk_w)
+
+        # Dot radius and spacing derived from the unit value.
+        # cell = dot_r * 2 + spacing; dot_r ≈ 39 % of cell, spacing ≈ 22 %.
+        day_cell_target = u * DAY_SCALE
+        wk_cell_target = u * WK_SCALE
+
+        day_dot_r = max(int(day_cell_target * 0.39), 2)
+        day_dot_spacing = max(int(day_cell_target * 0.22), 1)
+
+        wk_dot_r = max(int(wk_cell_target * 0.39), 1)
+        wk_dot_spacing = max(int(wk_cell_target * 0.22), 1)
+
+        # Actual (integer) cell sizes after rounding
         day_cell = day_dot_r * 2 + day_dot_spacing
         wk_cell = wk_dot_r * 2 + wk_dot_spacing
+        gap = max(int(u * GAP_SCALE), 4)
+
+        # Vertical arrangement: day number above, weekday below.
+        # A small optical lift makes the grouped block feel visually centred
+        # despite the day number being heavier than the weekday label.
         day_block_h = _DIGIT_H * day_cell
         wk_block_h = _LETTER_H * wk_cell
-        gap = int(ref * 0.08)
         total_content_h = day_block_h + gap + wk_block_h
-        content_top = left_cy - total_content_h // 2
+        optical_lift = int(card_h * 0.02)
+        content_top = left_cy - total_content_h // 2 - optical_lift
 
         day_center_y = content_top + day_block_h // 2
         wk_center_y = content_top + day_block_h + gap + wk_block_h // 2
@@ -553,7 +586,7 @@ class SimpleCalendar(BasePlugin):
             draw, weekday_str, left_cx, wk_center_y,
             wk_dot_r, wk_dot_spacing, white,
             glyph_w=_LETTER_W, glyph_h=_LETTER_H,
-            char_gap_dots=1.2,
+            char_gap_dots=0.9,
         )
 
         # === RIGHT PANEL CONTENT (month name, weekday headers, day grid) ===
@@ -561,26 +594,27 @@ class SimpleCalendar(BasePlugin):
         right_w = card_right - right_left
         right_cx = right_left + right_w // 2
 
-        # Font sizes scaled to available column width to prevent overlap
-        grid_side_pad = int(right_w * 0.08)
+        # Tighter side padding so the grid occupies more of the panel.
+        grid_side_pad = int(right_w * 0.04)
         grid_left = right_left + grid_side_pad
         grid_right_edge = card_right - grid_side_pad
         grid_w = grid_right_edge - grid_left
         col_w = grid_w / 7
 
-        # Scale fonts proportionally to column width (fits 2-digit numbers)
-        month_font_size = max(int(col_w * 0.72), 12)
-        year_font_size = max(int(col_w * 0.46), 10)
-        header_font_size = max(int(col_w * 0.42), 10)
-        day_font_size = max(int(col_w * 0.42), 10)
+        # Font hierarchy: day numbers are the primary focus.
+        # Month title kept prominent; year and weekday headers are secondary.
+        month_font_size = max(int(col_w * 0.76), 12)
+        year_font_size = max(int(col_w * 0.44), 9)       # slightly larger — more readable
+        header_font_size = max(int(col_w * 0.40), 9)     # slightly larger — clearly visible
+        day_font_size = max(int(col_w * 0.56), 10)       # prominent but not overpowering
 
         month_font = get_font("Jost", month_font_size, "bold")
         year_font = get_font("Jost", year_font_size)
         header_font = get_font("Jost", header_font_size)
-        day_font = get_font("Jost", day_font_size)
+        day_font = get_font("Jost", day_font_size)        # regular weight — less heavy
 
-        # Layout vertical positions
-        top_pad = int(card_h * 0.08)
+        # Layout vertical positions — reduced top padding to reclaim space for grid.
+        top_pad = int(card_h * 0.055)
         month_y = card_top + top_pad
 
         # Month and year
@@ -589,13 +623,10 @@ class SimpleCalendar(BasePlugin):
         month_bbox = draw.textbbox((0, 0), month_name, font=month_font)
         year_bbox = draw.textbbox((0, 0), year_text, font=year_font)
         month_width = month_bbox[2] - month_bbox[0]
-        year_width = year_bbox[2] - year_bbox[0]
-        header_gap = max(int(col_w * 0.5), 10)
-        total_width = month_width + header_gap + year_width
+        header_gap = max(int(col_w * 0.4), 8)
+        total_width = month_width + header_gap + (year_bbox[2] - year_bbox[0])
         header_left = right_cx - total_width / 2
 
-        # Baseline anchoring: accented glyphs (Á, É) extend upward
-        # without shifting letter positions or downstream layout.
         baseline_y = month_y + month_font.getmetrics()[0]
         title_lift = max(int(month_font_size * 0.30), 8)
 
@@ -607,29 +638,29 @@ class SimpleCalendar(BasePlugin):
         draw.text(
             (header_left + month_width + header_gap, year_y),
             year_text,
-            fill=(138, 138, 138), font=year_font, anchor="ls",
+            fill=(120, 120, 120), font=year_font, anchor="ls",  # medium gray — readable but secondary
         )
 
-        # Weekday header row
+        # Weekday header row — compact, low-emphasis
         header_labels = self._get_weekday_headers(locale_data, language)
-        header_y = month_y + int(month_font_size * 1.6)
+        header_y = month_y + int(month_font_size * 1.4)
 
         for i, label in enumerate(header_labels):
             x = grid_left + col_w * i + col_w / 2
             draw.text(
                 (x, header_y), label,
-                fill=mid_gray, font=header_font, anchor="mt",
+                fill=(155, 155, 155), font=header_font, anchor="mt",  # visible but subordinate to days
             )
 
-        # Month day grid
-        grid_top_y = header_y + int(header_font_size * 2.0)
-        available_grid_h = card_bottom - grid_top_y - int(card_h * 0.04)
+        # Month day grid — reduced gap above so more vertical space goes to rows.
+        grid_top_y = header_y + int(header_font_size * 1.6)
+        available_grid_h = card_bottom - grid_top_y - int(card_h * 0.02)
 
         cal = calendar.Calendar(firstweekday=6).monthdayscalendar(now.year, now.month)
         num_weeks = len(cal)
         row_h = available_grid_h / num_weeks
 
-        today_circle_r = int(min(col_w, row_h) * 0.43)
+        today_circle_r = int(min(col_w, row_h) * 0.46)
 
         for week_idx, week in enumerate(cal):
             row_cy = grid_top_y + row_h * week_idx + row_h / 2
