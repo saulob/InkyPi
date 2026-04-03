@@ -667,6 +667,7 @@ class SimpleCalendar(BasePlugin):
                     )
 
         return img
+
     @staticmethod
     def _get_selected_date(settings, tz):
         custom_date = settings.get("customDate")
