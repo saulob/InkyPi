@@ -443,19 +443,20 @@ class SimpleCalendar(BasePlugin):
         timezone_name = device_config.get_config("timezone", default="America/New_York")
         tz = pytz.timezone(timezone_name)
         selected_date = self._get_selected_date(settings, tz)
-        language = self._get_locale_key(settings.get("locale") or settings.get("language", "en"))
+        language = self._get_locale_key(settings.get("language") or settings.get("locale", "en"))
         locale_data = LOCALE_DATA.get(language)
 
         primary_color = self._parse_color(settings.get("primaryColor"), (230, 26, 26))
         highlight_color = self._parse_color(settings.get("highlightColor"), (163, 13, 13))
+        layout_position = settings.get("layoutPosition", "left").lower()
 
-        return self._render_calendar(dimensions, selected_date, primary_color, highlight_color, locale_data, language)
+        return self._render_calendar(dimensions, selected_date, primary_color, highlight_color, locale_data, language, layout_position)
 
     # ------------------------------------------------------------------
     # Core rendering
     # ------------------------------------------------------------------
 
-    def _render_calendar(self, dimensions, now, primary_color, highlight_color, locale_data, language):
+    def _render_calendar(self, dimensions, now, primary_color, highlight_color, locale_data, language, layout_position="left"):
         W, H = dimensions
 
         # Colours
@@ -486,90 +487,79 @@ class SimpleCalendar(BasePlugin):
             fill=light_bg,
         )
 
-        # Left panel: dark block covering ~40% width (narrower in portrait)
+        # --- Panel and calendar bounds based on layout_position ---
         aspect = card_w / max(card_h, 1)
-        left_ratio = 0.38 if aspect >= 1.0 else 0.30
-        left_panel_w = int(card_w * left_ratio)
-        left_right_edge = card_left + left_panel_w
 
-        # Draw dark left panel with rounded corners only on left side
-        # We draw a full rounded rect then cover the right corners with a plain rect
-        draw.rounded_rectangle(
-            [card_left, card_top, left_right_edge + corner_r, card_bottom],
-            radius=corner_r,
-            fill=dark,
-        )
-        # Cover the right rounded corners to make them sharp
-        draw.rectangle(
-            [left_right_edge, card_top, left_right_edge + corner_r, card_bottom],
-            fill=dark,
-        )
+        panel_ratio = 0.38 if aspect >= 1.0 else 0.30
+        panel_px = int(card_w * panel_ratio)
+        if layout_position == "left":
+            p_left, p_top, p_right, p_bottom = card_left, card_top, card_left + panel_px, card_bottom
+            c_left, c_top, c_right, c_bottom = p_right, card_top, card_right, card_bottom
+        else:  # right
+            p_left, p_top, p_right, p_bottom = card_right - panel_px, card_top, card_right, card_bottom
+            c_left, c_top, c_right, c_bottom = card_left, card_top, p_left, card_bottom
 
-        # Clean edge: redraw light background over the overlap area on the right
-        # side so the left panel has a sharp vertical edge (cover full corner_r)
-        draw.rectangle(
-            [left_right_edge, card_top, left_right_edge + corner_r, card_bottom],
-            fill=light_bg,
-        )
+        cal_w = c_right - c_left
+        cal_h = c_bottom - c_top
+        cal_cx = c_left + cal_w // 2
 
-        # === LEFT PANEL CONTENT (dot-matrix day + weekday) ===
-        left_cx = card_left + left_panel_w // 2
-        left_cy = card_top + card_h // 2
+        # --- Draw dark panel with rounded corners only on outer card edges ---
+        if layout_position == "left":
+            draw.rounded_rectangle(
+                [p_left, p_top, p_right + corner_r, p_bottom],
+                radius=corner_r,
+                fill=dark,
+            )
+            draw.rectangle([p_right, p_top, p_right + corner_r, p_bottom], fill=light_bg)
+        else:  # right
+            draw.rounded_rectangle(
+                [p_left - corner_r, p_top, p_right, p_bottom],
+                radius=corner_r,
+                fill=dark,
+            )
+            draw.rectangle([p_left - corner_r, p_top, p_left, p_bottom], fill=light_bg)
+
+        # === DOT-MATRIX CONTENT (inside dark panel) ===
+        panel_w = p_right - p_left
+        panel_h = p_bottom - p_top
+        panel_cx = p_left + panel_w // 2
+        panel_cy = p_top + panel_h // 2
 
         day_str = str(now.day)
         weekday_str = self._get_weekday_abbrev(now, locale_data, language)
 
-        # --- Fit dot-matrix content to maximise usage of the left panel ---
-        # Available drawing area — tighter inset for better fill.
-        avail_h = card_h * 0.96
-        avail_w = left_panel_w * 0.94
+        # Vertical stack: day number above, weekday abbrev below
+        avail_h = panel_h * 0.96
+        avail_w = panel_w * 0.94
 
-        # Glyph column counts — each glyph is 5 dots wide; inter-char gaps
-        # expressed in dot-cell units (1.5 for digits, 0.9 for letters).
         n_day = len(day_str)
         day_glyph_cols = _DIGIT_W * n_day + 1.5 * max(n_day - 1, 0)
         n_wk = len(weekday_str)
         wk_glyph_cols = _LETTER_W * n_wk + 0.9 * max(n_wk - 1, 0)
 
-        # Scale factors:
-        #   DAY_SCALE  — day-number cell is this many times the base unit.
-        #   WK_SCALE   — weekday cell is smaller for clear visual hierarchy.
-        #   GAP_SCALE  — gap between the two blocks in base-unit steps (tighter).
         DAY_SCALE = 1.85
         WK_SCALE = 0.85
         GAP_SCALE = 1.2
-        # Total height in base 'u' units
-        total_u = _DIGIT_H * DAY_SCALE + GAP_SCALE + _LETTER_H * WK_SCALE  # ~20.1
+        total_u = _DIGIT_H * DAY_SCALE + GAP_SCALE + _LETTER_H * WK_SCALE
 
-        # Base unit 'u': largest value satisfying all three bounds.
         u_from_h = avail_h / total_u
         u_from_day_w = (avail_w / (day_glyph_cols * DAY_SCALE)) if day_glyph_cols else u_from_h
         u_from_wk_w = (avail_w / (wk_glyph_cols * WK_SCALE)) if wk_glyph_cols else u_from_h
         u = min(u_from_h, u_from_day_w, u_from_wk_w)
 
-        # Dot radius and spacing derived from the unit value.
-        # cell = dot_r * 2 + spacing; dot_r ≈ 39 % of cell, spacing ≈ 22 %.
-        day_cell_target = u * DAY_SCALE
-        wk_cell_target = u * WK_SCALE
+        day_dot_r = max(int(u * DAY_SCALE * 0.39), 2)
+        day_dot_spacing = max(int(u * DAY_SCALE * 0.22), 1)
+        wk_dot_r = max(int(u * WK_SCALE * 0.39), 1)
+        wk_dot_spacing = max(int(u * WK_SCALE * 0.22), 1)
 
-        day_dot_r = max(int(day_cell_target * 0.39), 2)
-        day_dot_spacing = max(int(day_cell_target * 0.22), 1)
-
-        wk_dot_r = max(int(wk_cell_target * 0.39), 1)
-        wk_dot_spacing = max(int(wk_cell_target * 0.22), 1)
-
-        # Actual (integer) cell sizes after rounding
         day_cell = day_dot_r * 2 + day_dot_spacing
         wk_cell = wk_dot_r * 2 + wk_dot_spacing
         gap = max(int(u * GAP_SCALE), 4)
 
-        # Vertical arrangement: day number above, weekday below.
-        # A small optical lift makes the grouped block feel visually centred
-        # despite the day number being heavier than the weekday label.
         day_block_h = _DIGIT_H * day_cell
         wk_block_h = _LETTER_H * wk_cell
         total_content_h = day_block_h + gap + wk_block_h
-        content_top = left_cy - total_content_h // 2
+        content_top = panel_cy - total_content_h // 2
 
         day_center_y = content_top + day_block_h // 2
         wk_center_y = content_top + day_block_h + gap + wk_block_h // 2
@@ -577,44 +567,36 @@ class SimpleCalendar(BasePlugin):
             wk_center_y -= int(wk_cell * 0.45)
 
         _draw_dotmatrix_text(
-            draw, day_str, left_cx, day_center_y,
+            draw, day_str, panel_cx, day_center_y,
             day_dot_r, day_dot_spacing, white,
             glyph_w=_DIGIT_W, glyph_h=_DIGIT_H,
         )
         _draw_dotmatrix_text(
-            draw, weekday_str, left_cx, wk_center_y,
+            draw, weekday_str, panel_cx, wk_center_y,
             wk_dot_r, wk_dot_spacing, white,
             glyph_w=_LETTER_W, glyph_h=_LETTER_H,
             char_gap_dots=0.9,
         )
 
-        # === RIGHT PANEL CONTENT (month name, weekday headers, day grid) ===
-        right_left = left_right_edge
-        right_w = card_right - right_left
-        right_cx = right_left + right_w // 2
-
-        # Tighter side padding so the grid occupies more of the panel.
-        grid_side_pad = int(right_w * 0.04)
-        grid_left = right_left + grid_side_pad
-        grid_right_edge = card_right - grid_side_pad
+        # === CALENDAR CONTENT (inside light area) ===
+        grid_side_pad = int(cal_w * 0.04)
+        grid_left = c_left + grid_side_pad
+        grid_right_edge = c_right - grid_side_pad
         grid_w = grid_right_edge - grid_left
         col_w = grid_w / 7
 
-        # Font hierarchy: day numbers are the primary focus.
-        # Month title kept prominent; year and weekday headers are secondary.
         month_font_size = max(int(col_w * 0.76), 12)
-        year_font_size = max(int(col_w * 0.52), 9)       # slightly larger — more readable
-        header_font_size = max(int(col_w * 0.40), 9)     # slightly larger — clearly visible
-        day_font_size = max(int(col_w * 0.56), 10)       # prominent but not overpowering
+        year_font_size = max(int(col_w * 0.52), 9)
+        header_font_size = max(int(col_w * 0.40), 9)
+        day_font_size = max(int(col_w * 0.56), 10)
 
         month_font = get_font("Jost", month_font_size, "bold")
         year_font = get_font("Jost", year_font_size)
         header_font = get_font("Jost", header_font_size)
-        day_font = get_font("Jost", day_font_size)        # regular weight — less heavy
+        day_font = get_font("Jost", day_font_size)
 
-        # Layout vertical positions — reduced top padding to reclaim space for grid.
-        top_pad = int(card_h * 0.045)
-        month_y = card_top + top_pad
+        top_pad = int(cal_h * 0.045)
+        month_y = c_top + top_pad
 
         # Month and year
         month_name = self._get_month_name(now, locale_data, language)
@@ -624,7 +606,7 @@ class SimpleCalendar(BasePlugin):
         month_width = month_bbox[2] - month_bbox[0]
         header_gap = max(int(col_w * 0.4), 8)
         total_width = month_width + header_gap + (year_bbox[2] - year_bbox[0])
-        header_left = right_cx - total_width / 2
+        header_left = cal_cx - total_width / 2
 
         baseline_y = month_y + month_font.getmetrics()[0]
         title_lift = max(int(month_font_size * 0.30), 8)
@@ -637,10 +619,10 @@ class SimpleCalendar(BasePlugin):
         draw.text(
             (header_left + month_width + header_gap, year_y),
             year_text,
-            fill=(120, 120, 120), font=year_font, anchor="ls",  # medium gray — readable but secondary
+            fill=(120, 120, 120), font=year_font, anchor="ls",
         )
 
-        # Weekday header row — compact, low-emphasis
+        # Weekday header row
         header_labels = self._get_weekday_headers(locale_data, language)
         header_y = month_y + int(month_font_size * 1.4)
 
@@ -648,20 +630,20 @@ class SimpleCalendar(BasePlugin):
             x = grid_left + col_w * i + col_w / 2
             draw.text(
                 (x, header_y), label,
-                fill=(155, 155, 155), font=header_font, anchor="mt",  # visible but subordinate to days
+                fill=(155, 155, 155), font=header_font, anchor="mt",
             )
 
-        # Month day grid — reduced gap above so more vertical space goes to rows.
+        # Month day grid
         grid_top_y = header_y + int(header_font_size * 1.4)
-        available_grid_h = card_bottom - grid_top_y - int(card_h * 0.015)
+        available_grid_h = c_bottom - grid_top_y - int(cal_h * 0.015)
 
-        cal = calendar.Calendar(firstweekday=6).monthdayscalendar(now.year, now.month)
-        num_weeks = len(cal)
+        cal_grid = calendar.Calendar(firstweekday=6).monthdayscalendar(now.year, now.month)
+        num_weeks = len(cal_grid)
         row_h = available_grid_h / num_weeks
 
         today_circle_r = int(min(col_w, row_h) * 0.46)
 
-        for week_idx, week in enumerate(cal):
+        for week_idx, week in enumerate(cal_grid):
             row_cy = grid_top_y + row_h * week_idx + row_h / 2
             for dow, day in enumerate(week):
                 if day == 0:
@@ -669,7 +651,6 @@ class SimpleCalendar(BasePlugin):
                 col_cx = grid_left + col_w * dow + col_w / 2
 
                 if day == now.day:
-                    # Today highlight: filled circle using the configured accent color
                     draw.ellipse(
                         [col_cx - today_circle_r, row_cy - today_circle_r,
                          col_cx + today_circle_r, row_cy + today_circle_r],
@@ -686,7 +667,6 @@ class SimpleCalendar(BasePlugin):
                     )
 
         return img
-
     @staticmethod
     def _get_selected_date(settings, tz):
         custom_date = settings.get("customDate")

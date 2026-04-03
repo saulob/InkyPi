@@ -5,8 +5,8 @@
 </div>
 
 <div class="form-group">
-	<label for="locale" class="form-label">Locale:</label>
-	<select id="locale" name="locale" class="form-input">
+	<label for="language" class="form-label">Language:</label>
+	<select id="language" name="language" class="form-input">
 		<option value="nl">Dutch</option>
 		<option value="en" selected>English</option>
 		<option value="fr">French</option>
@@ -15,6 +15,14 @@
 		<option value="it">Italian</option>
 		<option value="pt">Portuguese</option>
 		<option value="es">Spanish</option>
+	</select>
+</div>
+
+<div class="form-group">
+	<label for="layoutPosition" class="form-label">Layout Position:</label>
+	<select id="layoutPosition" name="layoutPosition" class="form-input">
+		<option value="left" selected>Left</option>
+		<option value="right">Right</option>
 	</select>
 </div>
 
@@ -33,11 +41,12 @@
 	document.addEventListener('DOMContentLoaded', () => {
 		if (loadPluginSettings) {
 			document.getElementById('customDate').value = pluginSettings.customDate || '';
-			const locale = document.getElementById('locale');
-			locale.value = pluginSettings.locale || pluginSettings.language || 'en';
-			if (!locale.querySelector(`option[value="${pluginSettings.locale || pluginSettings.language}"]`)) {
-				locale.value = 'en';
+			const language = document.getElementById('language');
+			language.value = pluginSettings.language || pluginSettings.locale || 'en';
+			if (!language.querySelector(`option[value="${language.value}"]`)) {
+				language.value = 'en';
 			}
+			document.getElementById('layoutPosition').value = pluginSettings.layoutPosition || 'left';
 			document.querySelector('[name=primaryColor]').value = pluginSettings.primaryColor || '#e61a1a';
 			document.querySelector('[name=highlightColor]').value = pluginSettings.highlightColor || '#a30d0d';
 		}
