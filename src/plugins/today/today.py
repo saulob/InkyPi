@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 from PIL import Image, ImageColor, ImageDraw
@@ -83,11 +83,27 @@ class Today(BasePlugin):
         secondary_color = ImageColor.getcolor(settings.get("secondaryColor") or DEFAULT_SECONDARY, "RGB")
         progress_bar_color = ImageColor.getcolor(settings.get("progressBarColor") or DEFAULT_PROGRESS_BAR, "RGB")
 
-        # Full day progress (00:00:00 to 23:59:59) — use seconds for accuracy
-        total_seconds_day = 24 * 60 * 60
-        cur_seconds = now.hour * 3600 + now.minute * 60 + now.second
-        progress = min(cur_seconds / total_seconds_day, 1.0)
-        remaining_seconds = max(total_seconds_day - cur_seconds, 0)
+        # Day progress/remaining computed using actual midnight->midnight
+        # interval in the chosen timezone so DST (23h/25h days) is handled.
+        if now.tzinfo is None:
+            total_seconds_day = 24 * 60 * 60
+            cur_seconds = now.hour * 3600 + now.minute * 60 + now.second
+            progress = min(cur_seconds / total_seconds_day, 1.0)
+            remaining_seconds = max(total_seconds_day - cur_seconds, 0)
+        else:
+            def _localize(naive_dt, tz):
+                try:
+                    return tz.localize(naive_dt)
+                except AttributeError:
+                    return naive_dt.replace(tzinfo=tz)
+
+            start = _localize(datetime(now.year, now.month, now.day, 0, 0, 0), tz)
+            tomorrow = now.date() + timedelta(days=1)
+            end = _localize(datetime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0, 0), tz)
+            total_seconds_day = (end - start).total_seconds()
+            elapsed_seconds = (now - start).total_seconds()
+            progress = min(max(elapsed_seconds / total_seconds_day, 0.0), 1.0)
+            remaining_seconds = int(max(total_seconds_day - elapsed_seconds, 0))
 
         # Format time based on system time format setting
         if time_format == "24h":
