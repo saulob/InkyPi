@@ -19,6 +19,18 @@
 </div>
 
 <div class="form-group">
+    <label class="form-label">Title:</label>
+    <div class="form-group">
+        <input type="radio" id="title-default" name="titleSelection" value="default">
+        <label for="title-default">Default</label>
+
+        <input type="radio" id="title-custom" name="titleSelection" value="custom">
+        <label for="title-custom">Custom</label>
+        <input type="text" id="customTitle" name="customTitle" class="form-input" placeholder="Type something..." />
+    </div>
+</div>
+
+<div class="form-group">
     <div class="form-group">
         <label for="primaryColor" class="form-label">Primary Color:</label>
         <input id="primaryColor" type="color" name="primaryColor" class="color-picker" value="#ffffff"/>
@@ -34,6 +46,16 @@
 </div>
 
 <script>
+    function updateCustomTitleState() {
+        const customSelected = document.getElementById('title-custom').checked;
+        const customTitle = document.getElementById('customTitle');
+        customTitle.disabled = !customSelected;
+    }
+
+    document.querySelectorAll('input[name="titleSelection"]').forEach((radio) => {
+        radio.addEventListener('change', updateCustomTitleState);
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
         const language = document.getElementById('language');
         if (typeof pluginSettings === 'object' && pluginSettings !== null) {
@@ -51,8 +73,13 @@
             if (pluginSettings.progressBarColor) {
                 document.querySelector("[name=progressBarColor]").value = pluginSettings.progressBarColor;
             }
+            const selectedTitle = pluginSettings.titleSelection || 'default';
+            document.querySelector(`input[name="titleSelection"][value="${selectedTitle}"]`).checked = true;
+            document.getElementById('customTitle').value = pluginSettings.customTitle || '';
         } else {
             language.value = 'en';
+            document.getElementById('title-default').checked = true;
         }
+        updateCustomTitleState();
     });
 </script>

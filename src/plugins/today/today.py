@@ -112,7 +112,11 @@ class Today(BasePlugin):
         else:
             remain_str = f"{m}m {remain_word}"
 
-        return self._render(dimensions, locale["title"], time_digits, period, date_str, progress, remain_str,
+        title_selection = settings.get("titleSelection", "default")
+        custom_title = (settings.get("customTitle") or "").strip()
+        title = custom_title.upper() if title_selection == "custom" and custom_title else locale["title"]
+
+        return self._render(dimensions, title, time_digits, period, date_str, progress, remain_str,
                            primary_color, secondary_color, progress_bar_color)
 
     def _render(self, dimensions, title, time_digits, period, date_str, progress, remain_str,
