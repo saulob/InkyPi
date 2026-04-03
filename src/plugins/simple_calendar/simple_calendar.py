@@ -533,7 +533,10 @@ class SimpleCalendar(BasePlugin):
         avail_w = panel_w * 0.94
 
         n_day = len(day_str)
-        day_glyph_cols = _DIGIT_W * n_day + 1.5 * max(n_day - 1, 0)
+        # Fixed 2-digit reference column count so both 1-digit and 2-digit days
+        # use the same stable bounding box and identical dot sizing.
+        _DAY_DIGITS_REF = 2
+        day_glyph_cols = _DIGIT_W * _DAY_DIGITS_REF + 1.5 * max(_DAY_DIGITS_REF - 1, 0)
         n_wk = len(weekday_str)
         wk_glyph_cols = _LETTER_W * n_wk + 0.9 * max(n_wk - 1, 0)
 
@@ -566,10 +569,13 @@ class SimpleCalendar(BasePlugin):
         if any(ch in {"Á", "É"} for ch in weekday_str.upper()):
             wk_center_y -= int(wk_cell * 0.45)
 
+        # Slightly tighter inter-digit gap for 2-digit days improves visual balance.
+        day_char_gap = 1.5 if n_day == 1 else 1.0
         _draw_dotmatrix_text(
             draw, day_str, panel_cx, day_center_y,
             day_dot_r, day_dot_spacing, white,
             glyph_w=_DIGIT_W, glyph_h=_DIGIT_H,
+            char_gap_dots=day_char_gap,
         )
         _draw_dotmatrix_text(
             draw, weekday_str, panel_cx, wk_center_y,
