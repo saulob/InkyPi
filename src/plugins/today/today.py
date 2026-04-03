@@ -162,11 +162,11 @@ class Today(BasePlugin):
         # Pre-compute gap and initialize fonts so they're always defined
         gap = int(dim * 0.015)
         clock_fnt = get_font("DS-Digital", clock_size)
-        period_fnt = get_font("Jost", int(clock_size * 0.164), "bold")
+        period_fnt = get_font("Jost", int(clock_size * 0.164 * 1.21), "bold")
         # Reduce font size until it fits (loop may override the provisional fonts)
         while clock_size > 16:
             clock_fnt = get_font("DS-Digital", clock_size)
-            period_fnt = get_font("Jost", int(clock_size * 0.164), "bold")
+            period_fnt = get_font("Jost", int(clock_size * 0.164 * 1.21), "bold")
             test_w = draw.textlength(ghost, font=clock_fnt)
             if period:
                 test_w += gap + draw.textlength(period, font=period_fnt)
