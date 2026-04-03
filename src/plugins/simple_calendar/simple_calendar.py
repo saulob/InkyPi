@@ -1,5 +1,4 @@
 import calendar
-import logging
 import unicodedata
 from datetime import datetime
 
@@ -8,8 +7,6 @@ from PIL import Image, ImageColor, ImageDraw
 
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.app_utils import get_font
-
-logger = logging.getLogger(__name__)
 
 LOCALE_DATA = {
     "de": {
