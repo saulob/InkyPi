@@ -74,7 +74,12 @@
                 document.querySelector("[name=progressBarColor]").value = pluginSettings.progressBarColor;
             }
             const selectedTitle = pluginSettings.titleSelection || 'default';
-            document.querySelector(`input[name="titleSelection"][value="${selectedTitle}"]`).checked = true;
+            const selectedTitleRadio = document.querySelector(`input[name="titleSelection"][value="${selectedTitle}"]`);
+            if (selectedTitleRadio) {
+                selectedTitleRadio.checked = true;
+            } else {
+                document.getElementById('title-default').checked = true;
+            }
             document.getElementById('customTitle').value = pluginSettings.customTitle || '';
         } else {
             language.value = 'en';
