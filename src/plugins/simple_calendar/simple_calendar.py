@@ -521,8 +521,8 @@ class SimpleCalendar(BasePlugin):
 
         # --- Fit dot-matrix content to maximise usage of the left panel ---
         # Available drawing area — tighter inset for better fill.
-        avail_h = card_h * 0.92
-        avail_w = left_panel_w * 0.88
+        avail_h = card_h * 0.96
+        avail_w = left_panel_w * 0.94
 
         # Glyph column counts — each glyph is 5 dots wide; inter-char gaps
         # expressed in dot-cell units (1.5 for digits, 0.9 for letters).
@@ -569,8 +569,7 @@ class SimpleCalendar(BasePlugin):
         day_block_h = _DIGIT_H * day_cell
         wk_block_h = _LETTER_H * wk_cell
         total_content_h = day_block_h + gap + wk_block_h
-        optical_lift = int(card_h * 0.02)
-        content_top = left_cy - total_content_h // 2 - optical_lift
+        content_top = left_cy - total_content_h // 2
 
         day_center_y = content_top + day_block_h // 2
         wk_center_y = content_top + day_block_h + gap + wk_block_h // 2
@@ -604,7 +603,7 @@ class SimpleCalendar(BasePlugin):
         # Font hierarchy: day numbers are the primary focus.
         # Month title kept prominent; year and weekday headers are secondary.
         month_font_size = max(int(col_w * 0.76), 12)
-        year_font_size = max(int(col_w * 0.44), 9)       # slightly larger — more readable
+        year_font_size = max(int(col_w * 0.52), 9)       # slightly larger — more readable
         header_font_size = max(int(col_w * 0.40), 9)     # slightly larger — clearly visible
         day_font_size = max(int(col_w * 0.56), 10)       # prominent but not overpowering
 
@@ -614,7 +613,7 @@ class SimpleCalendar(BasePlugin):
         day_font = get_font("Jost", day_font_size)        # regular weight — less heavy
 
         # Layout vertical positions — reduced top padding to reclaim space for grid.
-        top_pad = int(card_h * 0.055)
+        top_pad = int(card_h * 0.045)
         month_y = card_top + top_pad
 
         # Month and year
@@ -653,8 +652,8 @@ class SimpleCalendar(BasePlugin):
             )
 
         # Month day grid — reduced gap above so more vertical space goes to rows.
-        grid_top_y = header_y + int(header_font_size * 1.6)
-        available_grid_h = card_bottom - grid_top_y - int(card_h * 0.02)
+        grid_top_y = header_y + int(header_font_size * 1.4)
+        available_grid_h = card_bottom - grid_top_y - int(card_h * 0.015)
 
         cal = calendar.Calendar(firstweekday=6).monthdayscalendar(now.year, now.month)
         num_weeks = len(cal)
