@@ -10,7 +10,7 @@ from utils.app_utils import get_font
 
 LOCALE_DATA = {
     "de": {
-        "weekday_abbrev": ["MON", "DIE", "MIT", "DON", "FRE", "SAM", "SON"],
+        "weekday_abbrev": ["MO", "DI", "MI", "DO", "FR", "SA", "SO"],
         "headers": ["S", "M", "D", "M", "D", "F", "S"],
         "months": ["JANUAR", "FEBRUAR", "MÄRZ", "APRIL", "MAI", "JUNI", "JULI", "AUGUST", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DEZEMBER"],
     },
