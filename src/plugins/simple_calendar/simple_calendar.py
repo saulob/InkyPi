@@ -465,13 +465,11 @@ class SimpleCalendar(BasePlugin):
         img = Image.new("RGB", (W, H), white)
         draw = ImageDraw.Draw(img)
 
-        # Card geometry — generous margin, large rounded card
-        margin_x = int(W * 0.04)
-        margin_y = int(H * 0.06)
-        card_left = margin_x
-        card_top = margin_y
-        card_right = W - margin_x
-        card_bottom = H - margin_y
+        # Card geometry — edge-to-edge, no outer margin
+        card_left = 0
+        card_top = 0
+        card_right = W
+        card_bottom = H
         card_w = card_right - card_left
         card_h = card_bottom - card_top
         corner_r = int(min(card_w, card_h) * 0.06)
