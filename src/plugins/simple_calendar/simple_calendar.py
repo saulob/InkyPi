@@ -460,7 +460,6 @@ class SimpleCalendar(BasePlugin):
         dark = primary_color
         light_bg = (245, 245, 245)
         white = (255, 255, 255)
-        mid_gray = (178, 178, 178)
         text_color = (56, 56, 56)
 
         img = Image.new("RGB", (W, H), white)
