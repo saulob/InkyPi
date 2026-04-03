@@ -453,7 +453,7 @@ class SimpleCalendar(BasePlugin):
     # Core rendering
     # ------------------------------------------------------------------
 
-    def _render_calendar(self, dimensions, now, primary_color, highlight_color, locale_data, language, layout_position="left"):
+    def _render_calendar(self, dimensions, selected_date, primary_color, highlight_color, locale_data, language, layout_position="left"):
         W, H = dimensions
 
         # Colours
@@ -521,8 +521,8 @@ class SimpleCalendar(BasePlugin):
         panel_cx = p_left + panel_w // 2
         panel_cy = p_top + panel_h // 2
 
-        day_str = str(now.day)
-        weekday_str = self._get_weekday_abbrev(now, locale_data, language)
+        day_str = str(selected_date.day)
+        weekday_str = self._get_weekday_abbrev(selected_date, locale_data, language)
 
         # Vertical stack: day number above, weekday abbrev below
         avail_h = panel_h * 0.96
@@ -601,8 +601,8 @@ class SimpleCalendar(BasePlugin):
         month_y = c_top + top_pad
 
         # Month and year
-        month_name = self._get_month_name(now, locale_data, language)
-        year_text = str(now.year)
+        month_name = self._get_month_name(selected_date, locale_data, language)
+        year_text = str(selected_date.year)
         month_bbox = draw.textbbox((0, 0), month_name, font=month_font)
         year_bbox = draw.textbbox((0, 0), year_text, font=year_font)
         month_width = month_bbox[2] - month_bbox[0]
@@ -639,7 +639,7 @@ class SimpleCalendar(BasePlugin):
         grid_top_y = header_y + int(header_font_size * 1.4)
         available_grid_h = c_bottom - grid_top_y - int(cal_h * 0.015)
 
-        cal_grid = calendar.Calendar(firstweekday=6).monthdayscalendar(now.year, now.month)
+        cal_grid = calendar.Calendar(firstweekday=6).monthdayscalendar(selected_date.year, selected_date.month)
         num_weeks = len(cal_grid)
         row_h = available_grid_h / num_weeks
 
@@ -652,7 +652,7 @@ class SimpleCalendar(BasePlugin):
                     continue
                 col_cx = grid_left + col_w * dow + col_w / 2
 
-                if day == now.day:
+                if day == selected_date.day:
                     draw.ellipse(
                         [col_cx - today_circle_r, row_cy - today_circle_r,
                          col_cx + today_circle_r, row_cy + today_circle_r],
@@ -687,15 +687,15 @@ class SimpleCalendar(BasePlugin):
         normalized = unicodedata.normalize("NFKD", text)
         return "".join(char for char in normalized if not unicodedata.combining(char))
 
-    def _get_weekday_abbrev(self, now, locale_data, language):
+    def _get_weekday_abbrev(self, selected_date, locale_data, language):
         if locale_data:
-            return locale_data["weekday_abbrev"][now.weekday()].upper()
-        return now.strftime("%a").upper()[:3]
+            return locale_data["weekday_abbrev"][selected_date.weekday()].upper()
+        return selected_date.strftime("%a").upper()[:3]
 
-    def _get_month_name(self, now, locale_data, language):
+    def _get_month_name(self, selected_date, locale_data, language):
         if locale_data:
-            return locale_data["months"][now.month - 1]
-        return self._strip_accents(now.strftime("%B").upper())
+            return locale_data["months"][selected_date.month - 1]
+        return self._strip_accents(selected_date.strftime("%B").upper())
 
     def _get_weekday_headers(self, locale_data, language):
         if locale_data:
