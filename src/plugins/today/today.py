@@ -14,12 +14,6 @@ DEFAULT_PROGRESS_BAR = "#cc3232"
 # Hardcoded locale data for Latin-script languages commonly used by the InkyPi
 # community (hobbyists/tech in Europe and Americas). Jost font supports accented chars.
 LOCALE_DATA = {
-    "da": {
-        "title": "I DAG",
-        "days": ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"],
-        "months_short": ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"],
-        "remaining": "tilbage",
-    },
     "de": {
         "title": "HEUTE",
         "days": ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
@@ -44,17 +38,17 @@ LOCALE_DATA = {
         "months_short": ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"],
         "remaining": "restant",
     },
+    "id": {
+        "title": "HARI INI",
+        "days": ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"],
+        "months_short": ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"],
+        "remaining": "tersisa",
+    },
     "it": {
         "title": "OGGI",
         "days": ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"],
         "months_short": ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"],
         "remaining": "rimanenti",
-    },
-    "nb": {
-        "title": "I DAG",
-        "days": ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"],
-        "months_short": ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"],
-        "remaining": "igjen",
     },
     "nl": {
         "title": "VANDAAG",
@@ -67,12 +61,6 @@ LOCALE_DATA = {
         "days": ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
         "months_short": ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"],
         "remaining": "restantes",
-    },
-    "sv": {
-        "title": "IDAG",
-        "days": ["Måndag", "Tisdag", "Onsdag", "Torsdag", "Fredag", "Lördag", "Söndag"],
-        "months_short": ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"],
-        "remaining": "kvar",
     },
 }
 
