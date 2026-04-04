@@ -255,7 +255,6 @@ class RainToday(BasePlugin):
 
         units = settings.get("units", "imperial")
         language = str(settings.get("language", "en")).strip() or "en"
-        show_rain_end = settings.get("showRainEnd", "true") != "false"
 
         timezone_name = device_config.get_config("timezone", default="America/New_York")
         time_format = device_config.get_config("time_format", default="12h")
@@ -292,9 +291,9 @@ class RainToday(BasePlugin):
             if hour_index < len(probs) and probs[hour_index] is not None:
                 rain_prob = probs[hour_index]
 
-        # Rain end time
+        # Rain end time – always shown when rain is detected
         rain_end_text = ""
-        if show_rain_end and rain_key != "no_rain":
+        if rain_key != "no_rain":
             rain_end_text = self._infer_rain_end(hourly, hour_index, tz, time_format, locale)
 
         # Chance text
@@ -333,7 +332,6 @@ class RainToday(BasePlugin):
             "precip_display": precip_display,
             "precip_unit": precip_unit,
             "precip_label": locale["precipitation"],
-            "show_rain_end": show_rain_end and rain_key != "no_rain",
             "plugin_settings": settings,
         }
 

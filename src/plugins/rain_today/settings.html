@@ -62,15 +62,6 @@
     </select>
 </div>
 
-<div class="form-group">
-    <label for="showRainEnd" class="form-label">Show rain end time:</label>
-    <div class="toggle-container">
-        <input type="hidden" id="showRainEndValue" name="showRainEnd" value="true">
-        <input type="checkbox" id="showRainEnd" class="toggle-checkbox" checked onclick="document.getElementById('showRainEndValue').value = this.checked ? 'true' : 'false';">
-        <label for="showRainEnd" class="toggle-label"></label>
-    </div>
-</div>
-
 <div id="mapModal" class="modal">
     <div class="modal-content">
         <span class="close-button" onclick="closeModal('mapModal')">×</span>
@@ -188,10 +179,6 @@
             document.getElementById('weatherProvider').value = weatherProvider;
             document.getElementById('units').value = pluginSettings.units || 'imperial';
 
-            const showRainEndVal = pluginSettings.showRainEnd;
-            const showRainEndChecked = showRainEndVal === undefined || showRainEndVal === null || showRainEndVal === 'true' || showRainEndVal === true;
-            document.getElementById('showRainEnd').checked = showRainEndChecked;
-            document.getElementById('showRainEndValue').value = showRainEndChecked ? 'true' : 'false';
         } else {
             document.getElementById('language').value = 'en';
             document.getElementById('quickLocation').value = '';
