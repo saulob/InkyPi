@@ -7,6 +7,7 @@ For the API key, set `THE_MOVIE_DB={API_KEY}` in your .env file.
 from plugins.base_plugin.base_plugin import BasePlugin
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+from utils.app_utils import get_font
 from utils.http_client import get_http_session
 import logging
 from random import randint
@@ -83,102 +84,114 @@ class MovieOfTheDay(BasePlugin):
         return movie
 
     def _compose_layout(self, movie, dimensions):
-        """Compose the e-paper layout with poster on one side and text on the other."""
+        """Compose a balanced card layout: poster left (~38%), text block right."""
         width, height = dimensions
+        dim = min(width, height)
 
         title = movie.get("title", "Unknown Title")
         release_date = movie.get("release_date", "")
         year = release_date[:4] if release_date else "N/A"
         rating = movie.get("vote_average", 0)
-        rating_str = f"{rating:.1f}/10" if rating else "N/A"
+        rating_str = f"★ {rating:.1f}/10" if rating else "N/A"
         poster_path = movie.get("poster_path")
 
-        # Create base image (white background for e-paper)
+        # Create base image
         image = Image.new("RGB", (width, height), "white")
         draw = ImageDraw.Draw(image)
 
-        # Layout: poster on the left, text on the right
-        poster_width = int(width * 0.35)
-        text_x = poster_width + int(width * 0.04)
-        text_width = width - text_x - int(width * 0.04)
-        padding = int(height * 0.08)
+        # --- Margins ---
+        margin = int(dim * 0.04)
 
-        # Load and place poster
+        # --- Poster: ~38% of total width, full height minus margin ---
+        poster_area_w = int(width * 0.38)
+        poster_max_w = poster_area_w - margin
+        poster_max_h = height - margin * 2
+
+        poster_img = None
         if poster_path:
             try:
                 poster_url = f"{TMDB_IMAGE_BASE}{poster_path}"
                 poster_img = self.image_loader.from_url(
-                    poster_url, (poster_width, height), timeout_ms=20000
+                    poster_url, (poster_max_w, poster_max_h), timeout_ms=20000
                 )
                 if poster_img:
-                    # Resize poster to fit the left column keeping aspect ratio
-                    poster_img.thumbnail(
-                        (poster_width - padding, height - padding * 2),
-                        Image.LANCZOS,
-                    )
-                    poster_x = (poster_width - poster_img.width) // 2
-                    poster_y = (height - poster_img.height) // 2
-                    image.paste(poster_img, (poster_x, poster_y))
+                    poster_img.thumbnail((poster_max_w, poster_max_h), Image.LANCZOS)
             except Exception as e:
                 logger.warning(f"Failed to load poster: {e}")
-                self._draw_poster_placeholder(draw, poster_width, height, padding)
+                poster_img = None
+
+        if poster_img:
+            poster_x = (poster_area_w - poster_img.width) // 2
+            poster_y = (height - poster_img.height) // 2
+            image.paste(poster_img, (poster_x, poster_y))
         else:
-            self._draw_poster_placeholder(draw, poster_width, height, padding)
+            self._draw_poster_placeholder(draw, margin // 2, margin,
+                                          poster_area_w - margin // 2, height - margin, dim)
 
-        # Load fonts
-        title_font = self._load_font(int(height * 0.07))
-        detail_font = self._load_font(int(height * 0.05))
-
-        # Draw title (with word wrapping)
-        title_y = padding
-        title_y = self._draw_wrapped_text(
-            draw, title, text_x, title_y, text_width, title_font, fill="black"
+        # --- Subtle vertical divider ---
+        divider_x = poster_area_w
+        div_margin_v = int(height * 0.1)
+        draw.line(
+            [(divider_x, div_margin_v), (divider_x, height - div_margin_v)],
+            fill=(210, 210, 210), width=1
         )
 
-        # Draw year
-        title_y += int(height * 0.04)
-        draw.text((text_x, title_y), year, font=detail_font, fill="gray")
-        title_y += int(height * 0.07)
+        # --- Text block on the right ---
+        gap_after_divider = int(dim * 0.035)
+        text_x = divider_x + gap_after_divider
+        text_max_w = width - text_x - margin
 
-        # Draw rating with star
-        draw.text((text_x, title_y), f"★ {rating_str}", font=detail_font, fill="black")
+        # Font sizes scaled from dim
+        header_font = get_font("Jost", int(dim * 0.032)) or ImageFont.load_default()
+        title_font = get_font("Jost", int(dim * 0.082), "bold") or ImageFont.load_default()
+        year_font = get_font("Jost", int(dim * 0.048)) or ImageFont.load_default()
+        rating_font = get_font("Jost", int(dim * 0.052), "bold") or ImageFont.load_default()
+
+        # Measure line heights for vertical centering
+        title_lines = self._wrap_text(draw, title, text_max_w, title_font, max_lines=2)
+        header_h = int(dim * 0.032 * 1.5)
+        title_line_h = int(dim * 0.082 * 1.2)
+        title_block_h = len(title_lines) * title_line_h
+        year_h = int(dim * 0.048 * 1.4)
+        rating_h = int(dim * 0.052 * 1.4)
+        gap_s = int(dim * 0.018)
+        gap_m = int(dim * 0.028)
+
+        total_h = header_h + gap_s + title_block_h + gap_s + year_h + gap_m + rating_h
+        cur_y = max(margin, (height - total_h) // 2)
+
+        # Header label
+        draw.text((text_x, cur_y), "Movie of the Day", font=header_font, fill=(160, 160, 160))
+        cur_y += header_h + gap_s
+
+        # Title
+        for line in title_lines:
+            draw.text((text_x, cur_y), line, font=title_font, fill=(10, 10, 10))
+            cur_y += title_line_h
+        cur_y += gap_s
+
+        # Year
+        draw.text((text_x, cur_y), year, font=year_font, fill=(130, 130, 130))
+        cur_y += year_h + gap_m
+
+        # Rating — inline, no badge
+        draw.text((text_x, cur_y), rating_str, font=rating_font, fill=(40, 40, 40))
 
         return image
 
-    def _draw_poster_placeholder(self, draw, poster_width, height, padding):
+    def _draw_poster_placeholder(self, draw, x0, y0, x1, y1, dim):
         """Draw a placeholder rectangle when poster is unavailable."""
-        x0 = padding
-        y0 = padding
-        x1 = poster_width - padding
-        y1 = height - padding
-        draw.rectangle([x0, y0, x1, y1], outline="gray", width=2)
-        # Draw a small film icon placeholder
+        draw.rounded_rectangle([x0, y0, x1, y1], radius=int(dim * 0.02),
+                               outline=(200, 200, 200), width=2)
         cx = (x0 + x1) // 2
         cy = (y0 + y1) // 2
-        placeholder_font = self._load_font(int(height * 0.04))
-        draw.text((cx, cy), "No Poster", font=placeholder_font, fill="gray", anchor="mm")
+        icon_font = get_font("Jost", int(dim * 0.06)) or ImageFont.load_default()
+        draw.text((cx, cy - int(dim * 0.04)), "🎬", font=icon_font, fill=(180, 180, 180), anchor="mm")
+        label_font = get_font("Jost", int(dim * 0.035)) or ImageFont.load_default()
+        draw.text((cx, cy + int(dim * 0.03)), "No Poster", font=label_font, fill=(180, 180, 180), anchor="mm")
 
-    def _load_font(self, size):
-        """Load a font, falling back to default if needed."""
-        import os
-        fonts_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            "static", "fonts"
-        )
-
-        # Try available fonts from the project's fonts directory
-        for font_name in ["Jost-SemiBold.ttf", "Jost.ttf", "Napoli.ttf"]:
-            font_path = os.path.join(fonts_dir, font_name)
-            if os.path.exists(font_path):
-                try:
-                    return ImageFont.truetype(font_path, size)
-                except Exception:
-                    continue
-
-        return ImageFont.load_default()
-
-    def _draw_wrapped_text(self, draw, text, x, y, max_width, font, fill="black"):
-        """Draw text with word wrapping. Returns the y position after the last line."""
+    def _wrap_text(self, draw, text, max_width, font, max_lines=2):
+        """Wrap text into lines, truncating with ellipsis if over max_lines."""
         words = text.split()
         lines = []
         current_line = ""
@@ -192,13 +205,24 @@ class MovieOfTheDay(BasePlugin):
                 if current_line:
                     lines.append(current_line)
                 current_line = word
+                if len(lines) >= max_lines:
+                    break
 
-        if current_line:
+        if current_line and len(lines) < max_lines:
             lines.append(current_line)
 
-        line_height = font.size + int(font.size * 0.3)
-        for line in lines:
-            draw.text((x, y), line, font=font, fill=fill)
-            y += line_height
+        # Truncate last line with ellipsis if we ran out of space
+        if len(lines) >= max_lines and words:
+            last = lines[max_lines - 1]
+            remaining_words = words[sum(len(l.split()) for l in lines):]
+            if remaining_words:
+                while last:
+                    candidate = last + "…"
+                    bbox = draw.textbbox((0, 0), candidate, font=font)
+                    if bbox[2] - bbox[0] <= max_width:
+                        lines[max_lines - 1] = candidate
+                        break
+                    last = last.rsplit(" ", 1)[0] if " " in last else last[:-1]
+            lines = lines[:max_lines]
 
-        return y
+        return lines if lines else [text[:20] + "…"]
