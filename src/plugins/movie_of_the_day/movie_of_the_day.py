@@ -92,7 +92,6 @@ class MovieOfTheDay(BasePlugin):
         release_date = movie.get("release_date", "")
         year = release_date[:4] if release_date else "N/A"
         rating = movie.get("vote_average", 0)
-        rating_str = f"★ {rating:.1f}/10" if rating else "N/A"
         poster_path = movie.get("poster_path")
 
         # Create base image
@@ -145,19 +144,18 @@ class MovieOfTheDay(BasePlugin):
         header_font = get_font("Jost", int(dim * 0.032)) or ImageFont.load_default()
         title_font = get_font("Jost", int(dim * 0.082), "bold") or ImageFont.load_default()
         year_font = get_font("Jost", int(dim * 0.048)) or ImageFont.load_default()
-        rating_font = get_font("Jost", int(dim * 0.052), "bold") or ImageFont.load_default()
 
-        # Measure line heights for vertical centering
+        # Measure heights for vertical centering
         title_lines = self._wrap_text(draw, title, text_max_w, title_font, max_lines=2)
         header_h = int(dim * 0.032 * 1.5)
         title_line_h = int(dim * 0.082 * 1.2)
         title_block_h = len(title_lines) * title_line_h
         year_h = int(dim * 0.048 * 1.4)
-        rating_h = int(dim * 0.052 * 1.4)
+        score_panel_h = int(dim * 0.22)  # label + score line + stars row
         gap_s = int(dim * 0.018)
-        gap_m = int(dim * 0.028)
+        gap_m = int(dim * 0.030)
 
-        total_h = header_h + gap_s + title_block_h + gap_s + year_h + gap_m + rating_h
+        total_h = header_h + gap_s + title_block_h + gap_s + year_h + gap_m + score_panel_h
         cur_y = max(margin, (height - total_h) // 2)
 
         # Header label
@@ -174,10 +172,65 @@ class MovieOfTheDay(BasePlugin):
         draw.text((text_x, cur_y), year, font=year_font, fill=(130, 130, 130))
         cur_y += year_h + gap_m
 
-        # Rating — inline, no badge
-        draw.text((text_x, cur_y), rating_str, font=rating_font, fill=(40, 40, 40))
+        # Score panel
+        self._draw_score_panel(draw, text_x, cur_y, rating, dim)
 
         return image
+
+    def _draw_score_panel(self, draw, x, y, rating, dim):
+        """Draw a compact score panel: User Score label, score number, and a 5-star row."""
+        import math
+
+        label_font = get_font("Jost", int(dim * 0.030)) or ImageFont.load_default()
+        score_font = get_font("Jost", int(dim * 0.065), "bold") or ImageFont.load_default()
+        gap = int(dim * 0.012)
+
+        # "User Score" label
+        draw.text((x, y), "User Score", font=label_font, fill=(150, 150, 150))
+        y += int(dim * 0.030 * 1.5) + gap
+
+        # Score number: N.N/10
+        if rating:
+            score_text = f"{rating:.1f}/10"
+        else:
+            score_text = "N/A"
+        draw.text((x, y), score_text, font=score_font, fill=(20, 20, 20))
+        y += int(dim * 0.065 * 1.3) + gap
+
+        # 5-star row drawn as polygons
+        if rating:
+            star_size = int(dim * 0.035)
+            star_gap = int(star_size * 0.35)
+            filled_count = rating / 2.0  # 0-5 scale
+            for i in range(5):
+                sx = x + i * (star_size + star_gap)
+                sy = y
+                if i < int(filled_count):
+                    self._draw_star(draw, sx, sy, star_size, fill=(50, 50, 50))
+                elif i < filled_count:
+                    # half-filled: draw outline, then filled on top clipped to left half
+                    self._draw_star(draw, sx, sy, star_size, fill=None, outline=(50, 50, 50))
+                    self._draw_star(draw, sx, sy, star_size, fill=(50, 50, 50))
+                else:
+                    self._draw_star(draw, sx, sy, star_size, fill=None, outline=(160, 160, 160))
+
+    @staticmethod
+    def _draw_star(draw, x, y, size, fill=None, outline=None):
+        """Draw a 5-point star polygon at (x, y) with given size."""
+        import math
+        cx = x + size // 2
+        cy = y + size // 2
+        outer_r = size // 2
+        inner_r = int(outer_r * 0.38)
+        points = []
+        for i in range(10):
+            r = outer_r if i % 2 == 0 else inner_r
+            angle = math.radians(-90 + i * 36)
+            points.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
+        if fill:
+            draw.polygon(points, fill=fill, outline=outline or fill)
+        elif outline:
+            draw.polygon(points, outline=outline, width=1)
 
     def _draw_poster_placeholder(self, draw, x0, y0, x1, y1, dim):
         """Draw a placeholder rectangle when poster is unavailable."""
@@ -185,10 +238,8 @@ class MovieOfTheDay(BasePlugin):
                                outline=(200, 200, 200), width=2)
         cx = (x0 + x1) // 2
         cy = (y0 + y1) // 2
-        icon_font = get_font("Jost", int(dim * 0.06)) or ImageFont.load_default()
-        draw.text((cx, cy - int(dim * 0.04)), "🎬", font=icon_font, fill=(180, 180, 180), anchor="mm")
         label_font = get_font("Jost", int(dim * 0.035)) or ImageFont.load_default()
-        draw.text((cx, cy + int(dim * 0.03)), "No Poster", font=label_font, fill=(180, 180, 180), anchor="mm")
+        draw.text((cx, cy), "No Poster", font=label_font, fill=(180, 180, 180), anchor="mm")
 
     def _wrap_text(self, draw, text, max_width, font, max_lines=2):
         """Wrap text into lines, truncating with ellipsis if over max_lines."""
