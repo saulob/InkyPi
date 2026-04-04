@@ -1,0 +1,193 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+.rain-today-shell {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Jost", sans-serif;
+    background: #1a2233;
+}
+
+.rain-card {
+    background: #ffffff;
+    border-radius: 6dvw;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 5dvh 5dvw 4dvh;
+    width: 82%;
+    height: 88%;
+    box-shadow: 0 0.8dvh 3dvh rgba(0, 0, 0, 0.12);
+}
+
+/* ---- Location row ---- */
+.location-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5dvw;
+}
+
+.location-icon {
+    width: min(5.5dvh, 5dvw);
+    height: min(5.5dvh, 5dvw);
+    flex-shrink: 0;
+}
+
+.location-name {
+    font-size: min(6.5dvh, 6dvw);
+    font-weight: 700;
+    color: #4A7CFF;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ---- Main area: icon + temp ---- */
+.main-area {
+    display: flex;
+    align-items: center;
+    gap: 2dvw;
+    padding: 1dvh 0;
+}
+
+.rain-icon {
+    width: min(16dvh, 14dvw);
+    height: min(16dvh, 14dvw);
+    flex-shrink: 0;
+}
+
+.temp-block {
+    display: flex;
+    align-items: baseline;
+    line-height: 1;
+}
+
+.temp-value {
+    font-size: min(22dvh, 20dvw);
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.temp-unit {
+    font-size: min(11dvh, 10dvw);
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+/* ---- Rain details ---- */
+.rain-details {
+    padding: 0.5dvh 0;
+}
+
+.rain-description {
+    font-size: min(7dvh, 6.5dvw);
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.rain-meta {
+    font-size: min(5.5dvh, 5dvw);
+    font-weight: 400;
+    color: #888;
+    line-height: 1.35;
+    margin-top: 0.3dvh;
+}
+
+/* ---- Bottom info row ---- */
+.bottom-row {
+    display: flex;
+    gap: 4dvw;
+    padding-top: 2dvh;
+    border-top: 1px solid #eee;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 2dvw;
+    flex: 1;
+}
+
+.info-icon {
+    width: min(8dvh, 7dvw);
+    height: min(8dvh, 7dvw);
+    flex-shrink: 0;
+}
+
+.info-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-value {
+    font-size: min(6.5dvh, 6dvw);
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.15;
+}
+
+.info-label {
+    font-size: min(4dvh, 3.5dvw);
+    font-weight: 400;
+    color: #888;
+    line-height: 1.2;
+}
+
+/* ---- Vertical / portrait orientation ---- */
+@media (max-aspect-ratio: 1) {
+    .rain-card {
+        width: 88%;
+        height: 85%;
+        padding: 4dvh 5dvw 3.5dvh;
+        border-radius: 5dvw;
+    }
+
+    .location-name {
+        font-size: min(5dvh, 7dvw);
+    }
+
+    .rain-icon {
+        width: min(12dvh, 18dvw);
+        height: min(12dvh, 18dvw);
+    }
+
+    .temp-value {
+        font-size: min(16dvh, 24dvw);
+    }
+
+    .temp-unit {
+        font-size: min(8dvh, 12dvw);
+    }
+
+    .rain-description {
+        font-size: min(5dvh, 7.5dvw);
+    }
+
+    .rain-meta {
+        font-size: min(4dvh, 6dvw);
+    }
+
+    .info-value {
+        font-size: min(4.5dvh, 7dvw);
+    }
+
+    .info-label {
+        font-size: min(3dvh, 4.5dvw);
+    }
+
+    .info-icon {
+        width: min(6dvh, 9dvw);
+        height: min(6dvh, 9dvw);
+    }
+
+    .bottom-row {
+        flex-direction: column;
+        gap: 2dvh;
+    }
+}
