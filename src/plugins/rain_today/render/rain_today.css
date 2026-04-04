@@ -12,7 +12,7 @@
     justify-content: stretch;
     font-family: "Jost", sans-serif;
     background: #ffffff;
-    padding: 0.6dvh 0.8dvw;
+    padding: 0.2dvh 0.8dvw 0.6dvh;
 }
 
 .rain-card {
@@ -22,8 +22,8 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 0.8dvh;
-    padding: 1.5dvh 2dvw;
+    gap: 0;
+    padding: 0.4dvh 2dvw 1.2dvh;
     width: 100%;
     height: 100%;
     box-shadow: none;
@@ -35,7 +35,7 @@
     align-items: center;
     justify-content: center;
     gap: 1.2dvw;
-    margin-bottom: 0.2dvh;
+    margin-bottom: 0.6dvh;
     width: 100%;
 }
 
@@ -61,6 +61,7 @@
     justify-content: center;
     gap: 2.5dvw;
     padding: 0;
+    margin-bottom: 1.2dvh;
     width: 100%;
 }
 
@@ -96,21 +97,30 @@
     padding: 0;
     text-align: center;
     width: 100%;
+    margin-bottom: 1.6dvh;
 }
 
 .rain-description {
-    font-size: min(10dvh, 9dvw);
+    font-size: min(8.5dvh, 7.5dvw);
     font-weight: 600;
     color: #1a1a1a;
     line-height: 1.1;
 }
 
-.rain-meta {
-    font-size: min(7dvh, 6.5dvw);
+.rain-chance {
+    font-size: min(11.5dvh, 10.5dvw);
+    font-weight: 600;
+    color: #2a2a2a;
+    line-height: 1.15;
+    margin-top: 0.7dvh;
+}
+
+.rain-end {
+    font-size: min(6.05dvh, 5.5dvw);
     font-weight: 400;
-    color: #666;
+    color: #888;
     line-height: 1.2;
-    margin-top: 0;
+    margin-top: 0.4dvh;
 }
 
 /* ---- Bottom info row ---- */
@@ -118,9 +128,9 @@
     display: flex;
     justify-content: center;
     gap: 6dvw;
-    padding-top: 1.5dvh;
+    padding-top: 1.8dvh;
     border-top: 1.5px solid rgba(0, 0, 0, 0.12);
-    margin-top: 1dvh;
+    margin-top: 0;
     width: 100%;
 }
 
@@ -145,7 +155,7 @@
 }
 
 .info-value {
-    font-size: min(10dvh, 9.5dvw);
+    font-size: min(10.5dvh, 10dvw);
     font-weight: 700;
     color: #1a1a1a;
     line-height: 1.05;
@@ -163,9 +173,9 @@
     .rain-card {
         width: 100%;
         height: 100%;
-        padding: 1.5dvh 2dvw;
+        padding: 0.4dvh 2dvw 1.2dvh;
         border-radius: 2.5dvw;
-        gap: 1.5dvh;
+        gap: 0;
     }
 
     .location-name {
@@ -186,15 +196,15 @@
     }
 
     .rain-description {
-        font-size: min(7dvh, 8.5dvw);
-    }
-
-    .rain-meta {
-        font-size: min(5.2dvh, 7dvw);
-    }
-
-    .info-value {
         font-size: min(6.5dvh, 8.5dvw);
+    }
+
+    .rain-chance {
+        font-size: min(8.5dvh, 10dvw);
+    }
+
+    .rain-end {
+        font-size: min(4.4dvh, 6.6dvw);
     }
 
     .info-label {

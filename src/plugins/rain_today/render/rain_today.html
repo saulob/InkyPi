@@ -87,7 +87,8 @@
         <!-- Rain details -->
         <div class="rain-details">
             <div class="rain-description">{{ rain_description }}</div>
-            <div class="rain-meta">{{ chance_text }}{% if rain_end_text %}<br>{{ rain_end_text }}{% endif %}</div>
+            <div class="rain-chance">{{ chance_text }}</div>
+            {% if rain_end_text %}<div class="rain-end">{{ rain_end_text }}</div>{% endif %}
         </div>
 
         <!-- Bottom info row -->
