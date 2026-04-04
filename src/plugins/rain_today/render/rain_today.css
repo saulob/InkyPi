@@ -8,22 +8,23 @@
     width: 100%;
     height: 100%;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    align-items: stretch;
+    justify-content: stretch;
     font-family: "Jost", sans-serif;
-    background: #1a2233;
+    background: #ffffff;
+    padding: 2dvh 2dvw;
 }
 
 .rain-card {
     background: #ffffff;
-    border-radius: 6dvw;
+    border-radius: 3dvw;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 5dvh 5dvw 4dvh;
-    width: 82%;
-    height: 88%;
-    box-shadow: 0 0.8dvh 3dvh rgba(0, 0, 0, 0.12);
+    padding: 4dvh 4dvw 3.5dvh;
+    width: 100%;
+    height: 100%;
+    box-shadow: none;
 }
 
 /* ---- Location row ---- */
@@ -142,10 +143,10 @@
 /* ---- Vertical / portrait orientation ---- */
 @media (max-aspect-ratio: 1) {
     .rain-card {
-        width: 88%;
-        height: 85%;
-        padding: 4dvh 5dvw 3.5dvh;
-        border-radius: 5dvw;
+        width: 100%;
+        height: 100%;
+        padding: 3dvh 4dvw 3dvh;
+        border-radius: 3dvw;
     }
 
     .location-name {
