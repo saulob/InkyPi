@@ -315,9 +315,9 @@ class RainToday(BasePlugin):
 
         # Unit symbols
         if units == "metric":
-            temp_unit = "°"
+            temp_unit = "°C"
         elif units == "imperial":
-            temp_unit = "°"
+            temp_unit = "°F"
         else:
             temp_unit = "K"
 
