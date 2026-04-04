@@ -253,7 +253,7 @@ class RainToday(BasePlugin):
         if not (-180.0 <= long <= 180.0):
             raise RuntimeError("Longitude must be between -180 and 180.")
 
-        units = settings.get("units", "metric")
+        units = settings.get("units", "imperial")
         language = str(settings.get("language", "en")).strip() or "en"
         show_rain_end = settings.get("showRainEnd", "true") != "false"
 
