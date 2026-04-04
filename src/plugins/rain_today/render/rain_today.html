@@ -13,12 +13,72 @@
 
         <!-- Main: rain icon + temperature -->
         <div class="main-area">
+            {% if rain_key == "no_rain" %}
+            <!-- Plain cloud: no rain -->
+            <svg class="rain-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.7 24.3A14 14 0 0 0 22.1 20 10.5 10.5 0 0 0 12 30.5C12 36.3 16.7 41 22.5 41H46a9 9 0 0 0 2.7-16.7z" fill="#4A7CFF" opacity="0.85"/>
+            </svg>
+            {% elif rain_key == "drizzle" %}
+            <!-- Cloud + three small dots: drizzle -->
+            <svg class="rain-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.7 24.3A14 14 0 0 0 22.1 20 10.5 10.5 0 0 0 12 30.5C12 36.3 16.7 41 22.5 41H46a9 9 0 0 0 2.7-16.7z" fill="#4A7CFF" opacity="0.85"/>
+                <circle cx="22" cy="50" r="2.5" fill="#4A7CFF" opacity="0.65"/>
+                <circle cx="32" cy="54" r="2.5" fill="#4A7CFF" opacity="0.65"/>
+                <circle cx="42" cy="50" r="2.5" fill="#4A7CFF" opacity="0.65"/>
+            </svg>
+            {% elif rain_key == "light_rain" %}
+            <!-- Cloud + two short drops: light rain -->
+            <svg class="rain-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.7 24.3A14 14 0 0 0 22.1 20 10.5 10.5 0 0 0 12 30.5C12 36.3 16.7 41 22.5 41H46a9 9 0 0 0 2.7-16.7z" fill="#4A7CFF" opacity="0.85"/>
+                <line x1="25" y1="46" x2="22" y2="57" stroke="#4A7CFF" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/>
+                <line x1="39" y1="46" x2="36" y2="57" stroke="#4A7CFF" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/>
+            </svg>
+            {% elif rain_key == "heavy_rain" %}
+            <!-- Darker cloud + four thick drops: heavy rain -->
+            <svg class="rain-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.7 24.3A14 14 0 0 0 22.1 20 10.5 10.5 0 0 0 12 30.5C12 36.3 16.7 41 22.5 41H46a9 9 0 0 0 2.7-16.7z" fill="#2A5ACC" opacity="0.95"/>
+                <line x1="18" y1="44" x2="14" y2="58" stroke="#2A5ACC" stroke-width="3" stroke-linecap="round"/>
+                <line x1="27" y1="44" x2="23" y2="58" stroke="#2A5ACC" stroke-width="3" stroke-linecap="round"/>
+                <line x1="36" y1="44" x2="32" y2="58" stroke="#2A5ACC" stroke-width="3" stroke-linecap="round"/>
+                <line x1="45" y1="44" x2="41" y2="58" stroke="#2A5ACC" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            {% elif rain_key == "showers" %}
+            <!-- Cloud + three sharply angled drops: showers -->
+            <svg class="rain-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.7 24.3A14 14 0 0 0 22.1 20 10.5 10.5 0 0 0 12 30.5C12 36.3 16.7 41 22.5 41H46a9 9 0 0 0 2.7-16.7z" fill="#4A7CFF" opacity="0.85"/>
+                <line x1="24" y1="44" x2="16" y2="57" stroke="#4A7CFF" stroke-width="2.8" stroke-linecap="round"/>
+                <line x1="33" y1="44" x2="25" y2="59" stroke="#4A7CFF" stroke-width="2.8" stroke-linecap="round"/>
+                <line x1="42" y1="44" x2="34" y2="57" stroke="#4A7CFF" stroke-width="2.8" stroke-linecap="round"/>
+            </svg>
+            {% elif rain_key == "freezing_drizzle" or rain_key == "freezing_rain" %}
+            <!-- Cloud + snowflake: freezing precipitation -->
+            <svg class="rain-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.7 24.3A14 14 0 0 0 22.1 20 10.5 10.5 0 0 0 12 30.5C12 36.3 16.7 41 22.5 41H46a9 9 0 0 0 2.7-16.7z" fill="#7BA8D4" opacity="0.9"/>
+                <!-- snowflake arms -->
+                <line x1="32" y1="43" x2="32" y2="62" stroke="#7BA8D4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="22.5" y1="48" x2="41.5" y2="57" stroke="#7BA8D4" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="41.5" y1="48" x2="22.5" y2="57" stroke="#7BA8D4" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- snowflake tick marks on vertical arm -->
+                <line x1="28" y1="47" x2="32" y2="50" stroke="#7BA8D4" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="36" y1="47" x2="32" y2="50" stroke="#7BA8D4" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="28" y1="58" x2="32" y2="55" stroke="#7BA8D4" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="36" y1="58" x2="32" y2="55" stroke="#7BA8D4" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            {% elif rain_key == "thunderstorm" %}
+            <!-- Dark cloud + lightning bolt: thunderstorm -->
+            <svg class="rain-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path d="M48.7 24.3A14 14 0 0 0 22.1 20 10.5 10.5 0 0 0 12 30.5C12 36.3 16.7 41 22.5 41H46a9 9 0 0 0 2.7-16.7z" fill="#445577" opacity="0.9"/>
+                <polygon points="35,42 42,42 36,54 41,54 28,64 31,53 26,53" fill="#FFD700"/>
+            </svg>
+            {% else %}
+            <!-- Default: cloud + three drops (moderate rain) -->
             <svg class="rain-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                 <path d="M48.7 24.3A14 14 0 0 0 22.1 20 10.5 10.5 0 0 0 12 30.5C12 36.3 16.7 41 22.5 41H46a9 9 0 0 0 2.7-16.7z" fill="#4A7CFF" opacity="0.85"/>
                 <line x1="22" y1="46" x2="18" y2="56" stroke="#4A7CFF" stroke-width="2.5" stroke-linecap="round"/>
                 <line x1="32" y1="46" x2="28" y2="58" stroke="#4A7CFF" stroke-width="2.5" stroke-linecap="round"/>
                 <line x1="42" y1="46" x2="38" y2="54" stroke="#4A7CFF" stroke-width="2.5" stroke-linecap="round"/>
             </svg>
+            {% endif %}
             <div class="temp-block">
                 <span class="temp-value">{{ current_temp }}</span><span class="temp-unit">{{ temp_unit }}</span>
             </div>

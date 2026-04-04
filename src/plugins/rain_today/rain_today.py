@@ -324,6 +324,7 @@ class RainToday(BasePlugin):
             "title": title,
             "current_temp": str(current_temp),
             "temp_unit": temp_unit,
+            "rain_key": rain_key,
             "rain_description": rain_description,
             "chance_text": chance_text,
             "rain_end_text": rain_end_text,

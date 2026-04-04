@@ -12,7 +12,7 @@
     justify-content: stretch;
     font-family: "Jost", sans-serif;
     background: #ffffff;
-    padding: 1.5dvh 1.8dvw;
+    padding: 0.6dvh 0.8dvw;
 }
 
 .rain-card {
@@ -22,8 +22,8 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 1dvh;
-    padding: 2dvh 3dvw;
+    gap: 0.8dvh;
+    padding: 1.5dvh 2dvw;
     width: 100%;
     height: 100%;
     box-shadow: none;
@@ -40,13 +40,13 @@
 }
 
 .location-icon {
-    width: min(6dvh, 5.5dvw);
-    height: min(6dvh, 5.5dvw);
+    width: min(6.5dvh, 6dvw);
+    height: min(6.5dvh, 6dvw);
     flex-shrink: 0;
 }
 
 .location-name {
-    font-size: min(7.5dvh, 7dvw);
+    font-size: min(8.5dvh, 8dvw);
     font-weight: 700;
     color: #4A7CFF;
     white-space: nowrap;
@@ -65,8 +65,8 @@
 }
 
 .rain-icon {
-    width: min(19dvh, 17dvw);
-    height: min(19dvh, 17dvw);
+    width: min(22dvh, 20dvw);
+    height: min(22dvh, 20dvw);
     flex-shrink: 0;
 }
 
@@ -77,14 +77,14 @@
 }
 
 .temp-value {
-    font-size: min(27dvh, 24dvw);
+    font-size: min(31dvh, 28dvw);
     font-weight: 700;
     color: #1a1a1a;
     line-height: 0.9;
 }
 
 .temp-unit {
-    font-size: min(8.5dvh, 7.5dvw);
+    font-size: min(10dvh, 9dvw);
     font-weight: 600;
     color: #1a1a1a;
     margin-top: 0.3dvh;
@@ -99,14 +99,14 @@
 }
 
 .rain-description {
-    font-size: min(8.5dvh, 7.5dvw);
+    font-size: min(10dvh, 9dvw);
     font-weight: 600;
     color: #1a1a1a;
     line-height: 1.1;
 }
 
 .rain-meta {
-    font-size: min(6dvh, 5.5dvw);
+    font-size: min(7dvh, 6.5dvw);
     font-weight: 400;
     color: #666;
     line-height: 1.2;
@@ -118,9 +118,9 @@
     display: flex;
     justify-content: center;
     gap: 6dvw;
-    padding-top: 1dvh;
-    border-top: 1px solid rgba(0, 0, 0, 0.07);
-    margin-top: 0.4dvh;
+    padding-top: 1.5dvh;
+    border-top: 1.5px solid rgba(0, 0, 0, 0.12);
+    margin-top: 1dvh;
     width: 100%;
 }
 
@@ -131,8 +131,8 @@
 }
 
 .info-icon {
-    width: min(9dvh, 8.5dvw);
-    height: min(9dvh, 8.5dvw);
+    width: min(10.5dvh, 10dvw);
+    height: min(10.5dvh, 10dvw);
     flex-shrink: 0;
     align-self: center;
 }
@@ -145,14 +145,14 @@
 }
 
 .info-value {
-    font-size: min(8.5dvh, 8dvw);
+    font-size: min(10dvh, 9.5dvw);
     font-weight: 700;
     color: #1a1a1a;
     line-height: 1.05;
 }
 
 .info-label {
-    font-size: min(4.2dvh, 3.8dvw);
+    font-size: min(5dvh, 4.5dvw);
     font-weight: 400;
     color: #888;
     line-height: 1.1;
@@ -163,47 +163,47 @@
     .rain-card {
         width: 100%;
         height: 100%;
-        padding: 2dvh 3dvw;
+        padding: 1.5dvh 2dvw;
         border-radius: 2.5dvw;
         gap: 1.5dvh;
     }
 
     .location-name {
-        font-size: min(5.5dvh, 8dvw);
+        font-size: min(6.5dvh, 8dvw);
     }
 
     .rain-icon {
-        width: min(14dvh, 20dvw);
-        height: min(14dvh, 20dvw);
+        width: min(17dvh, 20dvw);
+        height: min(17dvh, 20dvw);
     }
 
     .temp-value {
-        font-size: min(18dvh, 28dvw);
+        font-size: min(21dvh, 28dvw);
     }
 
     .temp-unit {
-        font-size: min(7dvh, 10dvw);
+        font-size: min(8dvh, 10dvw);
     }
 
     .rain-description {
-        font-size: min(6dvh, 8.5dvw);
+        font-size: min(7dvh, 8.5dvw);
     }
 
     .rain-meta {
-        font-size: min(4.5dvh, 7dvw);
+        font-size: min(5.2dvh, 7dvw);
     }
 
     .info-value {
-        font-size: min(5.5dvh, 8.5dvw);
+        font-size: min(6.5dvh, 8.5dvw);
     }
 
     .info-label {
-        font-size: min(3.2dvh, 5dvw);
+        font-size: min(3.8dvh, 5dvw);
     }
 
     .info-icon {
-        width: min(7dvh, 10dvw);
-        height: min(7dvh, 10dvw);
+        width: min(8.5dvh, 10dvw);
+        height: min(8.5dvh, 10dvw);
     }
 
     .bottom-row {
