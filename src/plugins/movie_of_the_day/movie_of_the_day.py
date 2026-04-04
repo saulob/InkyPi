@@ -6,10 +6,10 @@ For the API key, set `THE_MOVIE_DB={API_KEY}` in your .env file.
 
 from plugins.base_plugin.base_plugin import BasePlugin
 from PIL import Image, ImageDraw, ImageFont
-from io import BytesIO
 from utils.app_utils import get_font
 from utils.http_client import get_http_session
 import logging
+import math
 from random import randint
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class MovieOfTheDay(BasePlugin):
         return movie
 
     def _compose_layout(self, movie, dimensions):
-        """Compose a balanced card layout: poster left (~38%), text block right."""
+        """Compose a polished movie card with a compact score panel."""
         width, height = dimensions
         dim = min(width, height)
 
@@ -98,12 +98,12 @@ class MovieOfTheDay(BasePlugin):
         image = Image.new("RGB", (width, height), "white")
         draw = ImageDraw.Draw(image)
 
-        # --- Margins ---
-        margin = int(dim * 0.04)
-
-        # --- Poster: ~38% of total width, full height minus margin ---
-        poster_area_w = int(width * 0.38)
-        poster_max_w = poster_area_w - margin
+        margin = max(14, int(dim * 0.038))
+        poster_area_w = int(width * 0.37)
+        poster_inner_gap = max(6, int(dim * 0.01))
+        poster_left = margin // 2
+        poster_right = poster_area_w - poster_inner_gap
+        poster_max_w = poster_right - poster_left
         poster_max_h = height - margin * 2
 
         poster_img = None
@@ -120,104 +120,175 @@ class MovieOfTheDay(BasePlugin):
                 poster_img = None
 
         if poster_img:
-            poster_x = (poster_area_w - poster_img.width) // 2
+            poster_x = poster_left + (poster_max_w - poster_img.width) // 2
             poster_y = (height - poster_img.height) // 2
             image.paste(poster_img, (poster_x, poster_y))
         else:
-            self._draw_poster_placeholder(draw, margin // 2, margin,
-                                          poster_area_w - margin // 2, height - margin, dim)
+            self._draw_poster_placeholder(
+                draw, poster_left, margin, poster_right, height - margin, dim
+            )
 
-        # --- Subtle vertical divider ---
-        divider_x = poster_area_w
-        div_margin_v = int(height * 0.1)
+        divider_x = poster_right + poster_inner_gap
         draw.line(
-            [(divider_x, div_margin_v), (divider_x, height - div_margin_v)],
-            fill=(210, 210, 210), width=1
+            [(divider_x, margin), (divider_x, height - margin)],
+            fill=(185, 185, 185), width=2
         )
 
-        # --- Text block on the right ---
-        gap_after_divider = int(dim * 0.035)
+        gap_after_divider = int(dim * 0.032)
         text_x = divider_x + gap_after_divider
         text_max_w = width - text_x - margin
 
-        # Font sizes scaled from dim
-        header_font = get_font("Jost", int(dim * 0.032)) or ImageFont.load_default()
-        title_font = get_font("Jost", int(dim * 0.082), "bold") or ImageFont.load_default()
-        year_font = get_font("Jost", int(dim * 0.048)) or ImageFont.load_default()
+        header_font = get_font("Jost", int(dim * 0.034)) or ImageFont.load_default()
+        title_font = get_font("Jost", int(dim * 0.086), "bold") or ImageFont.load_default()
+        year_font = get_font("Jost", int(dim * 0.05)) or ImageFont.load_default()
 
-        # Measure heights for vertical centering
         title_lines = self._wrap_text(draw, title, text_max_w, title_font, max_lines=2)
-        header_h = int(dim * 0.032 * 1.5)
-        title_line_h = int(dim * 0.082 * 1.2)
+        _, header_h = self._measure_text(draw, "Movie of the Day", header_font)
+        _, title_text_h = self._measure_text(draw, "Ag", title_font)
+        _, year_h = self._measure_text(draw, year, year_font)
+        title_line_h = title_text_h + int(dim * 0.006)
         title_block_h = len(title_lines) * title_line_h
-        year_h = int(dim * 0.048 * 1.4)
-        score_panel_h = int(dim * 0.22)  # label + score line + stars row
-        gap_s = int(dim * 0.018)
-        gap_m = int(dim * 0.030)
 
-        total_h = header_h + gap_s + title_block_h + gap_s + year_h + gap_m + score_panel_h
-        cur_y = max(margin, (height - total_h) // 2)
+        score_metrics = self._get_score_panel_metrics(draw, rating, dim)
+        score_panel_w = min(text_max_w, score_metrics["panel_min_w"])
+        score_panel_h = score_metrics["panel_h"]
 
-        # Header label
-        draw.text((text_x, cur_y), "Movie of the Day", font=header_font, fill=(160, 160, 160))
-        cur_y += header_h + gap_s
+        gap_xs = int(dim * 0.006)
+        gap_s  = int(dim * 0.010)
+        gap_m  = int(dim * 0.026)  # larger gap before score card to prevent overlap
 
-        # Title
+        total_h = header_h + gap_xs + title_block_h + gap_s + year_h + gap_m + score_panel_h
+        # Bias upward: start at 40% of available slack rather than 50% (center)
+        slack = max(0, height - total_h)
+        cur_y = max(margin, int(slack * 0.38))
+
+        draw.text((text_x, cur_y), "Movie of the Day", font=header_font, fill=(155, 155, 155))
+        cur_y += header_h + gap_xs
+
         for line in title_lines:
             draw.text((text_x, cur_y), line, font=title_font, fill=(10, 10, 10))
             cur_y += title_line_h
         cur_y += gap_s
 
-        # Year
-        draw.text((text_x, cur_y), year, font=year_font, fill=(130, 130, 130))
+        draw.text((text_x, cur_y), year, font=year_font, fill=(125, 125, 125))
         cur_y += year_h + gap_m
 
-        # Score panel
-        self._draw_score_panel(draw, text_x, cur_y, rating, dim)
+        # Pass text_x as the anchor — panel content aligns with title/year
+        self._draw_score_panel(draw, text_x, cur_y, score_panel_w, rating, dim, score_metrics)
 
         return image
 
-    def _draw_score_panel(self, draw, x, y, rating, dim):
-        """Draw a compact score panel: User Score label, score number, and a 5-star row."""
-        import math
+    def _draw_score_panel(self, draw, x, y, panel_w, rating, dim, metrics=None):
+        """Draw the score card. x is the content left edge (aligns with title/year)."""
+        if metrics is None:
+            metrics = self._get_score_panel_metrics(draw, rating, dim)
 
-        label_font = get_font("Jost", int(dim * 0.030)) or ImageFont.load_default()
-        score_font = get_font("Jost", int(dim * 0.065), "bold") or ImageFont.load_default()
-        gap = int(dim * 0.012)
+        label_font = metrics["label_font"]
+        score_font = metrics["score_font"]
+        label_text = metrics["label_text"]
+        score_text = metrics["score_text"]
+        label_h    = metrics["label_h"]
+        score_h    = metrics["score_h"]
+        pad_x      = metrics["pad_x"]
+        pad_y      = metrics["pad_y"]
+        inner_gap  = metrics["inner_gap"]
+        star_size  = metrics["star_size"]
+        star_gap   = metrics["star_gap"]
+        panel_h    = metrics["panel_h"]
+
+        # Card rect bleeds left by pad_x so that content (inner_x=x) lines up
+        # with title and year which are also drawn at x.
+        card_x0 = x - pad_x
+        card_x1 = card_x0 + panel_w
+        radius = int(dim * 0.018)
+        draw.rounded_rectangle(
+            [card_x0, y, card_x1, y + panel_h],
+            radius=radius,
+            fill=(246, 246, 246),
+            outline=(208, 208, 208),
+            width=1,
+        )
+
+        inner_x = x          # perfectly aligned with title / year
+        cur_y   = y + pad_y
 
         # "User Score" label
-        draw.text((x, y), "User Score", font=label_font, fill=(150, 150, 150))
-        y += int(dim * 0.030 * 1.5) + gap
+        draw.text((inner_x, cur_y), label_text, font=label_font, fill=(150, 150, 150))
+        cur_y += label_h + inner_gap
 
-        # Score number: N.N/10
-        if rating:
-            score_text = f"{rating:.1f}/10"
-        else:
-            score_text = "N/A"
-        draw.text((x, y), score_text, font=score_font, fill=(20, 20, 20))
-        y += int(dim * 0.065 * 1.3) + gap
+        # Bold numeric rating
+        draw.text((inner_x, cur_y), score_text, font=score_font, fill=(12, 12, 12))
 
-        # 5-star row drawn as polygons
+        # Stars aligned to same x as rating number
         if rating:
-            star_size = int(dim * 0.035)
-            star_gap = int(star_size * 0.35)
-            filled_count = rating / 2.0  # 0-5 scale
-            for i in range(5):
-                sx = x + i * (star_size + star_gap)
-                sy = y
-                if i < int(filled_count):
-                    self._draw_star(draw, sx, sy, star_size, fill=(50, 50, 50))
-                elif i < filled_count:
-                    # half-filled: draw outline, then filled on top clipped to left half
-                    self._draw_star(draw, sx, sy, star_size, fill=None, outline=(50, 50, 50))
-                    self._draw_star(draw, sx, sy, star_size, fill=(50, 50, 50))
+            stars_y = cur_y + score_h + inner_gap
+            filled_stars = max(0, min(5, round(rating / 2)))
+            for index in range(5):
+                star_x = inner_x + index * (star_size + star_gap)
+                if index < filled_stars:
+                    self._draw_star(
+                        draw, star_x, stars_y, star_size,
+                        fill=(18, 18, 18), outline=(18, 18, 18), outline_width=1,
+                    )
                 else:
-                    self._draw_star(draw, sx, sy, star_size, fill=None, outline=(160, 160, 160))
+                    self._draw_star(
+                        draw, star_x, stars_y, star_size,
+                        fill=(220, 220, 220), outline=(145, 145, 145), outline_width=1,
+                    )
+
+    def _get_score_panel_metrics(self, draw, rating, dim):
+        """Measure score panel pieces so the content block can be centered accurately."""
+        label_font = get_font("Jost", int(dim * 0.034)) or ImageFont.load_default()
+        score_font = get_font("Jost", int(dim * 0.095), "bold") or ImageFont.load_default()
+
+        label_text = "User Score"
+        score_text = f"{rating:.1f}/10" if rating else "N/A"
+        label_w, label_h = self._measure_text(draw, label_text, label_font)
+        score_w, score_h = self._measure_text(draw, score_text, score_font)
+
+        # Fixed comfortable star size
+        star_size = int(dim * 0.048)
+        star_gap  = max(4, int(dim * 0.009))
+
+        pad_x     = int(dim * 0.022)
+        pad_y     = int(dim * 0.016)
+        inner_gap = int(dim * 0.009)
+
+        star_row_w = 5 * star_size + 4 * star_gap if rating else 0
+        content_w  = max(score_w, label_w, star_row_w)
+        panel_min_w = content_w + pad_x * 2
+
+        panel_h = pad_y * 2 + label_h + inner_gap + score_h
+        if rating:
+            panel_h += inner_gap + star_size
+
+        return {
+            "label_font": label_font,
+            "score_font": score_font,
+            "label_text": label_text,
+            "score_text": score_text,
+            "label_w": label_w,
+            "label_h": label_h,
+            "score_w": score_w,
+            "score_h": score_h,
+            "pad_x": pad_x,
+            "pad_y": pad_y,
+            "inner_gap": inner_gap,
+            "star_size": star_size,
+            "star_gap": star_gap,
+            "panel_min_w": panel_min_w,
+            "panel_h": panel_h,
+        }
+
+    def _get_star_row_layout(self, target_width, dim):
+        """Kept for compatibility; star layout is now computed in _get_score_panel_metrics."""
+        star_size = int(dim * 0.04)
+        star_gap  = max(3, int(dim * 0.008))
+        return star_size, star_gap
 
     @staticmethod
-    def _draw_star(draw, x, y, size, fill=None, outline=None):
+    def _draw_star(draw, x, y, size, fill=None, outline=None, outline_width=1):
         """Draw a 5-point star polygon at (x, y) with given size."""
-        import math
         cx = x + size // 2
         cy = y + size // 2
         outer_r = size // 2
@@ -227,10 +298,12 @@ class MovieOfTheDay(BasePlugin):
             r = outer_r if i % 2 == 0 else inner_r
             angle = math.radians(-90 + i * 36)
             points.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
-        if fill:
-            draw.polygon(points, fill=fill, outline=outline or fill)
-        elif outline:
-            draw.polygon(points, outline=outline, width=1)
+        draw.polygon(
+            points,
+            fill=fill,
+            outline=outline,
+            width=outline_width,
+        )
 
     def _draw_poster_placeholder(self, draw, x0, y0, x1, y1, dim):
         """Draw a placeholder rectangle when poster is unavailable."""
@@ -242,38 +315,54 @@ class MovieOfTheDay(BasePlugin):
         draw.text((cx, cy), "No Poster", font=label_font, fill=(180, 180, 180), anchor="mm")
 
     def _wrap_text(self, draw, text, max_width, font, max_lines=2):
-        """Wrap text into lines, truncating with ellipsis if over max_lines."""
+        """Word-wrap text, truncating at a word boundary with ellipsis on the last line."""
         words = text.split()
-        lines = []
-        current_line = ""
+        if not words:
+            return [""]
 
-        for word in words:
-            test_line = f"{current_line} {word}".strip()
-            bbox = draw.textbbox((0, 0), test_line, font=font)
-            if bbox[2] - bbox[0] <= max_width:
-                current_line = test_line
-            else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
-                if len(lines) >= max_lines:
+        lines = []
+        i = 0
+        while i < len(words):
+            line_words = []
+            while i < len(words):
+                test_line = " ".join(line_words + [words[i]])
+                bbox = draw.textbbox((0, 0), test_line, font=font)
+                if bbox[2] - bbox[0] <= max_width:
+                    line_words.append(words[i])
+                    i += 1
+                else:
                     break
 
-        if current_line and len(lines) < max_lines:
-            lines.append(current_line)
+            if not line_words:
+                # Single word too long to fit — force it onto a line
+                line_words = [words[i]]
+                i += 1
 
-        # Truncate last line with ellipsis if we ran out of space
-        if len(lines) >= max_lines and words:
-            last = lines[max_lines - 1]
-            remaining_words = words[sum(len(l.split()) for l in lines):]
-            if remaining_words:
-                while last:
-                    candidate = last + "…"
+            is_last_allowed = len(lines) >= max_lines - 1
+            has_more_words = i < len(words)
+
+            if is_last_allowed and has_more_words:
+                # Truncate this line at a word boundary with ellipsis
+                while line_words:
+                    candidate = " ".join(line_words) + "…"
                     bbox = draw.textbbox((0, 0), candidate, font=font)
                     if bbox[2] - bbox[0] <= max_width:
-                        lines[max_lines - 1] = candidate
-                        break
-                    last = last.rsplit(" ", 1)[0] if " " in last else last[:-1]
-            lines = lines[:max_lines]
+                        lines.append(candidate)
+                        return lines
+                    line_words.pop()
+                lines.append("…")
+                return lines
+
+            lines.append(" ".join(line_words))
+            if len(lines) >= max_lines:
+                break
 
         return lines if lines else [text[:20] + "…"]
+
+    @staticmethod
+    def _measure_text(draw, text, font):
+        """Return (width, advance_h) where advance_h is bbox[3]: distance from the
+        draw-origin to the visual bottom of the text. This is the correct amount
+        to advance cur_y so the next element starts below the rendered pixels."""
+        bbox = draw.textbbox((0, 0), text or " ", font=font)
+        return bbox[2] - bbox[0], bbox[3]
