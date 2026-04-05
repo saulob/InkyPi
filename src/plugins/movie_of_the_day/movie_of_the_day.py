@@ -31,6 +31,18 @@ LETTERBOXD_STAR_EMPTY_OUTLINE = (108, 118, 128)
 
 DEFAULT_LANGUAGE = "en"
 
+TMDB_LANGUAGE_MAP = {
+    "nl": "nl-NL",
+    "en": "en-US",
+    "fr": "fr-FR",
+    "de": "de-DE",
+    "id": "id-ID",
+    "it": "it-IT",
+    "pt-br": "pt-BR",
+    "pt-pt": "pt-PT",
+    "es": "es-ES",
+}
+
 TRANSLATIONS = {
     "en": {
         "movie_of_the_day": "Movie of the Day",
@@ -126,13 +138,14 @@ class MovieOfTheDay(BasePlugin):
             logger.error("TMDB API Key not configured")
             raise RuntimeError("TMDB API Key not configured. Set THE_MOVIE_DB in your .env file.")
 
-        movie = self._fetch_random_movie(api_key)
+        language = self._resolve_language(settings)
+        tmdb_language = self._get_tmdb_language(language)
+        movie = self._fetch_random_movie(api_key, tmdb_language)
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
-        language = self._resolve_language(settings)
         labels = self._get_labels(language)
 
         image = self._compose_layout(movie, dimensions, labels)
@@ -140,7 +153,7 @@ class MovieOfTheDay(BasePlugin):
         logger.info("=== Movie of the Day Plugin: Image generation complete ===")
         return image
 
-    def _fetch_random_movie(self, api_key):
+    def _fetch_random_movie(self, api_key, tmdb_language):
         """Fetch a random movie from TMDB discover endpoint."""
         session = get_http_session()
         random_page = randint(1, 100)
@@ -153,6 +166,7 @@ class MovieOfTheDay(BasePlugin):
                 "include_adult": "false",
                 "vote_count.gte": "100",
                 "page": random_page,
+                "language": tmdb_language,
             },
         )
 
@@ -167,9 +181,9 @@ class MovieOfTheDay(BasePlugin):
 
         movie = results[randint(0, len(results) - 1)]
         logger.info(f"Selected movie: {movie.get('title')} ({movie.get('release_date', 'N/A')})")
-        return self._fetch_movie_details(session, api_key, movie)
+        return self._fetch_movie_details(session, api_key, movie, tmdb_language)
 
-    def _fetch_movie_details(self, session, api_key, movie):
+    def _fetch_movie_details(self, session, api_key, movie, tmdb_language):
         """Fetch detail payload so future TMDB distribution fields can be used when available."""
         movie_id = movie.get("id")
         if not movie_id:
@@ -177,7 +191,7 @@ class MovieOfTheDay(BasePlugin):
 
         response = session.get(
             f"{TMDB_API_BASE}/movie/{movie_id}",
-            params={"api_key": api_key},
+            params={"api_key": api_key, "language": tmdb_language},
         )
         if response.status_code != 200:
             logger.warning(
@@ -325,6 +339,23 @@ class MovieOfTheDay(BasePlugin):
         return TRANSLATIONS.get(language, TRANSLATIONS[DEFAULT_LANGUAGE])
 
     @staticmethod
+    def _get_tmdb_language(language):
+        return TMDB_LANGUAGE_MAP.get(language, TMDB_LANGUAGE_MAP[DEFAULT_LANGUAGE])
+
+    @staticmethod
+    def _resolve_movie_title(movie):
+        translated_title = str(movie.get("title") or "").strip()
+        original_title = str(movie.get("original_title") or "").strip()
+
+        if not translated_title:
+            return original_title or "Unknown Title"
+
+        if translated_title == original_title and original_title:
+            return original_title
+
+        return translated_title
+
+    @staticmethod
     def _format_vote_count(vote_count, labels):
         """Format large vote counts in a compact UI-friendly style."""
         thousand_suffix = labels.get("thousand_suffix", "K")
@@ -345,7 +376,7 @@ class MovieOfTheDay(BasePlugin):
         width, height = dimensions
         dim = min(width, height)
 
-        title = movie.get("title", "Unknown Title")
+        title = self._resolve_movie_title(movie)
         release_date = movie.get("release_date", "")
         year = release_date[:4] if release_date else "N/A"
         rating = movie.get("vote_average", 0)
