@@ -85,10 +85,10 @@ TRANSLATIONS = {
         "million_suffix": "JT",
     },
     "it": {
-        "movie_of_the_day": "Film del Giorno",
+        "movie_of_the_day": "Film del giorno",
         "user_score": "Punteggio utenti",
         "ratings": "VALUTAZIONI",
-        "fans": "FAN",
+        "fans": "FANS",
         "thousand_suffix": "K",
         "million_suffix": "M",
     },
