@@ -4,29 +4,41 @@ Fetches a random movie from TMDB and displays the poster, title, year, and ratin
 For the API key, set `THE_MOVIE_DB={API_KEY}` in your .env file.
 """
 
-from plugins.base_plugin.base_plugin import BasePlugin
-from PIL import Image, ImageDraw, ImageFont
-from utils.app_utils import get_font
-from utils.http_client import get_http_session
 import logging
 import math
 from random import randint
+
+from PIL import Image, ImageDraw, ImageFont
+
+from plugins.base_plugin.base_plugin import BasePlugin
+from utils.app_utils import get_font
+from utils.http_client import get_http_session
 
 logger = logging.getLogger(__name__)
 
 TMDB_API_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 
+LETTERBOXD_BG = (20, 24, 28)
+LETTERBOXD_TEXT = (232, 236, 239)
+LETTERBOXD_MUTED = (164, 174, 184)
+LETTERBOXD_DIVIDER = (78, 88, 98)
+LETTERBOXD_BAR = (88, 103, 121)
+LETTERBOXD_BAR_PEAK = (128, 143, 160)
+LETTERBOXD_STAR_FILLED = (235, 239, 242)
+LETTERBOXD_STAR_EMPTY_FILL = (53, 61, 70)
+LETTERBOXD_STAR_EMPTY_OUTLINE = (108, 118, 128)
+
 
 class MovieOfTheDay(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
-        template_params['api_key'] = {
+        template_params["api_key"] = {
             "required": True,
             "service": "TMDB",
-            "expected_key": "THE_MOVIE_DB"
+            "expected_key": "THE_MOVIE_DB",
         }
-        template_params['style_settings'] = False
+        template_params["style_settings"] = False
         return template_params
 
     def generate_image(self, settings, device_config):
@@ -39,7 +51,6 @@ class MovieOfTheDay(BasePlugin):
 
         movie = self._fetch_random_movie(api_key)
 
-        # Get target dimensions
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
@@ -52,8 +63,6 @@ class MovieOfTheDay(BasePlugin):
     def _fetch_random_movie(self, api_key):
         """Fetch a random movie from TMDB discover endpoint."""
         session = get_http_session()
-
-        # Pick a random page (TMDB allows up to 500 pages)
         random_page = randint(1, 100)
 
         response = session.get(
@@ -73,18 +82,173 @@ class MovieOfTheDay(BasePlugin):
 
         data = response.json()
         results = data.get("results", [])
-
         if not results:
             raise RuntimeError("No movies found from TMDB.")
 
-        # Pick a random movie from the page results
         movie = results[randint(0, len(results) - 1)]
         logger.info(f"Selected movie: {movie.get('title')} ({movie.get('release_date', 'N/A')})")
+        return self._fetch_movie_details(session, api_key, movie)
 
-        return movie
+    def _fetch_movie_details(self, session, api_key, movie):
+        """Fetch detail payload so future TMDB distribution fields can be used when available."""
+        movie_id = movie.get("id")
+        if not movie_id:
+            return movie
+
+        response = session.get(
+            f"{TMDB_API_BASE}/movie/{movie_id}",
+            params={"api_key": api_key},
+        )
+        if response.status_code != 200:
+            logger.warning(
+                "TMDB movie detail lookup failed for %s with status %s",
+                movie_id,
+                response.status_code,
+            )
+            return movie
+
+        details = response.json()
+        if not isinstance(details, dict):
+            return movie
+
+        merged_movie = dict(movie)
+        merged_movie.update(details)
+        return merged_movie
+
+    def _build_rating_distribution(self, movie):
+        """Return rating bucket counts from TMDB payload when available, otherwise approximate."""
+        direct_distribution = self._extract_rating_distribution(movie)
+        if direct_distribution:
+            return self._to_star_distribution(direct_distribution)
+
+        rating = movie.get("vote_average") or 0
+        vote_count = movie.get("vote_count") or 0
+        if rating <= 0 or vote_count <= 0:
+            return None
+
+        simulated_distribution = self._simulate_rating_distribution(rating, vote_count, bucket_count=10)
+        return self._to_star_distribution(simulated_distribution)
+
+    def _extract_rating_distribution(self, movie):
+        """Best-effort parsing for future TMDB distribution-style fields."""
+        candidate_keys = (
+            "rating_distribution",
+            "vote_distribution",
+            "rating_counts",
+            "ratings_distribution",
+        )
+
+        for key in candidate_keys:
+            normalized = self._normalize_distribution(movie.get(key))
+            if normalized:
+                return normalized
+
+        return None
+
+    def _normalize_distribution(self, raw_distribution):
+        """Normalize supported distribution shapes into a compact list of bucket counts."""
+        if isinstance(raw_distribution, (list, tuple)):
+            values = [
+                max(0, int(value))
+                for value in raw_distribution
+                if isinstance(value, (int, float))
+            ]
+            if len(values) in (5, 10) and any(values):
+                return values
+            return None
+
+        if not isinstance(raw_distribution, dict):
+            return None
+
+        buckets = [0] * 10
+        has_values = False
+        for score, count in raw_distribution.items():
+            if not isinstance(count, (int, float)) or count <= 0:
+                continue
+
+            try:
+                numeric_score = float(score)
+            except (TypeError, ValueError):
+                continue
+
+            if numeric_score <= 5:
+                numeric_score *= 2
+
+            bucket_index = min(9, max(0, int(math.ceil(numeric_score)) - 1))
+            buckets[bucket_index] += int(count)
+            has_values = True
+
+        if has_values and any(buckets):
+            return buckets
+        return None
+
+    def _to_star_distribution(self, distribution):
+        """Collapse distributions into five buckets mapped to 1-5 stars."""
+        if not distribution:
+            return None
+
+        if len(distribution) == 5:
+            return distribution if any(distribution) else None
+
+        if len(distribution) != 10:
+            return None
+
+        star_distribution = [
+            distribution[0] + distribution[1],
+            distribution[2] + distribution[3],
+            distribution[4] + distribution[5],
+            distribution[6] + distribution[7],
+            distribution[8] + distribution[9],
+        ]
+        return star_distribution if any(star_distribution) else None
+
+    def _simulate_rating_distribution(self, rating, vote_count, bucket_count=10):
+        """Approximate a histogram using the average score and total votes."""
+        vote_count = int(vote_count)
+        if vote_count <= 0:
+            return None
+
+        mean = max(0.5, min(float(bucket_count) - 0.5, float(rating)))
+        sigma = 1.45 if vote_count < 5000 else 1.25
+        centers = [index + 0.5 for index in range(bucket_count)]
+        weights = [
+            math.exp(-((center - mean) ** 2) / (2 * (sigma ** 2)))
+            for center in centers
+        ]
+        total_weight = sum(weights)
+        if total_weight <= 0:
+            return None
+
+        scaled = [(weight / total_weight) * vote_count for weight in weights]
+        counts = [int(value) for value in scaled]
+        remainder = vote_count - sum(counts)
+
+        fractional_indices = sorted(
+            range(bucket_count),
+            key=lambda index: scaled[index] - counts[index],
+            reverse=True,
+        )
+        for index in fractional_indices[:remainder]:
+            counts[index] += 1
+
+        return counts if any(counts) else None
+
+    @staticmethod
+    def _format_vote_count(vote_count):
+        """Format large rating counts in a compact UI-friendly style."""
+        if vote_count >= 1_000_000:
+            value = f"{vote_count / 1_000_000:.1f}".rstrip("0").rstrip(".")
+            return f"{value}M ratings"
+        if vote_count >= 10_000:
+            return f"{vote_count // 1000}K ratings"
+        if vote_count >= 1_000:
+            value = f"{vote_count / 1000:.1f}".rstrip("0").rstrip(".")
+            return f"{value}K ratings"
+        suffix = "rating" if vote_count == 1 else "ratings"
+        return f"{vote_count} {suffix}"
 
     def _compose_layout(self, movie, dimensions):
-        """Compose a polished movie card with a compact score panel."""
+        """Compose a dark movie card with compact score and ratings sections."""
         width, height = dimensions
         dim = min(width, height)
 
@@ -92,10 +256,11 @@ class MovieOfTheDay(BasePlugin):
         release_date = movie.get("release_date", "")
         year = release_date[:4] if release_date else "N/A"
         rating = movie.get("vote_average", 0)
+        vote_count = movie.get("vote_count", 0)
         poster_path = movie.get("poster_path")
+        distribution = self._build_rating_distribution(movie)
 
-        # Create base image
-        image = Image.new("RGB", (width, height), "white")
+        image = Image.new("RGB", (width, height), LETTERBOXD_BG)
         draw = ImageDraw.Draw(image)
 
         margin = max(14, int(dim * 0.038))
@@ -115,8 +280,8 @@ class MovieOfTheDay(BasePlugin):
                 )
                 if poster_img:
                     poster_img.thumbnail((poster_max_w, poster_max_h), Image.LANCZOS)
-            except Exception as e:
-                logger.warning(f"Failed to load poster: {e}")
+            except Exception as exc:
+                logger.warning(f"Failed to load poster: {exc}")
                 poster_img = None
 
         if poster_img:
@@ -131,7 +296,8 @@ class MovieOfTheDay(BasePlugin):
         divider_x = poster_right + poster_inner_gap
         draw.line(
             [(divider_x, margin), (divider_x, height - margin)],
-            fill=(185, 185, 185), width=2
+            fill=LETTERBOXD_DIVIDER,
+            width=2,
         )
 
         gap_after_divider = int(dim * 0.032)
@@ -149,77 +315,103 @@ class MovieOfTheDay(BasePlugin):
         title_line_h = title_text_h + int(dim * 0.006)
         title_block_h = len(title_lines) * title_line_h
 
-        score_metrics = self._get_score_panel_metrics(draw, rating, dim)
-        score_panel_w = min(text_max_w, score_metrics["panel_min_w"])
+        score_panel_w = text_max_w
+        score_metrics = self._get_score_panel_metrics(
+            draw,
+            rating,
+            vote_count,
+            distribution,
+            dim,
+            score_panel_w,
+        )
         score_panel_h = score_metrics["panel_h"]
 
         gap_xs = int(dim * 0.006)
-        gap_s  = int(dim * 0.010)
-        gap_m  = int(dim * 0.026)  # larger gap before score card to prevent overlap
+        gap_s = int(dim * 0.010)
+        gap_m = int(dim * 0.026)
 
         total_h = header_h + gap_xs + title_block_h + gap_s + year_h + gap_m + score_panel_h
-        # Bias upward: start at 40% of available slack rather than 50% (center)
         slack = max(0, height - total_h)
         cur_y = max(margin, int(slack * 0.38))
 
-        draw.text((text_x, cur_y), "Movie of the Day", font=header_font, fill=(155, 155, 155))
+        draw.text((text_x, cur_y), "Movie of the Day", font=header_font, fill=LETTERBOXD_MUTED)
         cur_y += header_h + gap_xs
 
         for line in title_lines:
-            draw.text((text_x, cur_y), line, font=title_font, fill=(10, 10, 10))
+            draw.text((text_x, cur_y), line, font=title_font, fill=LETTERBOXD_TEXT)
             cur_y += title_line_h
         cur_y += gap_s
 
-        draw.text((text_x, cur_y), year, font=year_font, fill=(125, 125, 125))
+        draw.text((text_x, cur_y), year, font=year_font, fill=LETTERBOXD_MUTED)
         cur_y += year_h + gap_m
 
-        # Pass text_x as the anchor — panel content aligns with title/year
-        self._draw_score_panel(draw, text_x, cur_y, score_panel_w, rating, dim, score_metrics)
+        self._draw_score_panel(
+            draw,
+            text_x,
+            cur_y,
+            score_panel_w,
+            rating,
+            vote_count,
+            distribution,
+            dim,
+            score_metrics,
+        )
 
         return image
 
-    def _draw_score_panel(self, draw, x, y, panel_w, rating, dim, metrics=None):
-        """Draw the score card. x is the content left edge (aligns with title/year)."""
+    def _draw_score_panel(
+        self,
+        draw,
+        x,
+        y,
+        panel_w,
+        rating,
+        vote_count,
+        distribution,
+        dim,
+        metrics=None,
+    ):
+        """Draw the score area and optional rating histogram."""
         if metrics is None:
-            metrics = self._get_score_panel_metrics(draw, rating, dim)
+            metrics = self._get_score_panel_metrics(
+                draw,
+                rating,
+                vote_count,
+                distribution,
+                dim,
+                panel_w,
+            )
 
         label_font = metrics["label_font"]
         score_font = metrics["score_font"]
+        chart_title_font = metrics["chart_title_font"]
+        chart_count_font = metrics["chart_count_font"]
+        chart_label_font = metrics["chart_label_font"]
         label_text = metrics["label_text"]
         score_text = metrics["score_text"]
-        label_h    = metrics["label_h"]
-        score_h    = metrics["score_h"]
-        pad_x      = metrics["pad_x"]
-        pad_y      = metrics["pad_y"]
-        inner_gap  = metrics["inner_gap"]
-        star_size  = metrics["star_size"]
-        star_gap   = metrics["star_gap"]
-        panel_h    = metrics["panel_h"]
+        count_text = metrics["count_text"]
+        label_h = metrics["label_h"]
+        score_h = metrics["score_h"]
+        chart_title_h = metrics["chart_title_h"]
+        chart_label_h = metrics["chart_label_h"]
+        pad_y = metrics["pad_y"]
+        inner_gap = metrics["inner_gap"]
+        section_gap = metrics["section_gap"]
+        header_gap = metrics["header_gap"]
+        chart_gap = metrics["chart_gap"]
+        label_gap = metrics["label_gap"]
+        star_size = metrics["star_size"]
+        star_gap = metrics["star_gap"]
+        chart_h = metrics["chart_h"]
 
-        # Card rect bleeds left by pad_x so that content (inner_x=x) lines up
-        # with title and year which are also drawn at x.
-        card_x0 = x - pad_x
-        card_x1 = card_x0 + panel_w
-        radius = int(dim * 0.018)
-        draw.rounded_rectangle(
-            [card_x0, y, card_x1, y + panel_h],
-            radius=radius,
-            fill=(246, 246, 246),
-            outline=(208, 208, 208),
-            width=1,
-        )
+        inner_x = x
+        cur_y = y + pad_y
 
-        inner_x = x          # perfectly aligned with title / year
-        cur_y   = y + pad_y
-
-        # "User Score" label
-        draw.text((inner_x, cur_y), label_text, font=label_font, fill=(150, 150, 150))
+        draw.text((inner_x, cur_y), label_text, font=label_font, fill=LETTERBOXD_MUTED)
         cur_y += label_h + inner_gap
 
-        # Bold numeric rating
-        draw.text((inner_x, cur_y), score_text, font=score_font, fill=(12, 12, 12))
+        draw.text((inner_x, cur_y), score_text, font=score_font, fill=LETTERBOXD_TEXT)
 
-        # Stars aligned to same x as rating number
         if rating:
             stars_y = cur_y + score_h + inner_gap
             filled_stars = max(0, min(5, round(rating / 2)))
@@ -227,63 +419,167 @@ class MovieOfTheDay(BasePlugin):
                 star_x = inner_x + index * (star_size + star_gap)
                 if index < filled_stars:
                     self._draw_star(
-                        draw, star_x, stars_y, star_size,
-                        fill=(18, 18, 18), outline=(18, 18, 18), outline_width=1,
+                        draw,
+                        star_x,
+                        stars_y,
+                        star_size,
+                        fill=LETTERBOXD_STAR_FILLED,
+                        outline=LETTERBOXD_STAR_FILLED,
+                        outline_width=1,
                     )
                 else:
                     self._draw_star(
-                        draw, star_x, stars_y, star_size,
-                        fill=(220, 220, 220), outline=(145, 145, 145), outline_width=1,
+                        draw,
+                        star_x,
+                        stars_y,
+                        star_size,
+                        fill=LETTERBOXD_STAR_EMPTY_FILL,
+                        outline=LETTERBOXD_STAR_EMPTY_OUTLINE,
+                        outline_width=1,
                     )
+            cur_y = stars_y + star_size
+        else:
+            cur_y += score_h
 
-    def _get_score_panel_metrics(self, draw, rating, dim):
-        """Measure score panel pieces so the content block can be centered accurately."""
+        if distribution:
+            cur_y += section_gap
+            draw.line(
+                [(inner_x, cur_y), (inner_x + panel_w, cur_y)],
+                fill=LETTERBOXD_DIVIDER,
+                width=1,
+            )
+            cur_y += header_gap
+
+            draw.text((inner_x, cur_y), "Ratings", font=chart_title_font, fill=LETTERBOXD_MUTED)
+            if count_text:
+                count_w, _ = self._measure_text(draw, count_text, chart_count_font)
+                draw.text(
+                    (inner_x + panel_w - count_w, cur_y),
+                    count_text,
+                    font=chart_count_font,
+                    fill=LETTERBOXD_MUTED,
+                )
+
+            cur_y += chart_title_h + chart_gap
+            self._draw_rating_histogram(
+                draw,
+                inner_x,
+                cur_y,
+                panel_w,
+                chart_h,
+                distribution,
+                dim,
+                chart_label_font,
+                label_gap,
+                chart_label_h,
+            )
+
+    def _draw_rating_histogram(
+        self,
+        draw,
+        x,
+        y,
+        width,
+        height,
+        distribution,
+        dim,
+        label_font,
+        label_gap,
+        label_h,
+    ):
+        """Draw a compact 5-star histogram with centered labels."""
+        if not distribution:
+            return
+
+        bucket_count = len(distribution)
+        bar_gap = max(8, int(dim * 0.018))
+        available_width = max(width - bar_gap * (bucket_count - 1), bucket_count)
+        bar_width = max(14, available_width // bucket_count)
+        max_count = max(distribution)
+        if max_count <= 0:
+            return
+
+        total_bar_width = bucket_count * bar_width + (bucket_count - 1) * bar_gap
+        start_x = x + max(0, (width - total_bar_width) // 2)
+        bottom_y = y + height
+        for index, count in enumerate(distribution):
+            ratio = count / max_count
+            bar_height = max(6, int(height * ratio)) if count > 0 else 0
+            bar_x0 = start_x + index * (bar_width + bar_gap)
+            bar_y0 = bottom_y - bar_height
+            fill = LETTERBOXD_BAR_PEAK if count == max_count else LETTERBOXD_BAR
+            draw.rectangle([bar_x0, bar_y0, bar_x0 + bar_width - 1, bottom_y], fill=fill)
+
+            label_text = "★" * (index + 1)
+            label_w, _ = self._measure_text(draw, label_text, label_font)
+            label_x = bar_x0 + (bar_width - label_w) // 2
+            label_y = bottom_y + label_gap
+            draw.text((label_x, label_y), label_text, font=label_font, fill=LETTERBOXD_TEXT)
+
+    def _get_score_panel_metrics(self, draw, rating, vote_count, distribution, dim, panel_w):
+        """Measure score and distribution pieces for vertical layout."""
         label_font = get_font("Jost", int(dim * 0.034)) or ImageFont.load_default()
         score_font = get_font("Jost", int(dim * 0.095), "bold") or ImageFont.load_default()
+        chart_title_font = get_font("Jost", int(dim * 0.036)) or ImageFont.load_default()
+        chart_count_font = get_font("Jost", int(dim * 0.03)) or ImageFont.load_default()
+        chart_label_font = get_font("Jost", int(dim * 0.026), "bold") or ImageFont.load_default()
 
         label_text = "User Score"
         score_text = f"{rating:.1f}/10" if rating else "N/A"
-        label_w, label_h = self._measure_text(draw, label_text, label_font)
-        score_w, score_h = self._measure_text(draw, score_text, score_font)
+        count_text = self._format_vote_count(vote_count) if distribution and vote_count else ""
 
-        # Fixed comfortable star size
+        _, label_h = self._measure_text(draw, label_text, label_font)
+        _, score_h = self._measure_text(draw, score_text, score_font)
+        _, chart_title_h = self._measure_text(draw, "Ratings", chart_title_font)
+        _, chart_label_h = self._measure_text(draw, "★★★★★", chart_label_font)
+
         star_size = int(dim * 0.048)
-        star_gap  = max(4, int(dim * 0.009))
+        star_gap = max(4, int(dim * 0.009))
 
-        pad_x     = int(dim * 0.022)
-        pad_y     = int(dim * 0.016)
+        pad_y = int(dim * 0.016)
         inner_gap = int(dim * 0.009)
-
-        star_row_w = 5 * star_size + 4 * star_gap if rating else 0
-        content_w  = max(score_w, label_w, star_row_w)
-        panel_min_w = content_w + pad_x * 2
+        section_gap = int(dim * 0.022)
+        header_gap = int(dim * 0.015)
+        chart_gap = int(dim * 0.012)
+        label_gap = int(dim * 0.01)
+        chart_h = max(int(dim * 0.16), int(panel_w * 0.16))
 
         panel_h = pad_y * 2 + label_h + inner_gap + score_h
         if rating:
             panel_h += inner_gap + star_size
+        if distribution:
+            panel_h += section_gap + 1 + header_gap + chart_title_h + chart_gap + chart_h
+            panel_h += label_gap + chart_label_h
 
         return {
             "label_font": label_font,
             "score_font": score_font,
+            "chart_title_font": chart_title_font,
+            "chart_count_font": chart_count_font,
+            "chart_label_font": chart_label_font,
             "label_text": label_text,
             "score_text": score_text,
-            "label_w": label_w,
+            "count_text": count_text,
             "label_h": label_h,
-            "score_w": score_w,
             "score_h": score_h,
-            "pad_x": pad_x,
+            "chart_title_h": chart_title_h,
+            "chart_label_h": chart_label_h,
             "pad_y": pad_y,
             "inner_gap": inner_gap,
+            "section_gap": section_gap,
+            "header_gap": header_gap,
+            "chart_gap": chart_gap,
+            "label_gap": label_gap,
             "star_size": star_size,
             "star_gap": star_gap,
-            "panel_min_w": panel_min_w,
+            "chart_h": chart_h,
             "panel_h": panel_h,
         }
 
     def _get_star_row_layout(self, target_width, dim):
         """Kept for compatibility; star layout is now computed in _get_score_panel_metrics."""
         star_size = int(dim * 0.04)
-        star_gap  = max(3, int(dim * 0.008))
+        star_gap = max(3, int(dim * 0.008))
         return star_size, star_gap
 
     @staticmethod
@@ -294,25 +590,24 @@ class MovieOfTheDay(BasePlugin):
         outer_r = size // 2
         inner_r = int(outer_r * 0.38)
         points = []
-        for i in range(10):
-            r = outer_r if i % 2 == 0 else inner_r
-            angle = math.radians(-90 + i * 36)
-            points.append((cx + r * math.cos(angle), cy + r * math.sin(angle)))
-        draw.polygon(
-            points,
-            fill=fill,
-            outline=outline,
-            width=outline_width,
-        )
+        for index in range(10):
+            radius = outer_r if index % 2 == 0 else inner_r
+            angle = math.radians(-90 + index * 36)
+            points.append((cx + radius * math.cos(angle), cy + radius * math.sin(angle)))
+        draw.polygon(points, fill=fill, outline=outline, width=outline_width)
 
     def _draw_poster_placeholder(self, draw, x0, y0, x1, y1, dim):
         """Draw a placeholder rectangle when poster is unavailable."""
-        draw.rounded_rectangle([x0, y0, x1, y1], radius=int(dim * 0.02),
-                               outline=(200, 200, 200), width=2)
+        draw.rounded_rectangle(
+            [x0, y0, x1, y1],
+            radius=int(dim * 0.02),
+            outline=LETTERBOXD_DIVIDER,
+            width=2,
+        )
         cx = (x0 + x1) // 2
         cy = (y0 + y1) // 2
         label_font = get_font("Jost", int(dim * 0.035)) or ImageFont.load_default()
-        draw.text((cx, cy), "No Poster", font=label_font, fill=(180, 180, 180), anchor="mm")
+        draw.text((cx, cy), "No Poster", font=label_font, fill=LETTERBOXD_MUTED, anchor="mm")
 
     def _wrap_text(self, draw, text, max_width, font, max_lines=2):
         """Word-wrap text, truncating at a word boundary with ellipsis on the last line."""
@@ -321,28 +616,26 @@ class MovieOfTheDay(BasePlugin):
             return [""]
 
         lines = []
-        i = 0
-        while i < len(words):
+        index = 0
+        while index < len(words):
             line_words = []
-            while i < len(words):
-                test_line = " ".join(line_words + [words[i]])
+            while index < len(words):
+                test_line = " ".join(line_words + [words[index]])
                 bbox = draw.textbbox((0, 0), test_line, font=font)
                 if bbox[2] - bbox[0] <= max_width:
-                    line_words.append(words[i])
-                    i += 1
+                    line_words.append(words[index])
+                    index += 1
                 else:
                     break
 
             if not line_words:
-                # Single word too long to fit — force it onto a line
-                line_words = [words[i]]
-                i += 1
+                line_words = [words[index]]
+                index += 1
 
             is_last_allowed = len(lines) >= max_lines - 1
-            has_more_words = i < len(words)
+            has_more_words = index < len(words)
 
             if is_last_allowed and has_more_words:
-                # Truncate this line at a word boundary with ellipsis
                 while line_words:
                     candidate = " ".join(line_words) + "…"
                     bbox = draw.textbbox((0, 0), candidate, font=font)
@@ -361,8 +654,6 @@ class MovieOfTheDay(BasePlugin):
 
     @staticmethod
     def _measure_text(draw, text, font):
-        """Return (width, advance_h) where advance_h is bbox[3]: distance from the
-        draw-origin to the visual bottom of the text. This is the correct amount
-        to advance cur_y so the next element starts below the rendered pixels."""
+        """Return width and vertical advance for consistent stacked layout."""
         bbox = draw.textbbox((0, 0), text or " ", font=font)
         return bbox[2] - bbox[0], bbox[3]
