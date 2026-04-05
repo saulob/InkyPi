@@ -417,31 +417,20 @@ class MovieOfTheDay(BasePlugin):
         draw.text((inner_x, cur_y), score_text, font=score_font, fill=LETTERBOXD_TEXT)
 
         if rating:
+            star_font = metrics["star_font"]
+            star_h = metrics["star_h"]
             stars_y = cur_y + score_h + inner_gap
             filled_stars = max(0, min(5, round(rating / 2)))
-            for index in range(5):
-                star_x = inner_x + index * (star_size + star_gap)
-                if index < filled_stars:
-                    self._draw_star(
-                        draw,
-                        star_x,
-                        stars_y,
-                        star_size,
-                        fill=LETTERBOXD_STAR_FILLED,
-                        outline=LETTERBOXD_STAR_FILLED,
-                        outline_width=1,
-                    )
-                else:
-                    self._draw_star(
-                        draw,
-                        star_x,
-                        stars_y,
-                        star_size,
-                        fill=LETTERBOXD_STAR_EMPTY_FILL,
-                        outline=LETTERBOXD_STAR_EMPTY_OUTLINE,
-                        outline_width=1,
-                    )
-            cur_y = stars_y + star_size
+            filled_text = "★" * filled_stars
+            empty_text = "☆" * (5 - filled_stars)
+            cursor_x = inner_x
+            if filled_text:
+                draw.text((cursor_x, stars_y), filled_text, font=star_font, fill=LETTERBOXD_STAR_FILLED)
+                filled_w, _ = self._measure_text(draw, filled_text, star_font)
+                cursor_x += filled_w
+            if empty_text:
+                draw.text((cursor_x, stars_y), empty_text, font=star_font, fill=LETTERBOXD_STAR_EMPTY_OUTLINE)
+            cur_y = stars_y + star_h
         else:
             cur_y += score_h
 
@@ -518,8 +507,10 @@ class MovieOfTheDay(BasePlugin):
         _, score_h = self._measure_text(draw, score_text, score_font)
         _, chart_title_h = self._measure_text(draw, "RATINGS", chart_title_font)
 
-        star_size = int(dim * 0.048)
-        star_gap = max(4, int(dim * 0.009))
+        star_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(dim * 0.053))
+        _, star_h = self._measure_text(draw, "★★★★★", star_font)
+        star_size = star_h
+        star_gap = 0
 
         pad_y = int(dim * 0.016)
         inner_gap = int(dim * 0.009)
@@ -543,6 +534,8 @@ class MovieOfTheDay(BasePlugin):
             "score_font": score_font,
             "chart_title_font": chart_title_font,
             "chart_count_font": chart_count_font,
+            "star_font": star_font,
+            "star_h": star_h,
             "label_text": label_text,
             "score_text": score_text,
             "count_text": count_text,
@@ -562,25 +555,7 @@ class MovieOfTheDay(BasePlugin):
             "panel_h": panel_h,
         }
 
-    def _get_star_row_layout(self, target_width, dim):
-        """Kept for compatibility; star layout is now computed in _get_score_panel_metrics."""
-        star_size = int(dim * 0.04)
-        star_gap = max(3, int(dim * 0.008))
-        return star_size, star_gap
 
-    @staticmethod
-    def _draw_star(draw, x, y, size, fill=None, outline=None, outline_width=1):
-        """Draw a 5-point star polygon at (x, y) with given size."""
-        cx = x + size // 2
-        cy = y + size // 2
-        outer_r = size // 2
-        inner_r = int(outer_r * 0.38)
-        points = []
-        for index in range(10):
-            radius = outer_r if index % 2 == 0 else inner_r
-            angle = math.radians(-90 + index * 36)
-            points.append((cx + radius * math.cos(angle), cy + radius * math.sin(angle)))
-        draw.polygon(points, fill=fill, outline=outline, width=outline_width)
 
     def _draw_poster_placeholder(self, draw, x0, y0, x1, y1, dim):
         """Draw a placeholder rectangle when poster is unavailable."""
