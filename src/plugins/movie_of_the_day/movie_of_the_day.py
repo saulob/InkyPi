@@ -518,7 +518,7 @@ class MovieOfTheDay(BasePlugin):
         chart_gap = int(dim * 0.008)
         chart_h = max(int(dim * 0.32), int(panel_w * 0.32))
 
-        panel_h = pad_y * 2 + label_h + inner_gap + score_h
+        panel_h = pad_y + label_h + inner_gap + score_h
         if rating:
             panel_h += inner_gap + star_size
         if distribution:
