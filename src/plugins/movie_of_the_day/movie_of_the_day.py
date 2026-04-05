@@ -303,7 +303,7 @@ class MovieOfTheDay(BasePlugin):
         text_x = divider_x + gap_after_divider
         text_max_w = width - text_x - margin
 
-        header_font = get_font("Jost", int(dim * 0.034)) or ImageFont.load_default()
+        header_font = get_font("Jost", int(dim * 0.042)) or ImageFont.load_default()
         title_font = get_font("Jost", int(dim * 0.086), "bold") or ImageFont.load_default()
         year_font = get_font("Jost", int(dim * 0.05)) or ImageFont.load_default()
 
@@ -329,9 +329,14 @@ class MovieOfTheDay(BasePlugin):
         gap_s = int(dim * 0.010)
         gap_m = int(dim * 0.026)
 
-        total_h = header_h + gap_xs + title_block_h + gap_s + year_h + gap_m + score_panel_h
-        # Anchor the right column so its visual bottom aligns with the poster bottom.
-        cur_y = max(margin, height - margin - total_h)
+        top_content_h = header_h + gap_xs + title_block_h + gap_s + year_h + gap_m
+        available_score_h = max(0, height - margin * 2 - top_content_h)
+        score_panel_h = max(score_panel_h, available_score_h)
+        score_metrics["panel_h"] = score_panel_h
+
+        total_h = top_content_h + score_panel_h
+        # Top-align the right column with the poster area.
+        cur_y = margin
 
         draw.text((text_x, cur_y), "Movie of the Day", font=header_font, fill=LETTERBOXD_MUTED)
         cur_y += header_h + gap_xs
@@ -399,6 +404,9 @@ class MovieOfTheDay(BasePlugin):
         star_size = metrics["star_size"]
         star_gap = metrics["star_gap"]
         chart_h = metrics["chart_h"]
+        panel_h = metrics["panel_h"]
+        score_block_h = metrics["score_block_h"]
+        chart_block_h = metrics["chart_block_h"]
 
         inner_x = x
         cur_y = y + pad_y
@@ -438,7 +446,9 @@ class MovieOfTheDay(BasePlugin):
             cur_y += score_h
 
         if distribution:
-            cur_y += section_gap
+            extra_space = max(0, panel_h - (score_block_h + chart_block_h))
+            cur_y += extra_space + section_gap
+
             draw.text((inner_x, cur_y), "RATINGS", font=chart_title_font, fill=LETTERBOXD_MUTED)
             if count_text:
                 count_w, _ = self._measure_text(draw, count_text, chart_count_font)
@@ -518,11 +528,15 @@ class MovieOfTheDay(BasePlugin):
         chart_gap = int(dim * 0.008)
         chart_h = max(int(dim * 0.32), int(panel_w * 0.32))
 
-        panel_h = pad_y + label_h + inner_gap + score_h
+        score_block_h = pad_y + label_h + inner_gap + score_h
         if rating:
-            panel_h += inner_gap + star_size
+            score_block_h += inner_gap + star_size
+
+        chart_block_h = 0
         if distribution:
-            panel_h += section_gap + 1 + header_gap + chart_title_h + chart_gap + chart_h
+            chart_block_h = section_gap + chart_title_h + header_gap + 1 + chart_gap + chart_h
+
+        panel_h = score_block_h + chart_block_h
 
         return {
             "label_font": label_font,
@@ -543,6 +557,8 @@ class MovieOfTheDay(BasePlugin):
             "star_size": star_size,
             "star_gap": star_gap,
             "chart_h": chart_h,
+            "score_block_h": score_block_h,
+            "chart_block_h": chart_block_h,
             "panel_h": panel_h,
         }
 
