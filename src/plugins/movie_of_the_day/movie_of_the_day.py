@@ -50,7 +50,7 @@ TRANSLATIONS = {
     },
     "fr": {
         "movie_of_the_day": "Film du Jour",
-        "user_score": "Score Utilisateur",
+        "user_score": "Score des utilisateurs",
         "ratings": "NOTES",
         "fans": "FANS",
         "thousand_suffix": "K",
@@ -67,14 +67,14 @@ TRANSLATIONS = {
     "id": {
         "movie_of_the_day": "Film Hari Ini",
         "user_score": "Skor Pengguna",
-        "ratings": "PENILAIAN",
+        "ratings": "PERINGKAT",
         "fans": "PENGGEMAR",
         "thousand_suffix": "RB",
         "million_suffix": "JT",
     },
     "it": {
         "movie_of_the_day": "Film del Giorno",
-        "user_score": "Punteggio Utenti",
+        "user_score": "Punteggio utenti",
         "ratings": "VALUTAZIONI",
         "fans": "FAN",
         "thousand_suffix": "K",
@@ -98,7 +98,7 @@ TRANSLATIONS = {
     },
     "es": {
         "movie_of_the_day": "Película del Día",
-        "user_score": "Puntuación de Usuarios",
+        "user_score": "Puntuación de usuarios",
         "ratings": "VALORACIONES",
         "fans": "FANS",
         "thousand_suffix": "K",
