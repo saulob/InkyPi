@@ -29,6 +29,83 @@ LETTERBOXD_STAR_FILLED = (235, 239, 242)
 LETTERBOXD_STAR_EMPTY_FILL = (53, 61, 70)
 LETTERBOXD_STAR_EMPTY_OUTLINE = (108, 118, 128)
 
+DEFAULT_LANGUAGE = "en"
+
+TRANSLATIONS = {
+    "en": {
+        "movie_of_the_day": "Movie of the Day",
+        "user_score": "User Score",
+        "ratings": "RATINGS",
+        "fans": "FANS",
+        "thousand_suffix": "K",
+        "million_suffix": "M",
+    },
+    "nl": {
+        "movie_of_the_day": "Film van de Dag",
+        "user_score": "Gebruikersscore",
+        "ratings": "BEOORDELINGEN",
+        "fans": "FANS",
+        "thousand_suffix": "K",
+        "million_suffix": "M",
+    },
+    "fr": {
+        "movie_of_the_day": "Film du Jour",
+        "user_score": "Score Utilisateur",
+        "ratings": "NOTES",
+        "fans": "FANS",
+        "thousand_suffix": "K",
+        "million_suffix": "M",
+    },
+    "de": {
+        "movie_of_the_day": "Film des Tages",
+        "user_score": "Nutzerbewertung",
+        "ratings": "BEWERTUNGEN",
+        "fans": "FANS",
+        "thousand_suffix": "K",
+        "million_suffix": "M",
+    },
+    "id": {
+        "movie_of_the_day": "Film Hari Ini",
+        "user_score": "Skor Pengguna",
+        "ratings": "PENILAIAN",
+        "fans": "PENGGEMAR",
+        "thousand_suffix": "RB",
+        "million_suffix": "JT",
+    },
+    "it": {
+        "movie_of_the_day": "Film del Giorno",
+        "user_score": "Punteggio Utenti",
+        "ratings": "VALUTAZIONI",
+        "fans": "FAN",
+        "thousand_suffix": "K",
+        "million_suffix": "M",
+    },
+    "pt-br": {
+        "movie_of_the_day": "Filme do Dia",
+        "user_score": "Pontuação dos Usuários",
+        "ratings": "AVALIAÇÕES",
+        "fans": "FÃS",
+        "thousand_suffix": " mil",
+        "million_suffix": "M",
+    },
+    "pt-pt": {
+        "movie_of_the_day": "Filme do Dia",
+        "user_score": "Pontuação dos Utilizadores",
+        "ratings": "AVALIAÇÕES",
+        "fans": "FÃS",
+        "thousand_suffix": " mil",
+        "million_suffix": "M",
+    },
+    "es": {
+        "movie_of_the_day": "Película del Día",
+        "user_score": "Puntuación de Usuarios",
+        "ratings": "VALORACIONES",
+        "fans": "FANS",
+        "thousand_suffix": "K",
+        "million_suffix": "M",
+    },
+}
+
 
 class MovieOfTheDay(BasePlugin):
     def generate_settings_template(self):
@@ -55,7 +132,10 @@ class MovieOfTheDay(BasePlugin):
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
-        image = self._compose_layout(movie, dimensions)
+        language = self._resolve_language(settings)
+        labels = self._get_labels(language)
+
+        image = self._compose_layout(movie, dimensions, labels)
 
         logger.info("=== Movie of the Day Plugin: Image generation complete ===")
         return image
@@ -234,19 +314,33 @@ class MovieOfTheDay(BasePlugin):
         return counts if any(counts) else None
 
     @staticmethod
-    def _format_vote_count(vote_count):
+    def _resolve_language(settings):
+        language = str(settings.get("language", DEFAULT_LANGUAGE)).strip().lower()
+        if language == "pt":
+            language = "pt-br"
+        return language if language in TRANSLATIONS else DEFAULT_LANGUAGE
+
+    @staticmethod
+    def _get_labels(language):
+        return TRANSLATIONS.get(language, TRANSLATIONS[DEFAULT_LANGUAGE])
+
+    @staticmethod
+    def _format_vote_count(vote_count, labels):
         """Format large vote counts in a compact UI-friendly style."""
+        thousand_suffix = labels.get("thousand_suffix", "K")
+        million_suffix = labels.get("million_suffix", "M")
+
         if vote_count >= 1_000_000:
             value = f"{vote_count / 1_000_000:.1f}".rstrip("0").rstrip(".")
-            return f"{value}M"
+            return f"{value}{million_suffix}"
         if vote_count >= 10_000:
-            return f"{vote_count // 1000}K"
+            return f"{vote_count // 1000}{thousand_suffix}"
         if vote_count >= 1_000:
             value = f"{vote_count / 1000:.1f}".rstrip("0").rstrip(".")
-            return f"{value}K"
+            return f"{value}{thousand_suffix}"
         return str(vote_count)
 
-    def _compose_layout(self, movie, dimensions):
+    def _compose_layout(self, movie, dimensions, labels):
         """Compose a dark movie card with compact score and ratings sections."""
         width, height = dimensions
         dim = min(width, height)
@@ -309,7 +403,7 @@ class MovieOfTheDay(BasePlugin):
 
         title_lines = self._wrap_text(draw, title, text_max_w, title_font, max_lines=3)
         title_line_count = len(title_lines)
-        _, header_h = self._measure_text(draw, "Movie of the Day", header_font)
+        _, header_h = self._measure_text(draw, labels["movie_of_the_day"], header_font)
         _, title_text_h = self._measure_text(draw, "Ag", title_font)
         _, year_h = self._measure_text(draw, year, year_font)
         title_line_h = title_text_h + int(dim * 0.006)
@@ -332,6 +426,7 @@ class MovieOfTheDay(BasePlugin):
             score_panel_w,
             available_score_h,
             title_line_count,
+            labels,
         )
         score_panel_h = score_metrics["panel_h"]
         score_panel_h = max(score_panel_h, available_score_h)
@@ -341,7 +436,7 @@ class MovieOfTheDay(BasePlugin):
         # Top-align the right column with the poster area.
         cur_y = margin
 
-        draw.text((text_x, cur_y), "Movie of the Day", font=header_font, fill=LETTERBOXD_MUTED)
+        draw.text((text_x, cur_y), labels["movie_of_the_day"], font=header_font, fill=LETTERBOXD_MUTED)
         cur_y += header_h + gap_xs
 
         for line in title_lines:
@@ -362,6 +457,7 @@ class MovieOfTheDay(BasePlugin):
             distribution,
             dim,
             score_metrics,
+            labels,
         )
 
         return image
@@ -377,8 +473,11 @@ class MovieOfTheDay(BasePlugin):
         distribution,
         dim,
         metrics=None,
+        labels=None,
     ):
         """Draw the score area and optional rating histogram."""
+        labels = labels or TRANSLATIONS[DEFAULT_LANGUAGE]
+
         if metrics is None:
             metrics = self._get_score_panel_metrics(
                 draw,
@@ -387,6 +486,7 @@ class MovieOfTheDay(BasePlugin):
                 distribution,
                 dim,
                 panel_w,
+                labels=labels,
             )
 
         label_font = metrics["label_font"]
@@ -439,7 +539,7 @@ class MovieOfTheDay(BasePlugin):
             extra_space = max(0, panel_h - (score_block_h + chart_block_h))
             cur_y += extra_space + section_gap
 
-            draw.text((inner_x, cur_y), "RATINGS", font=chart_title_font, fill=LETTERBOXD_MUTED)
+            draw.text((inner_x, cur_y), labels["ratings"], font=chart_title_font, fill=LETTERBOXD_MUTED)
             if count_text:
                 count_w, _ = self._measure_text(draw, count_text, chart_count_font)
                 draw.text(
@@ -503,20 +603,27 @@ class MovieOfTheDay(BasePlugin):
         panel_w,
         available_score_h,
         title_line_count,
+        labels,
     ):
         """Measure score and distribution pieces for vertical layout."""
+        labels = labels or TRANSLATIONS[DEFAULT_LANGUAGE]
+
         label_font = get_font("Jost", int(dim * 0.034)) or ImageFont.load_default()
         score_font = get_font("Jost", int(dim * 0.095), "bold") or ImageFont.load_default()
         chart_title_font = get_font("Jost", int(dim * 0.041), "bold") or ImageFont.load_default()
         chart_count_font = get_font("Jost", int(dim * 0.034), "bold") or ImageFont.load_default()
 
-        label_text = "User Score"
+        label_text = labels["user_score"]
         score_text = f"{rating:.1f}/10" if rating else "N/A"
-        count_text = f"{self._format_vote_count(vote_count)} FANS" if distribution and vote_count else ""
+        count_text = (
+            f"{self._format_vote_count(vote_count, labels)} {labels['fans']}"
+            if distribution and vote_count
+            else ""
+        )
 
         _, label_h = self._measure_text(draw, label_text, label_font)
         _, score_h = self._measure_text(draw, score_text, score_font)
-        _, chart_title_h = self._measure_text(draw, "RATINGS", chart_title_font)
+        _, chart_title_h = self._measure_text(draw, labels["ratings"], chart_title_font)
 
         star_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(dim * 0.053))
         _, star_h = self._measure_text(draw, "★★★★★", star_font)
