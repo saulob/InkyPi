@@ -235,17 +235,16 @@ class MovieOfTheDay(BasePlugin):
 
     @staticmethod
     def _format_vote_count(vote_count):
-        """Format large rating counts in a compact UI-friendly style."""
+        """Format large vote counts in a compact UI-friendly style."""
         if vote_count >= 1_000_000:
             value = f"{vote_count / 1_000_000:.1f}".rstrip("0").rstrip(".")
-            return f"{value}M ratings"
+            return f"{value}M"
         if vote_count >= 10_000:
-            return f"{vote_count // 1000}K ratings"
+            return f"{vote_count // 1000}K"
         if vote_count >= 1_000:
             value = f"{vote_count / 1000:.1f}".rstrip("0").rstrip(".")
-            return f"{value}K ratings"
-        suffix = "rating" if vote_count == 1 else "ratings"
-        return f"{vote_count} {suffix}"
+            return f"{value}K"
+        return str(vote_count)
 
     def _compose_layout(self, movie, dimensions):
         """Compose a dark movie card with compact score and ratings sections."""
@@ -331,8 +330,8 @@ class MovieOfTheDay(BasePlugin):
         gap_m = int(dim * 0.026)
 
         total_h = header_h + gap_xs + title_block_h + gap_s + year_h + gap_m + score_panel_h
-        slack = max(0, height - total_h)
-        cur_y = max(margin, int(slack * 0.38))
+        # Anchor the right column so its visual bottom aligns with the poster bottom.
+        cur_y = max(margin, height - margin - total_h)
 
         draw.text((text_x, cur_y), "Movie of the Day", font=header_font, fill=LETTERBOXD_MUTED)
         cur_y += header_h + gap_xs
@@ -386,20 +385,17 @@ class MovieOfTheDay(BasePlugin):
         score_font = metrics["score_font"]
         chart_title_font = metrics["chart_title_font"]
         chart_count_font = metrics["chart_count_font"]
-        chart_label_font = metrics["chart_label_font"]
         label_text = metrics["label_text"]
         score_text = metrics["score_text"]
         count_text = metrics["count_text"]
         label_h = metrics["label_h"]
         score_h = metrics["score_h"]
         chart_title_h = metrics["chart_title_h"]
-        chart_label_h = metrics["chart_label_h"]
         pad_y = metrics["pad_y"]
         inner_gap = metrics["inner_gap"]
         section_gap = metrics["section_gap"]
         header_gap = metrics["header_gap"]
         chart_gap = metrics["chart_gap"]
-        label_gap = metrics["label_gap"]
         star_size = metrics["star_size"]
         star_gap = metrics["star_gap"]
         chart_h = metrics["chart_h"]
@@ -443,14 +439,7 @@ class MovieOfTheDay(BasePlugin):
 
         if distribution:
             cur_y += section_gap
-            draw.line(
-                [(inner_x, cur_y), (inner_x + panel_w, cur_y)],
-                fill=LETTERBOXD_DIVIDER,
-                width=1,
-            )
-            cur_y += header_gap
-
-            draw.text((inner_x, cur_y), "Ratings", font=chart_title_font, fill=LETTERBOXD_MUTED)
+            draw.text((inner_x, cur_y), "RATINGS", font=chart_title_font, fill=LETTERBOXD_MUTED)
             if count_text:
                 count_w, _ = self._measure_text(draw, count_text, chart_count_font)
                 draw.text(
@@ -460,7 +449,13 @@ class MovieOfTheDay(BasePlugin):
                     fill=LETTERBOXD_MUTED,
                 )
 
-            cur_y += chart_title_h + chart_gap
+            cur_y += chart_title_h + header_gap
+            draw.line(
+                [(inner_x, cur_y), (inner_x + panel_w, cur_y)],
+                fill=LETTERBOXD_DIVIDER,
+                width=1,
+            )
+            cur_y += chart_gap
             self._draw_rating_histogram(
                 draw,
                 inner_x,
@@ -469,107 +464,82 @@ class MovieOfTheDay(BasePlugin):
                 chart_h,
                 distribution,
                 dim,
-                chart_label_font,
-                label_gap,
-                chart_label_h,
             )
 
-    def _draw_rating_histogram(
-        self,
-        draw,
-        x,
-        y,
-        width,
-        height,
-        distribution,
-        dim,
-        label_font,
-        label_gap,
-        label_h,
-    ):
-        """Draw a compact 5-star histogram with centered labels."""
+    def _draw_rating_histogram(self, draw, x, y, width, height, distribution, dim):
+        """Draw a compact 5-star histogram with stronger bar presence."""
         if not distribution:
             return
 
         bucket_count = len(distribution)
-        bar_gap = max(8, int(dim * 0.018))
+        bar_gap = max(10, int(dim * 0.02))
         available_width = max(width - bar_gap * (bucket_count - 1), bucket_count)
-        bar_width = max(14, available_width // bucket_count)
+        bar_width = max(18, available_width // bucket_count)
         max_count = max(distribution)
         if max_count <= 0:
             return
 
         total_bar_width = bucket_count * bar_width + (bucket_count - 1) * bar_gap
         start_x = x + max(0, (width - total_bar_width) // 2)
+        top_pad = max(6, int(dim * 0.012))
+        drawable_h = max(1, height - top_pad)
         bottom_y = y + height
         for index, count in enumerate(distribution):
             ratio = count / max_count
-            bar_height = max(6, int(height * ratio)) if count > 0 else 0
+            bar_height = max(10, int(drawable_h * ratio)) if count > 0 else 0
+            bar_height = min(drawable_h, bar_height)
             bar_x0 = start_x + index * (bar_width + bar_gap)
             bar_y0 = bottom_y - bar_height
             fill = LETTERBOXD_BAR_PEAK if count == max_count else LETTERBOXD_BAR
             draw.rectangle([bar_x0, bar_y0, bar_x0 + bar_width - 1, bottom_y], fill=fill)
 
-            label_text = "★" * (index + 1)
-            label_w, _ = self._measure_text(draw, label_text, label_font)
-            label_x = bar_x0 + (bar_width - label_w) // 2
-            label_y = bottom_y + label_gap
-            draw.text((label_x, label_y), label_text, font=label_font, fill=LETTERBOXD_TEXT)
-
     def _get_score_panel_metrics(self, draw, rating, vote_count, distribution, dim, panel_w):
         """Measure score and distribution pieces for vertical layout."""
         label_font = get_font("Jost", int(dim * 0.034)) or ImageFont.load_default()
         score_font = get_font("Jost", int(dim * 0.095), "bold") or ImageFont.load_default()
-        chart_title_font = get_font("Jost", int(dim * 0.036)) or ImageFont.load_default()
-        chart_count_font = get_font("Jost", int(dim * 0.03)) or ImageFont.load_default()
-        chart_label_font = get_font("Jost", int(dim * 0.026), "bold") or ImageFont.load_default()
+        chart_title_font = get_font("Jost", int(dim * 0.041), "bold") or ImageFont.load_default()
+        chart_count_font = get_font("Jost", int(dim * 0.034), "bold") or ImageFont.load_default()
 
         label_text = "User Score"
         score_text = f"{rating:.1f}/10" if rating else "N/A"
-        count_text = self._format_vote_count(vote_count) if distribution and vote_count else ""
+        count_text = f"{self._format_vote_count(vote_count)} FANS" if distribution and vote_count else ""
 
         _, label_h = self._measure_text(draw, label_text, label_font)
         _, score_h = self._measure_text(draw, score_text, score_font)
-        _, chart_title_h = self._measure_text(draw, "Ratings", chart_title_font)
-        _, chart_label_h = self._measure_text(draw, "★★★★★", chart_label_font)
+        _, chart_title_h = self._measure_text(draw, "RATINGS", chart_title_font)
 
         star_size = int(dim * 0.048)
         star_gap = max(4, int(dim * 0.009))
 
         pad_y = int(dim * 0.016)
         inner_gap = int(dim * 0.009)
-        section_gap = int(dim * 0.022)
-        header_gap = int(dim * 0.015)
-        chart_gap = int(dim * 0.012)
-        label_gap = int(dim * 0.01)
-        chart_h = max(int(dim * 0.16), int(panel_w * 0.16))
+        section_gap = int(dim * 0.012)
+        header_gap = int(dim * 0.008)
+        chart_gap = int(dim * 0.008)
+        chart_h = max(int(dim * 0.32), int(panel_w * 0.32))
 
         panel_h = pad_y * 2 + label_h + inner_gap + score_h
         if rating:
             panel_h += inner_gap + star_size
         if distribution:
             panel_h += section_gap + 1 + header_gap + chart_title_h + chart_gap + chart_h
-            panel_h += label_gap + chart_label_h
 
         return {
             "label_font": label_font,
             "score_font": score_font,
             "chart_title_font": chart_title_font,
             "chart_count_font": chart_count_font,
-            "chart_label_font": chart_label_font,
             "label_text": label_text,
             "score_text": score_text,
             "count_text": count_text,
             "label_h": label_h,
             "score_h": score_h,
             "chart_title_h": chart_title_h,
-            "chart_label_h": chart_label_h,
             "pad_y": pad_y,
             "inner_gap": inner_gap,
             "section_gap": section_gap,
             "header_gap": header_gap,
             "chart_gap": chart_gap,
-            "label_gap": label_gap,
             "star_size": star_size,
             "star_gap": star_gap,
             "chart_h": chart_h,
