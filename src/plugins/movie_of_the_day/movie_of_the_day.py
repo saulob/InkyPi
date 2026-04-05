@@ -307,12 +307,20 @@ class MovieOfTheDay(BasePlugin):
         title_font = get_font("Jost", int(dim * 0.086), "bold") or ImageFont.load_default()
         year_font = get_font("Jost", int(dim * 0.05)) or ImageFont.load_default()
 
-        title_lines = self._wrap_text(draw, title, text_max_w, title_font, max_lines=2)
+        title_lines = self._wrap_text(draw, title, text_max_w, title_font, max_lines=3)
+        title_line_count = len(title_lines)
         _, header_h = self._measure_text(draw, "Movie of the Day", header_font)
         _, title_text_h = self._measure_text(draw, "Ag", title_font)
         _, year_h = self._measure_text(draw, year, year_font)
         title_line_h = title_text_h + int(dim * 0.006)
         title_block_h = len(title_lines) * title_line_h
+
+        gap_xs = int(dim * 0.006)
+        gap_s = int(dim * 0.010)
+        gap_m = int(dim * 0.026)
+
+        top_content_h = header_h + gap_xs + title_block_h + gap_s + year_h + gap_m
+        available_score_h = max(0, height - margin * 2 - top_content_h)
 
         score_panel_w = text_max_w
         score_metrics = self._get_score_panel_metrics(
@@ -322,15 +330,10 @@ class MovieOfTheDay(BasePlugin):
             distribution,
             dim,
             score_panel_w,
+            available_score_h,
+            title_line_count,
         )
         score_panel_h = score_metrics["panel_h"]
-
-        gap_xs = int(dim * 0.006)
-        gap_s = int(dim * 0.010)
-        gap_m = int(dim * 0.026)
-
-        top_content_h = header_h + gap_xs + title_block_h + gap_s + year_h + gap_m
-        available_score_h = max(0, height - margin * 2 - top_content_h)
         score_panel_h = max(score_panel_h, available_score_h)
         score_metrics["panel_h"] = score_panel_h
 
@@ -401,8 +404,6 @@ class MovieOfTheDay(BasePlugin):
         section_gap = metrics["section_gap"]
         header_gap = metrics["header_gap"]
         chart_gap = metrics["chart_gap"]
-        star_size = metrics["star_size"]
-        star_gap = metrics["star_gap"]
         chart_h = metrics["chart_h"]
         panel_h = metrics["panel_h"]
         score_block_h = metrics["score_block_h"]
@@ -492,7 +493,17 @@ class MovieOfTheDay(BasePlugin):
             fill = LETTERBOXD_BAR_PEAK if count == max_count else LETTERBOXD_BAR
             draw.rectangle([bar_x0, bar_y0, bar_x0 + bar_width - 1, bottom_y], fill=fill)
 
-    def _get_score_panel_metrics(self, draw, rating, vote_count, distribution, dim, panel_w):
+    def _get_score_panel_metrics(
+        self,
+        draw,
+        rating,
+        vote_count,
+        distribution,
+        dim,
+        panel_w,
+        available_score_h,
+        title_line_count,
+    ):
         """Measure score and distribution pieces for vertical layout."""
         label_font = get_font("Jost", int(dim * 0.034)) or ImageFont.load_default()
         score_font = get_font("Jost", int(dim * 0.095), "bold") or ImageFont.load_default()
@@ -509,19 +520,39 @@ class MovieOfTheDay(BasePlugin):
 
         star_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(dim * 0.053))
         _, star_h = self._measure_text(draw, "★★★★★", star_font)
-        star_size = star_h
-        star_gap = 0
 
         pad_y = int(dim * 0.016)
         inner_gap = int(dim * 0.009)
         section_gap = int(dim * 0.012)
         header_gap = int(dim * 0.008)
         chart_gap = int(dim * 0.008)
-        chart_h = max(int(dim * 0.32), int(panel_w * 0.32))
+        base_chart_h = max(int(dim * 0.32), int(panel_w * 0.32))
+
+        title_line_scale = 1.0
+        if title_line_count == 2:
+            title_line_scale = 0.84
+        elif title_line_count >= 3:
+            title_line_scale = 0.72
+
+        chart_h = int(base_chart_h * title_line_scale)
 
         score_block_h = pad_y + label_h + inner_gap + score_h
         if rating:
-            score_block_h += inner_gap + star_size
+            score_block_h += inner_gap + star_h
+
+        if available_score_h > 0:
+            max_chart_h = max(
+                0,
+                available_score_h
+                - score_block_h
+                - section_gap
+                - chart_title_h
+                - header_gap
+                - 1
+                - chart_gap,
+            )
+            if max_chart_h > 0:
+                chart_h = min(chart_h, max_chart_h)
 
         chart_block_h = 0
         if distribution:
@@ -547,8 +578,6 @@ class MovieOfTheDay(BasePlugin):
             "section_gap": section_gap,
             "header_gap": header_gap,
             "chart_gap": chart_gap,
-            "star_size": star_size,
-            "star_gap": star_gap,
             "chart_h": chart_h,
             "score_block_h": score_block_h,
             "chart_block_h": chart_block_h,
