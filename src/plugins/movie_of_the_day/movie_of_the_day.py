@@ -426,7 +426,16 @@ class MovieOfTheDay(BasePlugin):
         if poster_img:
             poster_x = poster_left + (poster_max_w - poster_img.width) // 2
             poster_y = (height - poster_img.height) // 2
-            image.paste(poster_img, (poster_x, poster_y))
+            corner_radius = max(10, int(dim * 0.02))
+            poster_rgba = poster_img.convert("RGBA")
+            rounded_mask = Image.new("L", poster_rgba.size, 0)
+            rounded_draw = ImageDraw.Draw(rounded_mask)
+            rounded_draw.rounded_rectangle(
+                [(0, 0), (poster_rgba.width - 1, poster_rgba.height - 1)],
+                radius=corner_radius,
+                fill=255,
+            )
+            image.paste(poster_rgba, (poster_x, poster_y), rounded_mask)
         else:
             self._draw_poster_placeholder(
                 draw, poster_left, margin, poster_right, height - margin, dim
