@@ -704,7 +704,7 @@ class MovieOfTheDay(BasePlugin):
         _, score_h = self._measure_text(draw, score_text, score_font)
         _, chart_title_h = self._measure_text(draw, labels["ratings"], chart_title_font)
 
-        star_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(dim * 0.0583))
+        star_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(dim * 0.0641))
         _, star_h = self._measure_text(draw, "★★★★★", star_font)
 
         pad_y = int(dim * 0.016)
