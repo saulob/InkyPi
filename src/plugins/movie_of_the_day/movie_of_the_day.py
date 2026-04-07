@@ -21,7 +21,7 @@ TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 
 LETTERBOXD_BG = (20, 24, 28)
 LETTERBOXD_TEXT = (255, 255, 255)
-LETTERBOXD_MUTED = (68, 85, 102)
+LETTERBOXD_MUTED = (131, 153, 175)
 LETTERBOXD_DIVIDER = (68, 85, 102)
 LETTERBOXD_BAR = (85, 102, 119)
 LETTERBOXD_BAR_PEAK = (85, 102, 119)
@@ -150,9 +150,18 @@ class MovieOfTheDay(BasePlugin):
 
         bg_color = self._hex_to_rgb(settings.get("backgroundColor", ""), LETTERBOXD_BG)
         text_color = self._hex_to_rgb(settings.get("textColor", ""), LETTERBOXD_TEXT)
+        secondary_text_color = self._hex_to_rgb(settings.get("secondaryTextColor", ""), LETTERBOXD_MUTED)
         bar_color = self._hex_to_rgb(settings.get("barColor", ""), LETTERBOXD_BAR)
 
-        image = self._compose_layout(movie, dimensions, labels, bg_color=bg_color, text_color=text_color, bar_color=bar_color)
+        image = self._compose_layout(
+            movie,
+            dimensions,
+            labels,
+            bg_color=bg_color,
+            text_color=text_color,
+            secondary_text_color=secondary_text_color,
+            bar_color=bar_color,
+        )
 
         logger.info("=== Movie of the Day Plugin: Image generation complete ===")
         return image
@@ -386,7 +395,16 @@ class MovieOfTheDay(BasePlugin):
             pass
         return default
 
-    def _compose_layout(self, movie, dimensions, labels, bg_color=LETTERBOXD_BG, text_color=LETTERBOXD_TEXT, bar_color=LETTERBOXD_BAR):
+    def _compose_layout(
+        self,
+        movie,
+        dimensions,
+        labels,
+        bg_color=LETTERBOXD_BG,
+        text_color=LETTERBOXD_TEXT,
+        secondary_text_color=LETTERBOXD_MUTED,
+        bar_color=LETTERBOXD_BAR,
+    ):
         """Compose a dark movie card with compact score and ratings sections."""
         width, height = dimensions
         dim = min(width, height)
@@ -491,7 +509,7 @@ class MovieOfTheDay(BasePlugin):
         # Top-align the right column with the poster area.
         cur_y = margin
 
-        draw.text((text_x, cur_y), labels["movie_of_the_day"], font=header_font, fill=LETTERBOXD_MUTED)
+        draw.text((text_x, cur_y), labels["movie_of_the_day"], font=header_font, fill=secondary_text_color)
         cur_y += header_h + gap_xs
 
         for line in title_lines:
@@ -499,7 +517,7 @@ class MovieOfTheDay(BasePlugin):
             cur_y += title_line_h
         cur_y += gap_s
 
-        draw.text((text_x, cur_y), year, font=year_font, fill=LETTERBOXD_MUTED)
+        draw.text((text_x, cur_y), year, font=year_font, fill=secondary_text_color)
         cur_y += year_h + gap_m
 
         self._draw_score_panel(
@@ -514,6 +532,7 @@ class MovieOfTheDay(BasePlugin):
             score_metrics,
             labels,
             text_color=text_color,
+            secondary_text_color=secondary_text_color,
             bar_color=bar_color,
         )
 
@@ -532,6 +551,7 @@ class MovieOfTheDay(BasePlugin):
         metrics=None,
         labels=None,
         text_color=LETTERBOXD_TEXT,
+        secondary_text_color=LETTERBOXD_MUTED,
         bar_color=LETTERBOXD_BAR,
     ):
         """Draw the score area and optional rating histogram."""
@@ -571,7 +591,7 @@ class MovieOfTheDay(BasePlugin):
         inner_x = x
         cur_y = y + pad_y
 
-        draw.text((inner_x, cur_y), label_text, font=label_font, fill=LETTERBOXD_MUTED)
+        draw.text((inner_x, cur_y), label_text, font=label_font, fill=secondary_text_color)
         cur_y += label_h + inner_gap
 
         draw.text((inner_x, cur_y), score_text, font=score_font, fill=text_color)
@@ -598,14 +618,14 @@ class MovieOfTheDay(BasePlugin):
             extra_space = max(0, panel_h - (score_block_h + chart_block_h))
             cur_y += extra_space + section_gap
 
-            draw.text((inner_x, cur_y), labels["ratings"], font=chart_title_font, fill=LETTERBOXD_MUTED)
+            draw.text((inner_x, cur_y), labels["ratings"], font=chart_title_font, fill=secondary_text_color)
             if count_text:
                 count_w, _ = self._measure_text(draw, count_text, chart_count_font)
                 draw.text(
                     (inner_x + panel_w - count_w, cur_y),
                     count_text,
                     font=chart_count_font,
-                    fill=LETTERBOXD_MUTED,
+                    fill=secondary_text_color,
                 )
 
             cur_y += chart_title_h + header_gap
