@@ -19,6 +19,21 @@
 	</select>
 </div>
 
+<div class="form-group">
+	<div class="form-group">
+		<label for="backgroundColor" class="form-label">Background Color:</label>
+		<input type="color" id="backgroundColor" name="backgroundColor" class="color-picker" value="#14181c"/>
+	</div>
+	<div class="form-group">
+		<label for="textColor" class="form-label">Text Color:</label>
+		<input type="color" id="textColor" name="textColor" class="color-picker" value="#ffffff"/>
+	</div>
+	<div class="form-group">
+		<label for="barColor" class="form-label">Bar Color:</label>
+		<input type="color" id="barColor" name="barColor" class="color-picker" value="#445566"/>
+	</div>
+</div>
+
 <script>
 	document.addEventListener('DOMContentLoaded', () => {
 		const language = document.getElementById('language');
@@ -27,6 +42,15 @@
 			language.value = savedLanguage || 'en';
 			if (!language.querySelector(`option[value="${savedLanguage}"]`)) {
 				language.value = 'en';
+			}
+			if (pluginSettings.backgroundColor) {
+				document.getElementById('backgroundColor').value = pluginSettings.backgroundColor;
+			}
+			if (pluginSettings.textColor) {
+				document.getElementById('textColor').value = pluginSettings.textColor;
+			}
+			if (pluginSettings.barColor) {
+				document.getElementById('barColor').value = pluginSettings.barColor;
 			}
 		} else {
 			language.value = 'en';

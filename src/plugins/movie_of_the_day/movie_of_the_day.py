@@ -20,14 +20,14 @@ TMDB_API_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 
 LETTERBOXD_BG = (20, 24, 28)
-LETTERBOXD_TEXT = (232, 236, 239)
-LETTERBOXD_MUTED = (164, 174, 184)
-LETTERBOXD_DIVIDER = (78, 88, 98)
-LETTERBOXD_BAR = (88, 103, 121)
-LETTERBOXD_BAR_PEAK = (128, 143, 160)
-LETTERBOXD_STAR_FILLED = (235, 239, 242)
-LETTERBOXD_STAR_EMPTY_FILL = (53, 61, 70)
-LETTERBOXD_STAR_EMPTY_OUTLINE = (108, 118, 128)
+LETTERBOXD_TEXT = (255, 255, 255)
+LETTERBOXD_MUTED = (68, 85, 102)
+LETTERBOXD_DIVIDER = (68, 85, 102)
+LETTERBOXD_BAR = (80, 100, 200)
+LETTERBOXD_BAR_PEAK = (80, 100, 200)
+LETTERBOXD_STAR_FILLED = (255, 255, 255)
+LETTERBOXD_STAR_EMPTY_FILL = (20, 25, 80)
+LETTERBOXD_STAR_EMPTY_OUTLINE = (68, 85, 102)
 
 DEFAULT_LANGUAGE = "en"
 
@@ -148,7 +148,11 @@ class MovieOfTheDay(BasePlugin):
 
         labels = self._get_labels(language)
 
-        image = self._compose_layout(movie, dimensions, labels)
+        bg_color = self._hex_to_rgb(settings.get("backgroundColor", ""), LETTERBOXD_BG)
+        text_color = self._hex_to_rgb(settings.get("textColor", ""), LETTERBOXD_TEXT)
+        bar_color = self._hex_to_rgb(settings.get("barColor", ""), LETTERBOXD_BAR)
+
+        image = self._compose_layout(movie, dimensions, labels, bg_color=bg_color, text_color=text_color, bar_color=bar_color)
 
         logger.info("=== Movie of the Day Plugin: Image generation complete ===")
         return image
@@ -371,7 +375,18 @@ class MovieOfTheDay(BasePlugin):
             return f"{value}{thousand_suffix}"
         return str(vote_count)
 
-    def _compose_layout(self, movie, dimensions, labels):
+    @staticmethod
+    def _hex_to_rgb(hex_color, default):
+        """Convert a #rrggbb hex string to an RGB tuple, returning default on failure."""
+        try:
+            h = str(hex_color).lstrip("#")
+            if len(h) == 6:
+                return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+        except (ValueError, AttributeError):
+            pass
+        return default
+
+    def _compose_layout(self, movie, dimensions, labels, bg_color=LETTERBOXD_BG, text_color=LETTERBOXD_TEXT, bar_color=LETTERBOXD_BAR):
         """Compose a dark movie card with compact score and ratings sections."""
         width, height = dimensions
         dim = min(width, height)
@@ -384,7 +399,7 @@ class MovieOfTheDay(BasePlugin):
         poster_path = movie.get("poster_path")
         distribution = self._build_rating_distribution(movie)
 
-        image = Image.new("RGB", (width, height), LETTERBOXD_BG)
+        image = Image.new("RGB", (width, height), bg_color)
         draw = ImageDraw.Draw(image)
 
         margin = max(14, int(dim * 0.038))
@@ -471,7 +486,7 @@ class MovieOfTheDay(BasePlugin):
         cur_y += header_h + gap_xs
 
         for line in title_lines:
-            draw.text((text_x, cur_y), line, font=title_font, fill=LETTERBOXD_TEXT)
+            draw.text((text_x, cur_y), line, font=title_font, fill=text_color)
             cur_y += title_line_h
         cur_y += gap_s
 
@@ -489,6 +504,8 @@ class MovieOfTheDay(BasePlugin):
             dim,
             score_metrics,
             labels,
+            text_color=text_color,
+            bar_color=bar_color,
         )
 
         return image
@@ -505,6 +522,8 @@ class MovieOfTheDay(BasePlugin):
         dim,
         metrics=None,
         labels=None,
+        text_color=LETTERBOXD_TEXT,
+        bar_color=LETTERBOXD_BAR,
     ):
         """Draw the score area and optional rating histogram."""
         labels = labels or TRANSLATIONS[DEFAULT_LANGUAGE]
@@ -546,7 +565,7 @@ class MovieOfTheDay(BasePlugin):
         draw.text((inner_x, cur_y), label_text, font=label_font, fill=LETTERBOXD_MUTED)
         cur_y += label_h + inner_gap
 
-        draw.text((inner_x, cur_y), score_text, font=score_font, fill=LETTERBOXD_TEXT)
+        draw.text((inner_x, cur_y), score_text, font=score_font, fill=text_color)
 
         if rating:
             star_font = metrics["star_font"]
@@ -595,9 +614,10 @@ class MovieOfTheDay(BasePlugin):
                 chart_h,
                 distribution,
                 dim,
+                bar_color=bar_color,
             )
 
-    def _draw_rating_histogram(self, draw, x, y, width, height, distribution, dim):
+    def _draw_rating_histogram(self, draw, x, y, width, height, distribution, dim, bar_color=LETTERBOXD_BAR):
         """Draw a compact 5-star histogram with stronger bar presence."""
         if not distribution:
             return
@@ -621,8 +641,7 @@ class MovieOfTheDay(BasePlugin):
             bar_height = min(drawable_h, bar_height)
             bar_x0 = start_x + index * (bar_width + bar_gap)
             bar_y0 = bottom_y - bar_height
-            fill = LETTERBOXD_BAR_PEAK if count == max_count else LETTERBOXD_BAR
-            draw.rectangle([bar_x0, bar_y0, bar_x0 + bar_width - 1, bottom_y], fill=fill)
+            draw.rectangle([bar_x0, bar_y0, bar_x0 + bar_width - 1, bottom_y], fill=bar_color)
 
     def _get_score_panel_metrics(
         self,
