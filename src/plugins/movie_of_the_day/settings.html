@@ -38,6 +38,51 @@
 	</div>
 </div>
 
+
+<div style="margin-top:24px; padding:14px; border-left:3px solid #ff6b35; background-color:rgba(255, 107, 53, 0.08); border-radius:3px;">
+	<p style="margin:0 0 10px 0; font-weight:600; color:var(--text-primary);">⚠️ API Key Required</p>
+	<p style="margin:0 0 10px 0; color:var(--text-secondary); font-size:0.95em; line-height:1.5;">
+		This plugin requires a free API key from <strong>The Movie Database (TMDB)</strong>.
+	</p>
+	<div style="margin:12px 0; padding:12px; background-color:rgba(0, 0, 0, 0.08); border-radius:4px; font-size:0.9em; line-height:1.5;">
+		<p style="margin:0 0 8px 0;">
+			<strong>1. Get your free API key:</strong><br/>
+			<a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer" class="movie-of-the-day-info-link">→ The Movie Database API</a>
+		</p>
+		<p style="margin:0;">
+			<strong>2. Register the API key in InkyPi:</strong><br/>
+			<a href="{{ url_for('apikeys.apikeys_page') }}" class="movie-of-the-day-info-link">→ API Keys Management</a>
+		</p>
+	</div>
+	<p style="margin:0; font-size:0.85em; color:var(--text-secondary); font-style:italic;">
+		Use key name: <code style="background-color:rgba(0, 0, 0, 0.12); padding:2px 6px; border-radius:2px;">THE_MOVIE_DB</code>
+	</p>
+</div>
+
+<style>
+	.movie-of-the-day-info-link {
+		color: #0ea5c6;
+		font-weight: 600;
+		text-decoration: underline;
+		text-decoration-thickness: 1px;
+		text-underline-offset: 3px;
+		text-decoration-color: rgba(14, 165, 198, 0.55);
+		transition: color 0.15s ease, text-decoration-color 0.15s ease, opacity 0.15s ease;
+	}
+
+	.movie-of-the-day-info-link:hover {
+		color: #14b8d6;
+		text-decoration-color: currentColor;
+		opacity: 0.92;
+	}
+
+	.movie-of-the-day-info-link:focus-visible {
+		outline: 2px solid rgba(14, 165, 198, 0.35);
+		outline-offset: 2px;
+		border-radius: 2px;
+	}
+</style>
+
 <script>
 	document.addEventListener('DOMContentLoaded', () => {
 		const language = document.getElementById('language');
