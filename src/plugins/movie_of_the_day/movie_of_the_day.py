@@ -6,8 +6,10 @@ For the API key, set `THE_MOVIE_DB={API_KEY}` in your .env file.
 
 import logging
 import math
+import os
 from random import randint
 
+from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 
 from plugins.base_plugin.base_plugin import BasePlugin
@@ -122,11 +124,13 @@ TRANSLATIONS = {
 class MovieOfTheDay(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
+        load_dotenv(override=True)
         template_params["api_key"] = {
             "required": True,
             "service": "TMDB",
             "expected_key": "THE_MOVIE_DB",
         }
+        template_params["api_key_configured"] = bool(os.getenv("THE_MOVIE_DB"))
         template_params["style_settings"] = False
         return template_params
 
