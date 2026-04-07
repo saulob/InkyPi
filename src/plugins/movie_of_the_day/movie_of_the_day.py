@@ -428,9 +428,9 @@ class MovieOfTheDay(BasePlugin):
         text_x = divider_x + gap_after_divider
         text_max_w = width - text_x - margin
 
-        header_font = get_font("Jost", int(dim * 0.042)) or ImageFont.load_default()
+        header_font = get_font("Jost", int(dim * 0.0462)) or ImageFont.load_default()
         title_font = get_font("Jost", int(dim * 0.086), "bold") or ImageFont.load_default()
-        year_font = get_font("Jost", int(dim * 0.05)) or ImageFont.load_default()
+        year_font = get_font("Jost", int(dim * 0.0525)) or ImageFont.load_default()
 
         title_lines = self._wrap_text(draw, title, text_max_w, title_font, max_lines=3)
         title_line_count = len(title_lines)
@@ -639,10 +639,10 @@ class MovieOfTheDay(BasePlugin):
         """Measure score and distribution pieces for vertical layout."""
         labels = labels or TRANSLATIONS[DEFAULT_LANGUAGE]
 
-        label_font = get_font("Jost", int(dim * 0.034)) or ImageFont.load_default()
+        label_font = get_font("Jost", int(dim * 0.0374)) or ImageFont.load_default()
         score_font = get_font("Jost", int(dim * 0.095), "bold") or ImageFont.load_default()
-        chart_title_font = get_font("Jost", int(dim * 0.041), "bold") or ImageFont.load_default()
-        chart_count_font = get_font("Jost", int(dim * 0.034), "bold") or ImageFont.load_default()
+        chart_title_font = get_font("Jost", int(dim * 0.0451), "bold") or ImageFont.load_default()
+        chart_count_font = get_font("Jost", int(dim * 0.0374), "bold") or ImageFont.load_default()
 
         label_text = labels["user_score"]
         score_text = f"{rating:.1f}/10" if rating else "N/A"
@@ -656,7 +656,7 @@ class MovieOfTheDay(BasePlugin):
         _, score_h = self._measure_text(draw, score_text, score_font)
         _, chart_title_h = self._measure_text(draw, labels["ratings"], chart_title_font)
 
-        star_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(dim * 0.053))
+        star_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(dim * 0.0583))
         _, star_h = self._measure_text(draw, "★★★★★", star_font)
 
         pad_y = int(dim * 0.016)
