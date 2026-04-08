@@ -1277,25 +1277,24 @@ class EmojiMood(BasePlugin):
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
-        # Determine selected mode from plugin settings
-        # settings can come from the UI as strings; accept 'mode' or 'Mode' keys
-        mode_value = None
+        # Determine selected mood from plugin settings.
+        selected_mood_value = None
         if isinstance(settings, dict):
-            mode_value = settings.get("mode") or settings.get("Mode")
-        if not mode_value:
-            mode_value = "random"
+            selected_mood_value = settings.get("mood")
+        if not selected_mood_value:
+            selected_mood_value = "random"
 
-        mode_key = str(mode_value).lower()
+        selected_mood_key = str(selected_mood_value).lower()
 
         # Determine behavior setting (default: random)
         behavior_value = "random"
         if isinstance(settings, dict):
             behavior_value = str(settings.get("behavior") or "random").lower()
 
-        # Determine mood using Mode and Behavior
+        # Determine the final mood using Mood and Behavior.
 
-        if mode_key == "random":
-            # Mode is Random, so use Behavior to decide how to select a mood
+        if selected_mood_key == "random":
+            # Random mood uses Behavior to decide how to select a mood.
             if behavior_value == "smart":
                 mood_key = _get_smart_mood()["mood"]
             else:
@@ -1303,8 +1302,8 @@ class EmojiMood(BasePlugin):
                 mood_key = random.choice(list(MOOD_DATA.keys()))
                 # No debug info required
         else:
-            # Mode is set to a specific mood, ignore Behavior and use that mood
-            mood_key = mode_key if mode_key in MOOD_DATA else random.choice(list(MOOD_DATA.keys()))
+            # A fixed mood ignores Behavior and uses the selected mood.
+            mood_key = selected_mood_key if selected_mood_key in MOOD_DATA else random.choice(list(MOOD_DATA.keys()))
 
         mood = MOOD_DATA[mood_key]
 
