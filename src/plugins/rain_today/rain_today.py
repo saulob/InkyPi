@@ -347,7 +347,7 @@ class RainToday(BasePlugin):
         rain_description = locale.get(rain_key, locale["no_rain"])
 
         # Find current hour index in hourly data
-        hour_index = self._find_current_hour_index(hourly, now, tz)
+        hour_index = self._find_current_hour_index(hourly, now)
 
         # Rain probability for current hour
         rain_prob = 0
@@ -512,7 +512,7 @@ class RainToday(BasePlugin):
                 return tz.localize(shifted, is_dst=True)
             except Exception:
                 return naive_dt.replace(tzinfo=tz)
-    def _find_current_hour_index(self, hourly, now, tz):
+    def _find_current_hour_index(self, hourly, now):
         times = hourly.get("time", [])
         current_hour_str = now.strftime("%Y-%m-%dT%H:00")
         for i, t in enumerate(times):
