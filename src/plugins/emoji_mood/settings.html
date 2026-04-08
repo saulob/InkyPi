@@ -63,7 +63,14 @@
                 languageGroup.style.display = isCaptionOn ? '' : 'none';
             }
             if (langEl) {
-                langEl.disabled = !isCaptionOn;
+                // Keep the language select enabled so its value is submitted even when captions
+                // are hidden. The group is visually hidden above; use aria-hidden for assistive
+                // tech instead of disabling the control (disabled fields are not submitted).
+                if (!isCaptionOn) {
+                    langEl.setAttribute('aria-hidden', 'true');
+                } else {
+                    langEl.removeAttribute('aria-hidden');
+                }
             }
         };
 
