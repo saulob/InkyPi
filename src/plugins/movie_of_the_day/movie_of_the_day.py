@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 TMDB_API_BASE = "https://api.themoviedb.org/3"
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 
+TMDB_REQUEST_TIMEOUT = 10  # timeout for TMDB HTTP requests (in seconds)
+
 LETTERBOXD_BG = (20, 24, 28)
 LETTERBOXD_TEXT = (255, 255, 255)
 LETTERBOXD_MUTED = (131, 153, 175)
@@ -187,6 +189,7 @@ class MovieOfTheDay(BasePlugin):
                 "page": random_page,
                 "language": tmdb_language,
             },
+            timeout=TMDB_REQUEST_TIMEOUT,
         )
 
         if response.status_code != 200:
@@ -211,6 +214,7 @@ class MovieOfTheDay(BasePlugin):
         response = session.get(
             f"{TMDB_API_BASE}/movie/{movie_id}",
             params={"api_key": api_key, "language": tmdb_language},
+            timeout=TMDB_REQUEST_TIMEOUT,
         )
         if response.status_code != 200:
             logger.warning(
