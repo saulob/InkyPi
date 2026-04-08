@@ -6,7 +6,13 @@ from plugins.base_plugin.base_plugin import BasePlugin
 
 logger = logging.getLogger(__name__)
 
-TWEMOJI_BASE_URL = "https://cdn.jsdelivr.net/gh/twitter/twemoji@latest/assets/svg"
+# Pin to a specific Twemoji release for reproducible rendering.
+# Using `@latest` can cause snapshots or rendering to change unexpectedly
+# when the upstream assets are updated. Update this tag intentionally
+# when you want to bump Twemoji, or vendor the assets locally for full
+# reproducibility.
+TWEMOJI_RELEASE = "14.0.2"
+TWEMOJI_BASE_URL = f"https://cdn.jsdelivr.net/gh/twitter/twemoji@{TWEMOJI_RELEASE}/assets/svg"
 
 
 def _emoji_to_twemoji_url(emoji):
