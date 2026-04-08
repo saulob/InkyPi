@@ -9,7 +9,7 @@ import math
 import os
 from random import randint
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 from PIL import Image, ImageDraw, ImageFont
 
 from plugins.base_plugin.base_plugin import BasePlugin
@@ -124,13 +124,15 @@ TRANSLATIONS = {
 class MovieOfTheDay(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
-        load_dotenv(override=True)
+        env_values = dotenv_values()
         template_params["api_key"] = {
             "required": True,
             "service": "TMDB",
             "expected_key": "THE_MOVIE_DB",
         }
-        template_params["api_key_configured"] = bool(os.getenv("THE_MOVIE_DB"))
+        template_params["api_key_configured"] = bool(
+            os.getenv("THE_MOVIE_DB") or env_values.get("THE_MOVIE_DB")
+        )
         template_params["style_settings"] = False
         return template_params
 
