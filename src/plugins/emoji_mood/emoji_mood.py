@@ -1,6 +1,7 @@
 import random
 import logging
 from datetime import datetime
+import pytz
 from plugins.base_plugin.base_plugin import BasePlugin
 
 logger = logging.getLogger(__name__)
@@ -16,7 +17,7 @@ def _emoji_to_twemoji_url(emoji):
     return f"{TWEMOJI_BASE_URL}/{codepoints}.svg"
 
 
-def _get_smart_mood():
+def _get_smart_mood(tz):
     """Select a mood based on current time and day of week with weighted probabilities.
     
     Returns a dict with:
@@ -25,7 +26,10 @@ def _get_smart_mood():
     - weekday_name: Monday/Tuesday/etc
     - selected_weight: weight value of chosen mood
     """
-    now = datetime.now()
+    try:
+        now = datetime.now(tz)
+    except Exception:
+        now = datetime.now()
     hour = now.hour
     weekday = now.weekday()  # 0=Monday, 6=Sunday
     
@@ -1292,10 +1296,17 @@ class EmojiMood(BasePlugin):
         selected_mood_key = str(selected_mood_value).lower()
 
         # Determine the final mood key.
+        # Resolve timezone once (used only for the "smart" selection)
+        tz_name = device_config.get_config("timezone") or "UTC"
+        try:
+            tz = pytz.timezone(tz_name)
+        except Exception:
+            tz = pytz.timezone("UTC")
+
         if selected_mood_key == "random":
             mood_key = random.choice(list(MOOD_DATA.keys()))
         elif selected_mood_key == "smart":
-            mood_key = _get_smart_mood()["mood"]
+            mood_key = _get_smart_mood(tz)["mood"]
         else:
             mood_key = selected_mood_key if selected_mood_key in MOOD_DATA else random.choice(list(MOOD_DATA.keys()))
 
