@@ -26,15 +26,6 @@
 </div>
 
 <div class="form-group">
-    <label for="showMovement" class="form-label">Show Movement Indicators:</label>
-    <div class="toggle-container">
-        <input type="checkbox" id="showMovement" name="showMovement" class="toggle-checkbox" value="true" checked
-            onclick="this.value = this.checked ? 'true' : 'false'">
-        <label for="showMovement" class="toggle-label"></label>
-    </div>
-</div>
-
-<div class="form-group">
     <label for="showUpdated" class="form-label">Show Updated Time:</label>
     <div class="toggle-container">
         <input type="checkbox" id="showUpdated" name="showUpdated" class="toggle-checkbox" value="true" checked
@@ -55,10 +46,6 @@
             const showImages = pluginSettings.showImages !== "false";
             document.getElementById('showImages').checked = showImages;
             document.getElementById('showImages').value = showImages ? 'true' : 'false';
-
-            const showMovement = pluginSettings.showMovement !== "false";
-            document.getElementById('showMovement').checked = showMovement;
-            document.getElementById('showMovement').value = showMovement ? 'true' : 'false';
 
             const showUpdated = pluginSettings.showUpdated !== "false";
             document.getElementById('showUpdated').checked = showUpdated;
