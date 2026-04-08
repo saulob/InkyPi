@@ -287,7 +287,7 @@ MOOD_DATA = {
 }
 
 # Caption translations per language. Only captions are translated; debug info remains English.
-# Languages match those used in FlowProgress: de, en, es, fr, id, it, nl, pt
+# Languages supported including Brazilian Portuguese variant: de, en, es, fr, id, it, nl, pt, pt-br
 ENGLISH_CAPTIONS = {k: v["captions"] for k, v in MOOD_DATA.items()}
 
 CAPTION_TRANSLATIONS = {
@@ -1291,27 +1291,15 @@ class EmojiMood(BasePlugin):
 
         selected_mood_key = str(selected_mood_value).lower()
 
-        # Determine behavior setting (default: random)
-        behavior_value = "random"
-        if isinstance(settings, dict):
-            behavior_value = str(settings.get("behavior") or "random").lower()
-
-        # Determine the final mood using Mood and Behavior.
-
+        # Determine the final mood key.
         if selected_mood_key == "random":
-            # Random mood uses Behavior to decide how to select a mood.
-            if behavior_value == "smart":
-                mood_key = _get_smart_mood()["mood"]
-            else:
-                # Random behavior: equal probability for all moods
-                mood_key = random.choice(list(MOOD_DATA.keys()))
-                # No debug info required
+            mood_key = random.choice(list(MOOD_DATA.keys()))
+        elif selected_mood_key == "smart":
+            mood_key = _get_smart_mood()["mood"]
         else:
-            # A fixed mood ignores Behavior and uses the selected mood.
             mood_key = selected_mood_key if selected_mood_key in MOOD_DATA else random.choice(list(MOOD_DATA.keys()))
 
         mood = MOOD_DATA[mood_key]
-
         emoji = random.choice(mood["emojis"])
 
         # Determine selected language (default 'en') and pick a translated caption list for the mood

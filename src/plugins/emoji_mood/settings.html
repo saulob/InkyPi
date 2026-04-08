@@ -1,6 +1,6 @@
 <div style="margin-bottom:14px;">
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; font-size:1em; color:var(--text-primary); font-weight:500; background:var(--bg-secondary); padding:12px 14px; border-left:3px solid var(--border-color); border-radius:2px; line-height:1.4; max-width:100%;">
-        Displays a mood emoji with an optional caption. Choose fixed, random, or smart moods based on time and day
+        Displays a mood emoji with an optional caption. Choose random, smart, or a fixed mood based on time and day
     </div>
 </div>
 
@@ -8,6 +8,7 @@
     <label for="mood" class="form-label">Mood:</label>
     <select id="mood" name="mood" class="form-input">
         <option value="random">Random</option>
+        <option value="smart">Smart (time and day based)</option>
         <option value="adventure">Adventure</option>
         <option value="focus">Focus</option>
         <option value="fun">Fun</option>
@@ -18,14 +19,6 @@
         <option value="sick">Sick</option>
         <option value="stress">Stress</option>
         <option value="weird">Weird</option>
-    </select>
-</div>
-
-<div class="form-group">
-    <label for="behavior" class="form-label">Behavior:</label>
-    <select id="behavior" name="behavior" class="form-input">
-        <option value="random">Random</option>
-        <option value="smart">Smart (time and day based)</option>
     </select>
 </div>
 
@@ -82,10 +75,6 @@
             // Populate mood selection
             const selectedMood = pluginSettings.mood || 'random';
             document.getElementById('mood').value = selectedMood;
-            
-            // Populate behavior selection
-            const selectedBehavior = pluginSettings.behavior || 'random';
-            document.getElementById('behavior').value = selectedBehavior;
 
             // Populate language selection
             const selectedLanguage = pluginSettings.language || 'en';
