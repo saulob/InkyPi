@@ -849,4 +849,4 @@ class MovieOfTheDay(BasePlugin):
     def _measure_text(draw, text, font):
         """Return width and vertical advance for consistent stacked layout."""
         bbox = draw.textbbox((0, 0), text or " ", font=font)
-        return bbox[2] - bbox[0], bbox[3]
+        return bbox[2] - bbox[0], bbox[3] - bbox[1]
