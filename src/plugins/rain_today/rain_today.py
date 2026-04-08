@@ -260,7 +260,7 @@ class RainToday(BasePlugin):
         # Branch by chosen provider and normalize parsed data into the
         # variables used later in the template logic so the rest of the
         # function can remain provider-agnostic.
-        if weather_provider in ("openmeteo", "open-meteo", "open_meteo", "openmeteo"):
+        if weather_provider in ("openmeteo", "open-meteo", "open_meteo"):
             # Open-Meteo (existing behavior)
             weather_data = self._fetch_weather(lat, long, units)
             tz = self._parse_timezone(weather_data, local_tz)
@@ -277,7 +277,7 @@ class RainToday(BasePlugin):
             weather_code = current.get("weather_code", 0)
             provider_type = "open-meteo"
 
-        elif weather_provider in ("openweathermap", "open-weather-map", "open_weather_map", "openweathermap"):
+        elif weather_provider in ("openweathermap", "open-weather-map", "open_weather_map"):
             # OpenWeatherMap – fetch via One Call and adapt fields
             ow_data = self._fetch_openweathermap(lat, long, units, device_config)
             tz = self._parse_timezone(ow_data, local_tz)
