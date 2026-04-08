@@ -225,13 +225,7 @@ class RainToday(BasePlugin):
     # Settings template
     # ------------------------------------------------------------------
     def generate_settings_template(self):
-        template_params = super().generate_settings_template()
-        template_params['api_key'] = {
-            "required": True,
-            "service": "OpenWeatherMap",
-            "expected_key": "OPEN_WEATHER_MAP_SECRET"
-        }
-        return template_params
+        return super().generate_settings_template()
 
     # ------------------------------------------------------------------
     # Main image generation
