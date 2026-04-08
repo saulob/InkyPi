@@ -710,7 +710,14 @@ class MovieOfTheDay(BasePlugin):
         _, score_h = self._measure_text(draw, score_text, score_font)
         _, chart_title_h = self._measure_text(draw, labels["ratings"], chart_title_font)
 
-        star_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", int(dim * 0.0641))
+        star_font_size = int(dim * 0.0641)
+        try:
+            star_font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                star_font_size,
+            )
+        except (OSError, IOError):
+            star_font = get_font("Jost", star_font_size, "bold") or ImageFont.load_default()
         _, star_h = self._measure_text(draw, "★★★★★", star_font)
 
         pad_y = int(dim * 0.016)
