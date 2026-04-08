@@ -480,6 +480,41 @@ class RainToday(BasePlugin):
     # ------------------------------------------------------------------
     # Hourly helpers
     # ------------------------------------------------------------------
+    def _localize_datetime(self, naive_dt, tz):
+        """Localize a naive datetime to the given tz in a DST-safe way.
+
+        - If the datetime already has tzinfo, convert it to `tz`.
+        - Prefer `tz.localize(..., is_dst=None)` for pytz timezones to
+          surface DST issues, and fall back to sensible choices when
+          ambiguous or nonexistent times occur.
+        - For zoneinfo-style tzinfo (no .localize), attach tzinfo.
+        """
+        # If datetime already aware, convert to target tz
+        if naive_dt.tzinfo is not None:
+            try:
+                return naive_dt.astimezone(tz)
+            except Exception:
+                return naive_dt.replace(tzinfo=tz)
+
+        # Try pytz-style localize
+        try:
+            return tz.localize(naive_dt, is_dst=None)
+        except AttributeError:
+            # zoneinfo or other tzinfo without localize
+            return naive_dt.replace(tzinfo=tz)
+        except pytz.exceptions.AmbiguousTimeError:
+            # Ambiguous end-of-DST time: prefer the standard (non-DST)
+            try:
+                return tz.localize(naive_dt, is_dst=False)
+            except Exception:
+                return tz.localize(naive_dt, is_dst=True)
+        except pytz.exceptions.NonExistentTimeError:
+            # Non-existent start-of-DST time: shift forward one hour
+            try:
+                shifted = naive_dt + datetime.timedelta(hours=1)
+                return tz.localize(shifted, is_dst=True)
+            except Exception:
+                return naive_dt.replace(tzinfo=tz)
     def _find_current_hour_index(self, hourly, now, tz):
         times = hourly.get("time", [])
         current_hour_str = now.strftime("%Y-%m-%dT%H:00")
@@ -501,7 +536,9 @@ class RainToday(BasePlugin):
             precip = precips[i] if i < len(precips) and precips[i] is not None else 0.0
 
             if prob <= RAIN_END_PROB_THRESHOLD and precip <= RAIN_END_PRECIP_THRESHOLD:
-                end_dt = datetime.datetime.fromisoformat(times[i]).replace(tzinfo=tz)
+                # Parse the provider-supplied ISO time and localize it safely
+                naive = datetime.datetime.fromisoformat(times[i])
+                end_dt = self._localize_datetime(naive, tz)
                 if time_format == "12h":
                     time_str = end_dt.strftime("%I:%M %p").lstrip("0")
                 else:
