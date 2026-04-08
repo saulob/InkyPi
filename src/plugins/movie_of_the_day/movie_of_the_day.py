@@ -686,9 +686,9 @@ class MovieOfTheDay(BasePlugin):
         distribution,
         dim,
         panel_w,
-        available_score_h,
-        title_line_count,
-        labels,
+        available_score_h=0,
+        title_line_count=1,
+        labels=None,
     ):
         """Measure score and distribution pieces for vertical layout."""
         labels = labels or TRANSLATIONS[DEFAULT_LANGUAGE]
