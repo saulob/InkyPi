@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 TWEMOJI_RELEASE = "14.0.2"
 TWEMOJI_BASE_URL = f"https://cdn.jsdelivr.net/gh/twitter/twemoji@{TWEMOJI_RELEASE}/assets/svg"
 
+# Supported translation language codes. Keep this set in sync with files in translations/.
+SUPPORTED_LANGUAGES = {"en", "pt", "pt-br", "es", "fr", "de", "it", "nl", "id"}
+
 
 def _emoji_to_twemoji_url(emoji):
     """Convert a Unicode emoji string to a Twemoji CDN SVG URL."""
@@ -312,22 +315,41 @@ def _get_translations(language):
     Falls back to English captions if file is missing or invalid.
     """
     lang = str(language or "en").lower()
+
+    # Allow only supported language codes to avoid path traversal attacks
+    if lang not in SUPPORTED_LANGUAGES:
+        lang = "en"
+
     if lang in _translations_cache:
         return _translations_cache[lang]
 
     translations_dir = os.path.join(os.path.dirname(__file__), "translations")
     filename = f"{lang}.json"
     path = os.path.join(translations_dir, filename)
+
+    # Verify resolved path is inside translations_dir to prevent traversal
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        translations_dir_real = os.path.realpath(translations_dir)
+        path_real = os.path.realpath(path)
+        if os.path.commonpath([translations_dir_real, path_real]) != translations_dir_real:
+            logger.debug("EmojiMood: translation path outside translations dir: %s", path_real)
+            _translations_cache[lang] = ENGLISH_CAPTIONS
+            return ENGLISH_CAPTIONS
+    except Exception:
+        logger.exception("EmojiMood: error resolving translation paths for %s", lang)
+        _translations_cache[lang] = ENGLISH_CAPTIONS
+        return ENGLISH_CAPTIONS
+
+    try:
+        with open(path_real, "r", encoding="utf-8") as fh:
             data = json.load(fh)
             if isinstance(data, dict):
                 _translations_cache[lang] = data
                 return data
             else:
-                logger.warning("EmojiMood: translation file %s did not contain a dict", path)
+                logger.warning("EmojiMood: translation file %s did not contain a dict", path_real)
     except FileNotFoundError:
-        logger.debug("EmojiMood: translation file not found: %s", path)
+        logger.debug("EmojiMood: translation file not found: %s", path_real)
     except Exception:
         logger.exception("EmojiMood: failed to load translations for %s", lang)
 
