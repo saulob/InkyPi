@@ -1322,10 +1322,11 @@ class EmojiMood(BasePlugin):
         captions_for_mood = CAPTION_TRANSLATIONS.get(language, CAPTION_TRANSLATIONS["en"]).get(mood_key, MOOD_DATA[mood_key]["captions"])
         caption = random.choice(captions_for_mood)
 
-        # Show caption: 'yes' (show caption) or 'no' (hide caption)
+        # Show caption: strict true/false setting
         show_caption = True
         if isinstance(settings, dict):
-            show_caption = str(settings.get("showCaption") or "yes").lower() != "no"
+            show_caption_value = str(settings.get("showCaption") or "true").lower()
+            show_caption = show_caption_value == "true"
 
         template_params = {
             "emoji": emoji,
