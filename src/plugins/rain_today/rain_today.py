@@ -256,29 +256,97 @@ class RainToday(BasePlugin):
         units = settings.get("units", "imperial")
         language = str(settings.get("language", "en")).strip() or "en"
 
+        # Determine provider and timezone
+        weather_provider = str(settings.get("weatherProvider", "OpenMeteo")).strip().lower()
+
         timezone_name = device_config.get_config("timezone", default="America/New_York")
         time_format = device_config.get_config("time_format", default="12h")
         local_tz = pytz.timezone(timezone_name)
 
-        # Fetch weather data from Open-Meteo
-        weather_data = self._fetch_weather(lat, long, units)
-        tz = self._parse_timezone(weather_data, local_tz)
-        now = datetime.datetime.now(tz)
+        # Branch by chosen provider and normalize parsed data into the
+        # variables used later in the template logic so the rest of the
+        # function can remain provider-agnostic.
+        if weather_provider in ("openmeteo", "open-meteo", "open_meteo", "openmeteo"):
+            # Open-Meteo (existing behavior)
+            weather_data = self._fetch_weather(lat, long, units)
+            tz = self._parse_timezone(weather_data, local_tz)
+            now = datetime.datetime.now(tz)
 
-        # Parse current conditions
-        current = weather_data.get("current", {})
-        hourly = weather_data.get("hourly", {})
+            # Parse current conditions
+            current = weather_data.get("current", {})
+            hourly = weather_data.get("hourly", {})
 
-        temperature_conversion = 273.15 if units == "standard" else 0.0
-        current_temp = round(current.get("temperature_2m", 0) + temperature_conversion)
-        current_humidity = current.get("relative_humidity_2m", 0)
-        current_precip = current.get("precipitation", 0.0)
-        weather_code = current.get("weather_code", 0)
+            temperature_conversion = 273.15 if units == "standard" else 0.0
+            current_temp = round(current.get("temperature_2m", 0) + temperature_conversion)
+            current_humidity = current.get("relative_humidity_2m", 0)
+            current_precip = current.get("precipitation", 0.0)
+            weather_code = current.get("weather_code", 0)
+            provider_type = "open-meteo"
+
+        elif weather_provider in ("openweathermap", "open-weather-map", "open_weather_map", "openweathermap"):
+            # OpenWeatherMap – fetch via One Call and adapt fields
+            ow_data = self._fetch_openweathermap(lat, long, units, device_config)
+            tz = self._parse_timezone(ow_data, local_tz)
+            now = datetime.datetime.now(tz)
+
+            current_ow = ow_data.get("current", {})
+            hourly_list_ow = ow_data.get("hourly", []) or []
+
+            # OpenWeatherMap returns temperatures in the requested units
+            current_temp = round(current_ow.get("temp", 0))
+            current_humidity = current_ow.get("humidity", 0)
+
+            # current precipitation may be in `rain` or `snow` objects
+            current_precip = 0.0
+            if isinstance(current_ow.get("rain"), dict):
+                current_precip += current_ow.get("rain", {}).get("1h", 0.0)
+            if isinstance(current_ow.get("snow"), dict):
+                current_precip += current_ow.get("snow", {}).get("1h", 0.0)
+
+            # Build an hourly dict with the same keys used by the helpers
+            times = []
+            probs = []
+            precips = []
+            for h in hourly_list_ow:
+                dt_epoch = h.get("dt")
+                if dt_epoch is None:
+                    continue
+                dt_local = datetime.datetime.fromtimestamp(dt_epoch, tz=datetime.timezone.utc).astimezone(tz)
+                times.append(dt_local.strftime("%Y-%m-%dT%H:00"))
+                probs.append(int(round(h.get("pop", 0.0) * 100)))
+                ph = 0.0
+                if isinstance(h.get("rain"), dict):
+                    ph += h.get("rain", {}).get("1h", 0.0)
+                if isinstance(h.get("snow"), dict):
+                    ph += h.get("snow", {}).get("1h", 0.0)
+                precips.append(ph)
+
+            hourly = {
+                "time": times,
+                "precipitation_probability": probs,
+                "precipitation": precips,
+            }
+
+            # Use OpenWeatherMap weather id as weather_code (mapped later)
+            try:
+                weather_code = int(current_ow.get("weather", [{}])[0].get("id", 0))
+            except Exception:
+                weather_code = 0
+
+            provider_type = "openweathermap"
+
+        else:
+            raise RuntimeError(f"Unsupported weather provider '{weather_provider}' for rain_today.")
 
         locale = _get_locale(language)
 
-        # Rain description from weather code
-        rain_key = RAIN_CODE_MAP.get(weather_code, "no_rain")
+        # Determine rain description key: Open-Meteo uses WMO codes mapped
+        # via RAIN_CODE_MAP; OpenWeatherMap uses its own ids so map them.
+        if provider_type == "open-meteo":
+            rain_key = RAIN_CODE_MAP.get(weather_code, "no_rain")
+        else:
+            rain_key = self._map_openweathermap_id_to_rain_key(weather_code)
+
         rain_description = locale.get(rain_key, locale["no_rain"])
 
         # Find current hour index in hourly data
@@ -356,6 +424,49 @@ class RainToday(BasePlugin):
             logger.error("Failed to retrieve Open-Meteo data: %s", response.content)
             raise RuntimeError("Failed to retrieve Open-Meteo weather data.")
         return response.json()
+
+    def _fetch_openweathermap(self, lat, long, units, device_config):
+        api_key = device_config.load_env_key("OPEN_WEATHER_MAP_SECRET")
+        if not api_key:
+            logger.error("OpenWeatherMap API key not configured.")
+            raise RuntimeError("OpenWeatherMap API key not configured.")
+
+        url = (
+            f"https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={long}"
+            f"&units={units}&exclude=minutely&appid={api_key}"
+        )
+        response = requests.get(url, timeout=30)
+        if not 200 <= response.status_code < 300:
+            logger.error("Failed to retrieve OpenWeatherMap data: %s", response.content)
+            raise RuntimeError("Failed to retrieve OpenWeatherMap weather data.")
+        return response.json()
+
+    def _map_openweathermap_id_to_rain_key(self, owm_id):
+        """Map OpenWeatherMap weather `id` codes to rain keys used by LOCALE_DATA.
+
+        This is an approximate mapping focused on rain-related categories.
+        """
+        try:
+            wid = int(owm_id)
+        except Exception:
+            return "no_rain"
+
+        if 200 <= wid < 300:
+            return "thunderstorm"
+        if 300 <= wid < 400:
+            return "drizzle"
+        if wid == 511:
+            return "freezing_rain"
+        if 500 <= wid < 505:
+            return "light_rain"
+        if 505 <= wid < 520:
+            return "rain"
+        if 520 <= wid < 532:
+            return "showers"
+        if 532 <= wid < 600:
+            return "heavy_rain"
+
+        return "no_rain"
 
     def _parse_timezone(self, weather_data, fallback_tz):
         tz_name = weather_data.get("timezone")
