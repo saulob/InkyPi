@@ -1,0 +1,71 @@
+<div class="form-group">
+    <label for="mode" class="form-label">Chart Mode:</label>
+    <select id="mode" name="mode" class="form-input">
+        {% for key, mode in chart_modes.items() %}
+        <option value="{{ key }}">{{ mode.label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<div class="form-group">
+    <label for="itemsCount" class="form-label">Number of Items:</label>
+    <select id="itemsCount" name="itemsCount" class="form-input">
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5" selected>5</option>
+    </select>
+</div>
+
+<div class="form-group">
+    <label for="showImages" class="form-label">Show Game Images:</label>
+    <div class="toggle-container">
+        <input type="checkbox" id="showImages" name="showImages" class="toggle-checkbox" value="true" checked
+            onclick="this.value = this.checked ? 'true' : 'false'">
+        <label for="showImages" class="toggle-label"></label>
+    </div>
+</div>
+
+<div class="form-group">
+    <label for="showMovement" class="form-label">Show Movement Indicators:</label>
+    <div class="toggle-container">
+        <input type="checkbox" id="showMovement" name="showMovement" class="toggle-checkbox" value="true" checked
+            onclick="this.value = this.checked ? 'true' : 'false'">
+        <label for="showMovement" class="toggle-label"></label>
+    </div>
+</div>
+
+<div class="form-group">
+    <label for="showUpdated" class="form-label">Show Updated Time:</label>
+    <div class="toggle-container">
+        <input type="checkbox" id="showUpdated" name="showUpdated" class="toggle-checkbox" value="true" checked
+            onclick="this.value = this.checked ? 'true' : 'false'">
+        <label for="showUpdated" class="toggle-label"></label>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let mode = "new_trending";
+        let itemsCount = "5";
+
+        if (loadPluginSettings) {
+            mode = pluginSettings.mode || "new_trending";
+            itemsCount = pluginSettings.itemsCount || "5";
+
+            const showImages = pluginSettings.showImages !== "false";
+            document.getElementById('showImages').checked = showImages;
+            document.getElementById('showImages').value = showImages ? 'true' : 'false';
+
+            const showMovement = pluginSettings.showMovement !== "false";
+            document.getElementById('showMovement').checked = showMovement;
+            document.getElementById('showMovement').value = showMovement ? 'true' : 'false';
+
+            const showUpdated = pluginSettings.showUpdated !== "false";
+            document.getElementById('showUpdated').checked = showUpdated;
+            document.getElementById('showUpdated').value = showUpdated ? 'true' : 'false';
+        }
+
+        document.getElementById('mode').value = mode;
+        document.getElementById('itemsCount').value = itemsCount;
+    });
+</script>

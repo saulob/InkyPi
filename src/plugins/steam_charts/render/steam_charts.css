@@ -1,0 +1,114 @@
+.steam-container {
+    display: flex;
+    flex-direction: column;
+    font-family: "Jost";
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    padding: 1dvh 1dvw;
+}
+
+.header {
+    text-align: center;
+    flex-shrink: 0;
+    padding-bottom: 1dvh;
+}
+
+.title {
+    font-size: min(5.5dvh, 4.5vw);
+    font-weight: bold;
+    letter-spacing: 0.3vw;
+}
+
+.subtitle {
+    font-size: min(3dvh, 2.5vw);
+    opacity: 0.7;
+    padding-top: 0.3dvh;
+}
+
+.games-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    overflow: hidden;
+}
+
+.game-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5vw;
+    padding: 0.8dvh 0.5vw;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.game-row:last-child {
+    border-bottom: none;
+}
+
+.rank {
+    font-size: min(4.5dvh, 3.5vw);
+    font-weight: bold;
+    flex-shrink: 0;
+    width: 6vw;
+    text-align: center;
+}
+
+.game-image {
+    flex-shrink: 0;
+    width: 14vw;
+    height: auto;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.game-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.game-name {
+    flex: 1;
+    font-size: min(3.8dvh, 3vw);
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+.movement {
+    flex-shrink: 0;
+    font-size: min(3dvh, 2.5vw);
+    font-weight: bold;
+    width: 5vw;
+    text-align: center;
+}
+
+.movement.up {
+    color: #2e7d32;
+}
+
+.movement.down {
+    color: #c62828;
+}
+
+.movement.new {
+    color: #1565c0;
+    font-size: min(2.2dvh, 1.8vw);
+}
+
+.movement.stable {
+    opacity: 0.5;
+}
+
+.footer {
+    text-align: center;
+    font-size: min(2.2dvh, 1.8vw);
+    opacity: 0.5;
+    padding-top: 0.5dvh;
+    flex-shrink: 0;
+}

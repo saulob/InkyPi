@@ -1,0 +1,35 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+<div class="steam-container">
+    <div class="header">
+        <div class="title">{{ title }}</div>
+        {% if subtitle %}
+        <div class="subtitle">{{ subtitle }}</div>
+        {% endif %}
+    </div>
+
+    <div class="games-list">
+        {% for game in games %}
+        <div class="game-row">
+            <div class="rank">#{{ game.rank }}</div>
+            {% if show_images and game.image %}
+            <div class="game-image">
+                <img src="{{ game.image }}" alt="{{ game.name }}" onerror="this.parentElement.style.display='none'" />
+            </div>
+            {% endif %}
+            <div class="game-name">{{ game.name }}</div>
+            {% if show_movement and game.movement %}
+            <div class="movement {{ game.movement }}">
+                {% if game.movement == 'up' %}&#x2191;{% elif game.movement == 'down' %}&#x2193;{% elif game.movement == 'new' %}NEW{% elif game.movement == 'stable' %}&#x2192;{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if show_updated %}
+    <div class="footer">Updated {{ updated_time }}</div>
+    {% endif %}
+</div>
+{% endblock %}
