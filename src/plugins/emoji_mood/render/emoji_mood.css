@@ -14,7 +14,7 @@
 
 .title {
     width: 100%;
-    margin: 0;
+    margin: -3dvh 0 0;
     font-size: min(6dvh, 6dvw);
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -46,8 +46,8 @@
 .caption {
     width: 100%;
     margin-top: 0;
-    margin-bottom: 0;
-    font-size: min(6dvh, 6dvw);
+    margin-bottom: -3dvh;
+    font-size: min(7.26dvh, 7.26dvw);
     font-weight: 300;
     letter-spacing: 0.05em;
     flex-shrink: 0;
