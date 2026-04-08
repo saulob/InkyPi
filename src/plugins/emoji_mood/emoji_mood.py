@@ -1325,12 +1325,10 @@ class EmojiMood(BasePlugin):
             primary_color = settings.get("primaryColor") or "#000000"
             secondary_color = settings.get("secondaryColor") or "#ffffff"
 
-        # Caption style: 'normal' (show caption) or 'minimal' (hide caption)
-        caption_style = "normal"
+        # Show caption: 'yes' (show caption) or 'no' (hide caption)
         show_caption = True
         if isinstance(settings, dict):
-            caption_style = str(settings.get("captionStyle") or "normal").lower()
-            show_caption = (caption_style == "normal")
+            show_caption = str(settings.get("showCaption") or "yes").lower() != "no"
 
         template_params = {
             "emoji": emoji,

@@ -30,10 +30,10 @@
 </div>
 
 <div class="form-group">
-    <label for="captionStyle" class="form-label">Caption Style:</label>
-    <select id="captionStyle" name="captionStyle" class="form-input">
-        <option value="normal">Normal</option>
-        <option value="minimal">Minimal</option>
+    <label for="showCaption" class="form-label">Show Caption:</label>
+    <select id="showCaption" name="showCaption" class="form-input">
+        <option value="yes" selected>Yes</option>
+        <option value="no">No</option>
     </select>
 </div>
 
@@ -75,10 +75,10 @@
             document.getElementById('behavior').value = selectedBehavior;
             
             // Populate caption style selection
-            const selectedCaptionStyle = pluginSettings.captionStyle || 'normal';
-            const captionEl = document.getElementById('captionStyle');
+            const selectedShowCaption = pluginSettings.showCaption || 'yes';
+            const captionEl = document.getElementById('showCaption');
             if (captionEl) {
-                captionEl.value = selectedCaptionStyle;
+                captionEl.value = selectedShowCaption;
             }
             
             // Populate language selection
