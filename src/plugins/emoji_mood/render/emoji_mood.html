@@ -1,14 +1,7 @@
 {% extends "plugin.html" %}
 
 {% block content %}
-
-<style>
-    body {
-        background-color: {{ secondaryColor }} !important;
-    }
-</style>
-
-<div class="emoji-mood-root{% if not show_caption %} minimal{% endif %}" style="background-color: {{ secondaryColor }}; color: {{ primaryColor }};">
+<div class="emoji-mood-root{% if not show_caption %} minimal{% endif %}">
     <div class="title">Emoji Mood</div>
 
     <div class="emoji-mood-container">

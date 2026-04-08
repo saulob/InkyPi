@@ -52,17 +52,6 @@
     </select>
 </div>
 
-<div class="form-group">
-    <div class="form-group">
-        <label for="primaryColor" class="form-label">Primary Color (Text):</label>
-        <input type="color" name="primaryColor" class="color-picker" value="#000000"/>
-    </div>
-    <div class="form-group">
-        <label for="secondaryColor" class="form-label">Secondary Color (Background):</label>
-        <input type="color" name="secondaryColor" class="color-picker" value="#ffffff"/>
-    </div>
-</div>
-
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof loadPluginSettings !== 'undefined' && loadPluginSettings && pluginSettings) {
@@ -86,17 +75,6 @@
             const langEl = document.getElementById('language');
             if (langEl) {
                 langEl.value = selectedLanguage;
-            }
-            
-            // Populate primary and secondary colors
-            const primaryInput = document.querySelector('[name=primaryColor]');
-            const secondaryInput = document.querySelector('[name=secondaryColor]');
-            
-            if (primaryInput) {
-                primaryInput.value = pluginSettings.primaryColor || '#000000';
-            }
-            if (secondaryInput) {
-                secondaryInput.value = pluginSettings.secondaryColor || '#ffffff';
             }
         }
     });

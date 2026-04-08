@@ -1272,6 +1272,11 @@ CAPTION_TRANSLATIONS = {
 
 
 class EmojiMood(BasePlugin):
+    def generate_settings_template(self):
+        template_params = super().generate_settings_template()
+        template_params['style_settings'] = True
+        return template_params
+
     def generate_image(self, settings, device_config):
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
@@ -1317,13 +1322,6 @@ class EmojiMood(BasePlugin):
         captions_for_mood = CAPTION_TRANSLATIONS.get(language, CAPTION_TRANSLATIONS["en"]).get(mood_key, MOOD_DATA[mood_key]["captions"])
         caption = random.choice(captions_for_mood)
 
-        # Extract primary (text) and secondary (background) colors from settings
-        primary_color = "#000000"  # default: black
-        secondary_color = "#ffffff"  # default: white
-        if isinstance(settings, dict):
-            primary_color = settings.get("primaryColor") or "#000000"
-            secondary_color = settings.get("secondaryColor") or "#ffffff"
-
         # Show caption: 'yes' (show caption) or 'no' (hide caption)
         show_caption = True
         if isinstance(settings, dict):
@@ -1333,8 +1331,6 @@ class EmojiMood(BasePlugin):
             "emoji": emoji,
             "twemoji_url": _emoji_to_twemoji_url(emoji),
             "caption": caption,
-            "primaryColor": primary_color,
-            "secondaryColor": secondary_color,
             "plugin_settings": settings,
             "show_caption": show_caption,
         }
