@@ -282,6 +282,7 @@ class RainToday(BasePlugin):
             ow_data = self._fetch_openweathermap(lat, long, units, device_config)
             tz = self._parse_timezone(ow_data, local_tz)
             now = datetime.datetime.now(tz)
+            precip_divisor = 25.4 if units == "imperial" else 1.0
 
             current_ow = ow_data.get("current", {})
             hourly_list_ow = ow_data.get("hourly", []) or []
@@ -296,6 +297,7 @@ class RainToday(BasePlugin):
                 current_precip += current_ow.get("rain", {}).get("1h", 0.0)
             if isinstance(current_ow.get("snow"), dict):
                 current_precip += current_ow.get("snow", {}).get("1h", 0.0)
+            current_precip = current_precip / precip_divisor
 
             # Build an hourly dict with the same keys used by the helpers
             times = []
@@ -313,6 +315,7 @@ class RainToday(BasePlugin):
                     ph += h.get("rain", {}).get("1h", 0.0)
                 if isinstance(h.get("snow"), dict):
                     ph += h.get("snow", {}).get("1h", 0.0)
+                ph = ph / precip_divisor
                 precips.append(ph)
 
             hourly = {
