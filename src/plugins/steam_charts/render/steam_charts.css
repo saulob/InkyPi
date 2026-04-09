@@ -1,28 +1,43 @@
+body {
+    padding: 0.85vw !important;
+}
+
+.container {
+    align-items: stretch;
+    justify-content: flex-start;
+}
+
 .steam-container {
+    --image-width: 11.8vw;
+    --image-gap: 1.4vw;
     display: flex;
     flex-direction: column;
     font-family: "Jost";
     height: 100%;
     width: 100%;
     overflow: hidden;
-    padding: 0;
+    padding: 0.2dvh 0.4vw 0;
+    color: currentColor;
 }
 
 .header {
     flex-shrink: 0;
-    padding-bottom: 1dvh;
+    padding-bottom: 0.5dvh;
 }
 
 .title {
-    font-size: min(5dvh, 4vw);
+    font-size: min(6.8dvh, 5.2vw);
     font-weight: bold;
-    letter-spacing: 0.2vw;
+    letter-spacing: 0.18vw;
+    line-height: 0.95;
 }
 
 .subtitle {
-    font-size: min(2.8dvh, 2.2vw);
-    opacity: 0.5;
-    padding-top: 0.2dvh;
+    font-size: min(3.4dvh, 2.6vw);
+    font-weight: 600;
+    opacity: 0.78;
+    padding-top: 0.25dvh;
+    line-height: 1.05;
 }
 
 /* Table layout */
@@ -34,12 +49,13 @@
 }
 
 .charts-table thead th {
-    font-size: min(2.5dvh, 2vw);
+    font-size: min(2.35dvh, 1.9vw);
     font-weight: bold;
     text-align: left;
-    padding-bottom: 1dvh;
-    border-bottom: 2px solid;
-    opacity: 0.6;
+    padding-bottom: 0.55dvh;
+    border-bottom: 2px solid currentColor;
+    opacity: 0.74;
+    white-space: nowrap;
 }
 
 .charts-table th,
@@ -48,7 +64,7 @@
 }
 
 .charts-table tbody tr {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.14);
 }
 
 .charts-table tbody tr:last-child {
@@ -56,33 +72,39 @@
 }
 
 .charts-table td {
-    padding: 1dvh 0;
+    padding: 0.7dvh 0;
     vertical-align: middle;
 }
 
 /* Column widths */
-.col-rank      { width: 5%; text-align: center; }
-.col-name      { width: 37%; }
-.col-change    { width: 18%; text-align: center; }
-.col-sparkline { width: 24%; text-align: center; }
-.col-players   { width: 16%; text-align: right; }
+.col-rank      { width: 4.5%; text-align: center; }
+.col-name      { width: 45.5%; }
+.col-change    { width: 16%; text-align: center; }
+.col-sparkline { width: 20%; text-align: center; }
+.col-players   { width: 14%; text-align: right; }
+
+.charts-table:not(.has-images) .col-name      { width: 50%; }
+.charts-table:not(.has-images) .col-change    { width: 15%; }
+.charts-table:not(.has-images) .col-sparkline { width: 20%; }
+.charts-table:not(.has-images) .col-players   { width: 10.5%; }
 
 .charts-table.has-images thead .col-name {
-    padding-left: 12.8vw;
+    padding-left: calc(var(--image-width) + var(--image-gap));
 }
 
 /* Rank number */
 .rank {
-    font-size: min(3.8dvh, 3vw);
+    font-size: min(4.5dvh, 3.6vw);
     font-weight: bold;
     text-align: center;
+    padding-right: 0.4vw;
 }
 
 /* Game name */
 .game-name {
-    font-size: min(3.2dvh, 2.6vw);
+    font-size: min(4.15dvh, 3.15vw);
     font-weight: bold;
-    padding-right: 1vw;
+    padding-right: 0.8vw;
 }
 
 .game-name-content {
@@ -92,78 +114,70 @@
 }
 
 .game-name-content.has-image {
-    gap: 2.4vw;
+    gap: var(--image-gap);
 }
 
 .game-name-image {
-    flex: 0 0 10.4vw;
-    width: 10.4vw;
-    max-width: 10.4vw;
+    flex: 0 0 var(--image-width);
+    width: var(--image-width);
+    max-width: var(--image-width);
     height: auto;
     display: block;
 }
 
 .game-name-text {
-    display: block;
+    display: -webkit-box;
     min-width: 0;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
+    line-height: 1.05;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 /* 24h change percentage */
 .change {
-    font-size: min(3dvh, 2.4vw);
+    font-size: min(3.75dvh, 2.85vw);
     font-weight: bold;
     text-align: center;
+    color: currentColor;
 }
 
-.change.positive {
-    color: #2e7d32;
-}
-
+.change.positive,
 .change.negative {
-    color: #c62828;
+    color: currentColor;
 }
 
 /* Sparkline graph cell */
 .sparkline-cell {
     text-align: center;
-    padding: 0 1vw;
+    padding: 0 0.5vw;
 }
 
 .sparkline-cell svg {
     width: 100%;
-    height: min(5dvh, 4vw);
+    height: min(6.1dvh, 4.8vw);
+    display: block;
 }
 
 .sparkline-cell svg polyline {
     fill: none;
     stroke: currentColor;
-    stroke-width: 1.5;
+    stroke-width: 2.2;
     stroke-linejoin: round;
     stroke-linecap: round;
 }
 
 .sparkline-cell .no-data {
-    font-size: min(2.5dvh, 2vw);
-    opacity: 0.4;
+    font-size: min(2.8dvh, 2.2vw);
+    opacity: 0.6;
 }
 
 /* Current player count */
 .players {
-    font-size: min(3dvh, 2.4vw);
+    font-size: min(3.7dvh, 2.8vw);
     font-weight: bold;
     text-align: right;
     white-space: nowrap;
-}
-
-/* Footer */
-.footer {
-    text-align: center;
-    font-size: min(2dvh, 1.6vw);
-    opacity: 0.4;
-    padding-top: 0.5dvh;
-    flex-shrink: 0;
+    padding-left: 0.3vw;
 }
