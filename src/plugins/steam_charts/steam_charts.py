@@ -6,6 +6,7 @@ from datetime import datetime
 import logging
 import html
 import re
+import threading
 import time
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ STEAMCHARTS_HOME_URL = "https://steamcharts.com"
 STEAMCHARTS_CHART_URL = "https://steamcharts.com/app/{appid}/chart-data.json"
 STEAM_CAPSULE_URL = "https://cdn.akamai.steamstatic.com/steam/apps/{appid}/capsule_sm_120.jpg"
 STEAMCHARTS_CHART_TIMEOUT = 30
+STEAMCHARTS_REQUESTS_PER_SECOND = 2
 
 LEGACY_MODE_ALIASES = {
     "top_sellers": "most_played",
@@ -38,6 +40,24 @@ CHART_MODES = {
 }
 
 MAX_ITEMS = 5
+
+
+class _RateLimiter:
+    def __init__(self, requests_per_second):
+        self._interval = 1 / requests_per_second
+        self._lock = threading.Lock()
+        self._next_request_at = 0.0
+
+    def wait(self):
+        with self._lock:
+            now = time.monotonic()
+            if now < self._next_request_at:
+                time.sleep(self._next_request_at - now)
+                now = self._next_request_at
+            self._next_request_at = now + self._interval
+
+
+steamcharts_rate_limiter = _RateLimiter(STEAMCHARTS_REQUESTS_PER_SECOND)
 
 
 class SteamCharts(BasePlugin):
@@ -116,6 +136,7 @@ class SteamCharts(BasePlugin):
     def _fetch_homepage(self, failure_message):
         """Return SteamCharts homepage HTML or raise a descriptive runtime error."""
         try:
+            steamcharts_rate_limiter.wait()
             session = get_http_session()
             resp = session.get(STEAMCHARTS_HOME_URL, timeout=15)
             resp.raise_for_status()
@@ -313,6 +334,7 @@ class SteamCharts(BasePlugin):
         """Fetch chart data and compute a sparkline window plus optional 24h change."""
         try:
             url = STEAMCHARTS_CHART_URL.format(appid=app_id)
+            steamcharts_rate_limiter.wait()
             # Use a per-call session to avoid sharing a requests.Session() across threads.
             # Shared sessions from `get_http_session()` are a global singleton and
             # may not be safe to reuse concurrently from multiple worker threads.
