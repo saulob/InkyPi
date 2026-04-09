@@ -228,7 +228,7 @@ body {
 .sparkline-cell svg polyline {
     fill: none;
     stroke: var(--sparkline-color);
-    stroke-width: 2.2;
+    stroke-width: 2.4;
     stroke-linejoin: round;
     stroke-linecap: round;
 }

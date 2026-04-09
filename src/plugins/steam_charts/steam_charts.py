@@ -355,11 +355,12 @@ class SteamCharts(BasePlugin):
 
         counts = [p[1] for p in data_points]
 
-        # 2. Simple Moving Average (window=3) to smooth the line
-        if len(counts) > 3:
+        # 2. Simple Moving Average (window=5) to smooth the line further
+        if len(counts) > 5:
             smoothed = []
             for i in range(len(counts)):
-                window = counts[max(0, i-1):min(len(counts), i+2)]
+                # Window of 5: [i-2, i-1, i, i+1, i+2]
+                window = counts[max(0, i-2):min(len(counts), i+3)]
                 smoothed.append(sum(window) / len(window))
             counts = smoothed
 
@@ -370,10 +371,10 @@ class SteamCharts(BasePlugin):
             y = height / 2
             return f'<polyline points="0,{y} {width},{y}" />'
 
-        # 4. Normalize vertical range with a small margin (10%) to avoid extreme spikes
-        # This keeps the variation readable but not exaggerated
+        # 4. Normalize vertical range with a larger margin (15%) to avoid extreme spikes
+        # This keeps the variation readable and prevents touching top/bottom
         range_c = max_c - min_c
-        margin = range_c * 0.1
+        margin = range_c * 0.15
         plot_min = min_c - margin
         plot_max = max_c + margin
         plot_range = plot_max - plot_min
@@ -382,7 +383,8 @@ class SteamCharts(BasePlugin):
         for i, c in enumerate(counts):
             x = (i / (len(counts) - 1)) * width
             # Invert Y for SVG (0 is top)
-            y = height - ((c - plot_min) / plot_range) * height
+            # Ensure we stay within [1, height-1] to account for stroke width
+            y = (height - 2) - ((c - plot_min) / plot_range) * (height - 4) + 1
             points.append(f"{x:.1f},{y:.1f}")
 
         return '<polyline points="{}" />'.format(" ".join(points))
