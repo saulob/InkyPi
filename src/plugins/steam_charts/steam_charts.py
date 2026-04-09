@@ -148,6 +148,11 @@ class SteamCharts(BasePlugin):
                 game["image"] = self._get_cached_capsule_image(app_id)
             except Exception as e:
                 logger.warning(f"Failed to cache capsule image for app {app_id}: {e}")
+                # Clear the image field so templates do not leave a remote CDN URL.
+                # This prevents Chromium (used by `take_screenshot`) from
+                # performing uncontrolled network fetches outside our timeouts
+                # and rate limits which can hang or slow rendering.
+                game["image"] = ""
 
     def _fetch_homepage(self, failure_message):
         """Return SteamCharts homepage HTML or raise a descriptive runtime error."""
