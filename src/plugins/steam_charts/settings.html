@@ -19,27 +19,32 @@
 <div class="form-group">
     <label for="showImages" class="form-label">Show Game Images:</label>
     <div class="toggle-container">
+        <input type="hidden" id="showImagesHidden" name="showImages" value="false">
         <input type="checkbox" id="showImages" name="showImages" class="toggle-checkbox" value="true" checked
-            onclick="this.value = this.checked ? 'true' : 'false'">
+            onchange="syncShowImagesToggle(this)">
         <label for="showImages" class="toggle-label"></label>
     </div>
 </div>
 
 <script>
+    function syncShowImagesToggle(toggle) {
+        document.getElementById('showImagesHidden').disabled = toggle.checked;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        const showImagesToggle = document.getElementById('showImages');
         let mode = "new_trending";
         let itemsCount = "5";
+        let showImages = true;
 
         if (loadPluginSettings) {
             mode = pluginSettings.mode || "new_trending";
             itemsCount = pluginSettings.itemsCount || "5";
-
-            const showImages = pluginSettings.showImages !== "false";
-            document.getElementById('showImages').checked = showImages;
-            document.getElementById('showImages').value = showImages ? 'true' : 'false';
-
+            showImages = pluginSettings.showImages !== "false" && pluginSettings.showImages !== false;
         }
 
+        showImagesToggle.checked = showImages;
+        syncShowImagesToggle(showImagesToggle);
         document.getElementById('mode').value = mode;
         document.getElementById('itemsCount').value = itemsCount;
     });
