@@ -1,6 +1,5 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
-from datetime import datetime
 import concurrent.futures
 import logging
 import html
@@ -16,7 +15,7 @@ STEAM_CAPSULE_URL = "https://cdn.akamai.steamstatic.com/steam/apps/{appid}/capsu
 
 CHART_MODES = {
     "new_trending": {
-        "label": "New and Trending",
+        "label": "Trending",
         "source": "steamcharts_trending",
     },
     "top_sellers": {
@@ -43,7 +42,6 @@ class SteamCharts(BasePlugin):
         mode = settings.get("mode", "new_trending")
         items_count = min(int(settings.get("itemsCount", MAX_ITEMS)), MAX_ITEMS)
         show_images = settings.get("showImages", "true") == "true"
-        show_updated = settings.get("showUpdated", "true") == "true"
 
         mode_config = CHART_MODES.get(mode)
         if not mode_config:
@@ -55,15 +53,11 @@ class SteamCharts(BasePlugin):
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
-        updated_time = datetime.now().strftime("%H:%M")
-
         template_params = {
             "title": "STEAM CHARTS",
             "subtitle": mode_config["label"],
             "games": games,
             "show_images": show_images,
-            "show_updated": show_updated,
-            "updated_time": updated_time,
             "plugin_settings": settings,
         }
 

@@ -9,11 +9,10 @@
         {% endif %}
     </div>
 
-    <table class="charts-table">
+    <table class="charts-table{% if show_images %} has-images{% endif %}">
         <thead>
             <tr>
                 <th class="col-rank">#</th>
-                {% if show_images %}<th class="col-image"></th>{% endif %}
                 <th class="col-name">Name</th>
                 <th class="col-change">24-hour Change</th>
                 <th class="col-sparkline">Last 48 Hours</th>
@@ -24,14 +23,14 @@
             {% for game in games %}
             <tr class="game-row">
                 <td class="col-rank rank">{{ game.rank }}</td>
-                {% if show_images %}
-                <td class="col-image game-image">
-                    {% if game.image %}
-                    <img src="{{ game.image }}" alt="{{ game.name }}" onerror="this.style.display='none'" />
-                    {% endif %}
+                <td class="col-name game-name">
+                    <div class="game-name-content{% if show_images %} has-image{% endif %}">
+                        {% if show_images and game.image %}
+                        <img class="game-name-image" src="{{ game.image }}" alt="{{ game.name }}" onerror="this.remove()" />
+                        {% endif %}
+                        <span class="game-name-text">{{ game.name }}</span>
+                    </div>
                 </td>
-                {% endif %}
-                <td class="col-name game-name">{{ game.name }}</td>
                 <td class="col-change change {% if game.change_24h_fmt and game.change_24h_fmt != '--' %}{% if game.change_24h_fmt.startswith('+') %}positive{% elif game.change_24h_fmt.startswith('-') %}negative{% endif %}{% endif %}">
                     {{ game.change_24h_fmt }}
                 </td>
@@ -50,8 +49,6 @@
         </tbody>
     </table>
 
-    {% if show_updated %}
-    <div class="footer">Updated {{ updated_time }}</div>
-    {% endif %}
+
 </div>
 {% endblock %}

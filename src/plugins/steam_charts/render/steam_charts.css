@@ -5,7 +5,7 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    padding: 1.5dvh 2vw;
+    padding: 0;
 }
 
 .header {
@@ -42,6 +42,11 @@
     opacity: 0.6;
 }
 
+.charts-table th,
+.charts-table td {
+    box-sizing: border-box;
+}
+
 .charts-table tbody tr {
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
@@ -57,11 +62,14 @@
 
 /* Column widths */
 .col-rank      { width: 5%; text-align: center; }
-.col-image     { width: 11%; }
-.col-name      { width: 26%; }
+.col-name      { width: 37%; }
 .col-change    { width: 18%; text-align: center; }
 .col-sparkline { width: 24%; text-align: center; }
 .col-players   { width: 16%; text-align: right; }
+
+.charts-table.has-images thead .col-name {
+    padding-left: 12.8vw;
+}
 
 /* Rank number */
 .rank {
@@ -70,26 +78,38 @@
     text-align: center;
 }
 
-/* Game capsule image */
-.game-image {
-    padding-right: 0.5vw;
-}
-
-.game-image img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
 /* Game name */
 .game-name {
     font-size: min(3.2dvh, 2.6vw);
     font-weight: bold;
+    padding-right: 1vw;
+}
+
+.game-name-content {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.game-name-content.has-image {
+    gap: 2.4vw;
+}
+
+.game-name-image {
+    flex: 0 0 10.4vw;
+    width: 10.4vw;
+    max-width: 10.4vw;
+    height: auto;
+    display: block;
+}
+
+.game-name-text {
+    display: block;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.2;
-    padding-right: 1vw;
 }
 
 /* 24h change percentage */

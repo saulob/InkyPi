@@ -25,15 +25,6 @@
     </div>
 </div>
 
-<div class="form-group">
-    <label for="showUpdated" class="form-label">Show Updated Time:</label>
-    <div class="toggle-container">
-        <input type="checkbox" id="showUpdated" name="showUpdated" class="toggle-checkbox" value="true" checked
-            onclick="this.value = this.checked ? 'true' : 'false'">
-        <label for="showUpdated" class="toggle-label"></label>
-    </div>
-</div>
-
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         let mode = "new_trending";
@@ -47,9 +38,6 @@
             document.getElementById('showImages').checked = showImages;
             document.getElementById('showImages').value = showImages ? 'true' : 'false';
 
-            const showUpdated = pluginSettings.showUpdated !== "false";
-            document.getElementById('showUpdated').checked = showUpdated;
-            document.getElementById('showUpdated').value = showUpdated ? 'true' : 'false';
         }
 
         document.getElementById('mode').value = mode;
