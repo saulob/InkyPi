@@ -13,7 +13,7 @@ body {
 }
 
 .steam-container {
-    --image-width: 11vw;
+    --image-width: 15vw;
     --image-gap: 1vw;
     --primary-text: #e8e8e8;
     --secondary-text: #a8a8a8;
