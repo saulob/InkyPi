@@ -153,6 +153,22 @@ body {
     max-width: var(--image-width);
     height: auto;
     display: block;
+    border-radius: 2px;
+}
+
+.game-name-placeholder {
+    flex: 0 0 var(--image-width);
+    width: var(--image-width);
+    /* keep same aspect ratio as Steam capsule images (120x45 ≈ 8:3) */
+    aspect-ratio: 8 / 3;
+    background: #2a2a2a;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555555;
+    font-size: min(3.6dvh, 2.6vw);
+    font-weight: 400;
 }
 
 .game-name-text {

@@ -22,8 +22,9 @@
                 <td class="col-rank rank">{{ game.rank }}</td>
                 <td class="col-name game-name">
                     <div class="game-name-content{% if show_images %} has-image{% endif %}">
-                        {% if show_images and game.image %}
-                        <img class="game-name-image" src="{{ game.image }}" alt="{{ game.name }}" onerror="this.remove()" />
+                        {% if show_images %}
+                        <img class="game-name-image" src="{{ game.image }}" alt="{{ game.name }}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+                        <div class="game-name-placeholder" style="display:none;">?</div>
                         {% endif %}
                         <span class="game-name-text">{{ game.name }}</span>
                     </div>
