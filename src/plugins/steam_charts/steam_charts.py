@@ -390,8 +390,11 @@ class SteamCharts(BasePlugin):
         if not data:
             return {}
 
-        now_ms = time.time() * 1000
-        cutoff_window_ms = now_ms - sparkline_hours * 3600 * 1000
+        # Anchor calculations to the newest datapoint timestamp instead of wall-clock
+        # time. SteamCharts data timestamps can lag behind wall-clock time which
+        # would skew the sparkline window and 24h comparison.
+        latest_ts = data[-1][0]
+        cutoff_window_ms = latest_ts - sparkline_hours * 3600 * 1000
 
         recent_window = [p for p in data if p[0] >= cutoff_window_ms]
 
@@ -399,7 +402,7 @@ class SteamCharts(BasePlugin):
 
         change_24h = None
         if include_change and len(data) >= 2:
-            cutoff_24h_ms = now_ms - 24 * 3600 * 1000
+            cutoff_24h_ms = latest_ts - 24 * 3600 * 1000
             target_24h = min(data, key=lambda p: abs(p[0] - cutoff_24h_ms))
             if target_24h[1] > 0:
                 change_24h = ((current_players - target_24h[1]) / target_24h[1]) * 100
