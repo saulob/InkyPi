@@ -39,7 +39,7 @@ body {
 }
 
 .title {
-    font-size: min(6.2dvh, 4.9vw);
+    font-size: min(7.5dvh, 5.8vw);
     font-weight: 700;
     letter-spacing: 0.08vw;
     line-height: 0.96;
@@ -47,7 +47,7 @@ body {
 }
 
 .subtitle {
-    font-size: min(3.1dvh, 2.35vw);
+    font-size: min(3.8dvh, 2.9vw);
     font-weight: 400;
     color: var(--secondary-text);
     padding-top: 0.2dvh;
@@ -63,7 +63,7 @@ body {
 }
 
 .charts-table thead th {
-    font-size: min(2.15dvh, 1.72vw);
+    font-size: min(2.7dvh, 2.1vw);
     font-weight: 500;
     text-align: left;
     padding-bottom: 0.42dvh;
@@ -108,7 +108,7 @@ body {
 
 /* Rank number */
 .rank {
-    font-size: min(3.65dvh, 2.85vw);
+    font-size: min(4.4dvh, 3.4vw);
     font-weight: 700;
     text-align: center;
     color: #191919;
@@ -117,7 +117,7 @@ body {
 
 /* Game name */
 .game-name {
-    font-size: min(3.78dvh, 2.95vw);
+    font-size: min(4.5dvh, 3.45vw);
     font-weight: 500;
     padding-right: 0.55vw;
     color: var(--primary-text);
@@ -154,15 +154,18 @@ body {
 
 /* 24h change percentage */
 .change {
-    font-size: min(3.25dvh, 2.48vw);
+    font-size: min(3.9dvh, 3vw);
     font-weight: 500;
     text-align: center;
     color: #474747;
 }
 
-.change.positive,
+.change.positive {
+    color: #2e7d32;
+}
+
 .change.negative {
-    color: #474747;
+    color: #c62828;
 }
 
 /* Sparkline graph cell */
@@ -192,7 +195,7 @@ body {
 
 /* Current player count */
 .players {
-    font-size: min(3.18dvh, 2.42vw);
+    font-size: min(3.9dvh, 3vw);
     font-weight: 500;
     text-align: right;
     color: #4a4a4a;
