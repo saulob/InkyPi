@@ -121,7 +121,7 @@ class SteamCharts(BasePlugin):
             return resp.text
         except Exception as e:
             logger.error(f"Failed to fetch SteamCharts homepage: {e}")
-            raise RuntimeError(failure_message)
+            raise RuntimeError(f"{failure_message}: {e}") from e
 
     @staticmethod
     def _extract_table_rows(page_html, table_id, missing_message):
