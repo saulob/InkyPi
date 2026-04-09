@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 STEAMCHARTS_HOME_URL = "https://steamcharts.com"
 STEAMCHARTS_CHART_URL = "https://steamcharts.com/app/{appid}/chart-data.json"
 STEAM_CAPSULE_URL = "https://cdn.akamai.steamstatic.com/steam/apps/{appid}/capsule_sm_120.jpg"
+STEAMCHARTS_CHART_TIMEOUT = 30
 
 LEGACY_MODE_ALIASES = {
     "top_sellers": "most_played",
@@ -330,7 +331,7 @@ class SteamCharts(BasePlugin):
                 )
                 session.mount('http://', adapter)
                 session.mount('https://', adapter)
-                resp = session.get(url, timeout=8)
+                resp = session.get(url, timeout=STEAMCHARTS_CHART_TIMEOUT)
                 resp.raise_for_status()
                 data = resp.json()
         except Exception as e:
