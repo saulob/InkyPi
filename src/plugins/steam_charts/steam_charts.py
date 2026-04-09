@@ -47,7 +47,12 @@ class SteamCharts(BasePlugin):
     def generate_image(self, settings, device_config):
         mode = settings.get("mode", "new_trending")
         mode = LEGACY_MODE_ALIASES.get(mode, mode)
-        items_count = min(int(settings.get("itemsCount", MAX_ITEMS)), MAX_ITEMS)
+        raw_items_count = settings.get("itemsCount", MAX_ITEMS)
+        try:
+            items_count = int(raw_items_count)
+        except (TypeError, ValueError):
+            items_count = MAX_ITEMS
+        items_count = max(1, min(items_count, MAX_ITEMS))
         show_images = str(settings.get("showImages", "true")).lower() == "true"
 
         mode_config = CHART_MODES.get(mode)
