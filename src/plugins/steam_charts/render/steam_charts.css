@@ -1,6 +1,6 @@
 body {
     margin: 0 !important;
-    padding: 0.72vw !important;
+    padding: 0.5vw !important;
     background: #141414 !important;
     background-image: none !important;
     color: #f0f0f0 !important;
@@ -13,59 +13,59 @@ body {
 }
 
 .steam-container {
-    --image-width: 12vw;
-    --image-gap: 1.15vw;
-    --title-color: #ffffff;
+    --image-width: 11vw;
+    --image-gap: 1vw;
     --primary-text: #e8e8e8;
-    --secondary-text: #a0a0a0;
+    --secondary-text: #a8a8a8;
     --muted-text: #666666;
-    --divider: rgba(255, 255, 255, 0.07);
-    --header-divider: rgba(255, 255, 255, 0.13);
-    --sparkline-color: #9be330;
+    --header-divider: rgba(255, 255, 255, 0.15);
+    --sparkline-color: #88c826;
+    --row-odd: #181818;
+    --row-even: #1d1d1d;
     display: flex;
     flex-direction: column;
     font-family: "Jost";
     height: 100%;
     width: 100%;
     overflow: hidden;
-    padding: 0.15dvh 0.35vw 0;
+    padding: 0.3dvh 0.4vw 0;
     background: #141414;
     color: var(--primary-text);
 }
 
+/* ── Header ─────────────────────────────────────────────── */
 .header {
     flex-shrink: 0;
-    padding-bottom: 0.45dvh;
+    padding-bottom: 0.9dvh;
 }
 
 .title {
-    font-size: min(7.5dvh, 5.8vw);
+    font-size: min(7.5dvh, 5.75vw);
     font-weight: 700;
-    letter-spacing: 0.25vw;
-    line-height: 0.96;
-    color: var(--title-color);
+    letter-spacing: 0.15vw;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* STEAM = light gray, CHARTS = white — SteamCharts logo style */
+.title-steam {
+    color: #888888;
     text-transform: uppercase;
 }
 
-.title-steam {
-    color: #ffffff;
-    font-weight: 700;
-}
-
 .title-charts {
-    color: #9be330;
-    font-weight: 700;
+    color: #ffffff;
+    text-transform: uppercase;
 }
 
-.subtitle {
-    font-size: min(3.8dvh, 2.9vw);
+/* " - Trending" suffix — lighter, not bold, not uppercase */
+.title-mode {
+    color: #707070;
     font-weight: 400;
-    color: var(--secondary-text);
-    padding-top: 0.2dvh;
-    line-height: 1.05;
+    letter-spacing: 0.05vw;
 }
 
-/* Table layout */
+/* ── Table layout ────────────────────────────────────────── */
 .charts-table {
     width: 100%;
     flex: 1;
@@ -73,16 +73,16 @@ body {
     table-layout: fixed;
 }
 
+/* Header row — allow wrapping so long labels don't overlap */
 .charts-table thead th {
-    font-size: min(2.7dvh, 2.1vw);
-    font-weight: 700;
-    text-align: left;
-    padding-bottom: 0.42dvh;
+    font-size: min(2.6dvh, 2vw);
+    font-weight: 500;
+    padding: 0.4dvh 0.25vw 0.5dvh;
     border-bottom: 1px solid var(--header-divider);
-    color: #ffffff;
-    white-space: nowrap;
-    text-transform: uppercase;
-    letter-spacing: 0.05vw;
+    color: var(--secondary-text);
+    white-space: normal;
+    line-height: 1.2;
+    vertical-align: bottom;
 }
 
 .charts-table th,
@@ -90,49 +90,50 @@ body {
     box-sizing: border-box;
 }
 
-.charts-table tbody tr {
-    border-bottom: 1px solid var(--divider);
+/* Zebra striping */
+.charts-table tbody tr:nth-child(odd) {
+    background: var(--row-odd);
 }
 
-.charts-table tbody tr:last-child {
-    border-bottom: none;
+.charts-table tbody tr:nth-child(even) {
+    background: var(--row-even);
 }
 
 .charts-table td {
-    padding: 0.62dvh 0;
+    padding: 0.5dvh 0.2vw;
     vertical-align: middle;
 }
 
-/* Column widths */
-.col-rank      { width: 4.2%; text-align: center; }
-.col-name      { width: 46.3%; }
-.col-change    { width: 15.4%; text-align: center; }
-.col-sparkline { width: 20.2%; text-align: center; }
-.col-players   { width: 13.9%; text-align: right; }
+/* ── Column widths ───────────────────────────────────────── */
+.col-rank      { width: 4%;    text-align: center; }
+.col-name      { width: 42%;   text-align: left; }
+.col-change    { width: 16%;   text-align: center; }
+.col-sparkline { width: 22%;   text-align: center; }
+.col-players   { width: 16%;   text-align: right; }
 
-.charts-table:not(.has-images) .col-name      { width: 50.5%; }
-.charts-table:not(.has-images) .col-change    { width: 15%; }
-.charts-table:not(.has-images) .col-sparkline { width: 20%; }
-.charts-table:not(.has-images) .col-players   { width: 10.3%; }
+.charts-table:not(.has-images) .col-name      { width: 46%;   text-align: left; }
+.charts-table:not(.has-images) .col-change    { width: 15.5%; }
+.charts-table:not(.has-images) .col-sparkline { width: 22%; }
+.charts-table:not(.has-images) .col-players   { width: 12.5%; }
 
 .charts-table.has-images thead .col-name {
     padding-left: calc(var(--image-width) + var(--image-gap));
 }
 
-/* Rank number */
+/* ── Rank number ─────────────────────────────────────────── */
 .rank {
-    font-size: min(4.4dvh, 3.4vw);
+    font-size: min(4dvh, 3.1vw);
     font-weight: 700;
     text-align: center;
-    color: #aaaaaa;
-    padding-right: 0.25vw;
+    color: #777777;
+    padding-right: 0;
 }
 
-/* Game name */
+/* ── Game name ───────────────────────────────────────────── */
 .game-name {
-    font-size: min(4.5dvh, 3.45vw);
+    font-size: min(4.3dvh, 3.3vw);
     font-weight: 500;
-    padding-right: 0.55vw;
+    padding-right: 0.4vw;
     color: var(--primary-text);
 }
 
@@ -159,56 +160,56 @@ body {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.08;
+    line-height: 1.1;
     color: var(--primary-text);
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
 }
 
-/* 24h change percentage */
+/* ── 24h change percentage ───────────────────────────────── */
 .change {
-    font-size: min(3.9dvh, 3vw);
-    font-weight: 600;
+    font-size: min(3.6dvh, 2.75vw);
+    font-weight: 500;
     text-align: center;
     color: var(--secondary-text);
 }
 
 .change.positive {
-    color: #9be330;
+    color: #88c826;
 }
 
 .change.negative {
-    color: #e05c5c;
+    color: #d94f4f;
 }
 
-/* Sparkline graph cell */
+/* ── Sparkline graph ─────────────────────────────────────── */
 .sparkline-cell {
     text-align: center;
-    padding: 0 0.3vw;
+    padding: 0 0.25vw;
 }
 
 .sparkline-cell svg {
     width: 100%;
-    height: min(5.6dvh, 4.35vw);
+    height: min(5dvh, 3.8vw);
     display: block;
 }
 
 .sparkline-cell svg polyline {
     fill: none;
     stroke: var(--sparkline-color);
-    stroke-width: 1.85;
+    stroke-width: 1.6;
     stroke-linejoin: round;
     stroke-linecap: round;
 }
 
 .sparkline-cell .no-data {
-    font-size: min(2.45dvh, 1.95vw);
+    font-size: min(2.2dvh, 1.75vw);
     color: var(--muted-text);
 }
 
-/* Current player count */
+/* ── Current player count ────────────────────────────────── */
 .players {
-    font-size: min(3.9dvh, 3vw);
+    font-size: min(3.6dvh, 2.75vw);
     font-weight: 500;
     text-align: right;
     color: var(--primary-text);

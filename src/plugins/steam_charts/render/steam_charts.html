@@ -3,10 +3,7 @@
 {% block content %}
 <div class="steam-container">
     <div class="header">
-        <div class="title"><span class="title-steam">STEAM</span><span class="title-charts">CHARTS</span></div>
-        {% if subtitle %}
-        <div class="subtitle">{{ subtitle }}</div>
-        {% endif %}
+        <div class="title"><span class="title-steam">STEAM</span><span class="title-charts">CHARTS</span>{% if subtitle %}<span class="title-mode"> - {{ subtitle }}</span>{% endif %}</div>
     </div>
 
     <table class="charts-table{% if show_images %} has-images{% endif %}">
