@@ -315,10 +315,21 @@ class SteamCharts(BasePlugin):
             # Use a per-call session to avoid sharing a requests.Session() across threads.
             # Shared sessions from `get_http_session()` are a global singleton and
             # may not be safe to reuse concurrently from multiple worker threads.
+            # To retain retry and connection-pool characteristics, configure the
+            # per-call session with the same HTTPAdapter settings used by
+            # `get_http_session()` so transient failures are retried.
             with requests.Session() as session:
                 session.headers.update({
                     'User-Agent': 'InkyPi/1.0 (https://github.com/fatihak/InkyPi/)'
                 })
+                adapter = requests.adapters.HTTPAdapter(
+                    pool_connections=10,
+                    pool_maxsize=10,
+                    max_retries=3,
+                    pool_block=False,
+                )
+                session.mount('http://', adapter)
+                session.mount('https://', adapter)
                 resp = session.get(url, timeout=8)
                 resp.raise_for_status()
                 data = resp.json()
