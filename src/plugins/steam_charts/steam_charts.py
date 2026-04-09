@@ -1,6 +1,7 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
 import concurrent.futures
+import requests
 from datetime import datetime
 import logging
 import html
@@ -309,11 +310,17 @@ class SteamCharts(BasePlugin):
     def _fetch_chart_stats(self, app_id, sparkline_hours=48, include_change=True):
         """Fetch chart data and compute a sparkline window plus optional 24h change."""
         try:
-            session = get_http_session()
             url = STEAMCHARTS_CHART_URL.format(appid=app_id)
-            resp = session.get(url, timeout=8)
-            resp.raise_for_status()
-            data = resp.json()
+            # Use a per-call session to avoid sharing a requests.Session() across threads.
+            # Shared sessions from `get_http_session()` are a global singleton and
+            # may not be safe to reuse concurrently from multiple worker threads.
+            with requests.Session() as session:
+                session.headers.update({
+                    'User-Agent': 'InkyPi/1.0 (https://github.com/fatihak/InkyPi/)'
+                })
+                resp = session.get(url, timeout=8)
+                resp.raise_for_status()
+                data = resp.json()
         except Exception as e:
             logger.warning(f"Failed chart data for app {app_id}: {e}")
             return {}
