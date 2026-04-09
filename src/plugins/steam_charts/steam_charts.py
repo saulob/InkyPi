@@ -170,7 +170,7 @@ class SteamCharts(BasePlugin):
             if len(tds_clean) < 4:
                 continue
 
-            name = tds_clean[0]
+            name = html.unescape(tds_clean[0])
             change_fmt = html.unescape(tds_clean[1])
             players_raw = tds_clean[3]
 
@@ -216,7 +216,7 @@ class SteamCharts(BasePlugin):
             if len(tds_clean) < 6:
                 continue
 
-            name = tds_clean[1]
+            name = html.unescape(tds_clean[1])
             try:
                 players_int = int(tds_clean[2].replace(",", ""))
                 players_fmt = self._format_count(players_int)
@@ -265,7 +265,7 @@ class SteamCharts(BasePlugin):
             if len(tds_clean) < 4:
                 continue
 
-            name = tds_clean[0]
+            name = html.unescape(tds_clean[0])
             try:
                 peak_players_int = int(tds_clean[1].replace(",", ""))
                 peak_players_fmt = self._format_count(peak_players_int)
