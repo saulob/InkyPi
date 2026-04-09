@@ -105,16 +105,28 @@ body {
 }
 
 /* ── Column widths ───────────────────────────────────────── */
-.col-rank      { width: 4%;    text-align: center; }
-.col-name      { width: 42%;   text-align: left; }
-.col-change    { width: 16%;   text-align: center; }
-.col-sparkline { width: 22%;   text-align: center; }
-.col-players   { width: 16%;   text-align: right; }
+.col-rank      { width: 4%;  text-align: center; }
+.col-name      { text-align: left; }
+.col-change    { text-align: center; }
+.col-sparkline { text-align: center; }
+.col-players   { text-align: right; }
+.col-peak      { text-align: right; }
+.col-time      { text-align: center; }
 
-.charts-table:not(.has-images) .col-name      { width: 46%;   text-align: left; }
-.charts-table:not(.has-images) .col-change    { width: 15.5%; }
-.charts-table:not(.has-images) .col-sparkline { width: 22%; }
-.charts-table:not(.has-images) .col-players   { width: 12.5%; }
+.charts-table.variant-trending .col-name      { width: 42%; }
+.charts-table.variant-trending .col-change    { width: 16%; }
+.charts-table.variant-trending .col-sparkline { width: 22%; }
+.charts-table.variant-trending .col-players   { width: 16%; }
+
+.charts-table.variant-top-games .col-name      { width: 40%; }
+.charts-table.variant-top-games .col-players   { width: 16%; }
+.charts-table.variant-top-games .col-sparkline { width: 22%; }
+.charts-table.variant-top-games .col-peak      { width: 18%; }
+
+.charts-table.variant-top-records .col-name      { width: 40%; }
+.charts-table.variant-top-records .col-peak      { width: 18%; }
+.charts-table.variant-top-records .col-time      { width: 16%; }
+.charts-table.variant-top-records .col-sparkline { width: 22%; }
 
 .charts-table.has-images thead .col-name {
     padding-left: calc(var(--image-width) + var(--image-gap));
@@ -231,4 +243,21 @@ body {
     color: var(--primary-text);
     white-space: nowrap;
     padding-left: 0.2vw;
+}
+
+.peak {
+    font-size: min(3.6dvh, 2.75vw);
+    font-weight: 500;
+    text-align: right;
+    color: var(--primary-text);
+    white-space: nowrap;
+    padding-left: 0.2vw;
+}
+
+.record-time {
+    font-size: min(3.2dvh, 2.45vw);
+    font-weight: 500;
+    text-align: center;
+    color: var(--secondary-text);
+    white-space: nowrap;
 }

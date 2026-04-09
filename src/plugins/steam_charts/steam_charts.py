@@ -1,6 +1,7 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
 import concurrent.futures
+from datetime import datetime
 import logging
 import html
 import re
@@ -9,22 +10,28 @@ import time
 logger = logging.getLogger(__name__)
 
 STEAMCHARTS_HOME_URL = "https://steamcharts.com"
-STEAMCHARTS_TOP_URL = "https://steamcharts.com/top"
 STEAMCHARTS_CHART_URL = "https://steamcharts.com/app/{appid}/chart-data.json"
 STEAM_CAPSULE_URL = "https://cdn.akamai.steamstatic.com/steam/apps/{appid}/capsule_sm_120.jpg"
+
+LEGACY_MODE_ALIASES = {
+    "top_sellers": "most_played",
+}
 
 CHART_MODES = {
     "new_trending": {
         "label": "Trending",
         "source": "steamcharts_trending",
-    },
-    "top_sellers": {
-        "label": "Top Sellers",
-        "source": "steamcharts_top",
+        "table_variant": "trending",
     },
     "most_played": {
         "label": "Most Played",
-        "source": "steamcharts_top",
+        "source": "steamcharts_top_games",
+        "table_variant": "top_games",
+    },
+    "top_records": {
+        "label": "Top Records",
+        "source": "steamcharts_top_records",
+        "table_variant": "top_records",
     },
 }
 
@@ -39,6 +46,7 @@ class SteamCharts(BasePlugin):
 
     def generate_image(self, settings, device_config):
         mode = settings.get("mode", "new_trending")
+        mode = LEGACY_MODE_ALIASES.get(mode, mode)
         items_count = min(int(settings.get("itemsCount", MAX_ITEMS)), MAX_ITEMS)
         show_images = str(settings.get("showImages", "true")).lower() == "true"
 
@@ -55,6 +63,7 @@ class SteamCharts(BasePlugin):
         template_params = {
             "title": "STEAM CHARTS",
             "subtitle": mode_config["label"],
+            "table_variant": mode_config["table_variant"],
             "games": games,
             "show_images": show_images,
             "plugin_settings": settings,
@@ -65,58 +74,100 @@ class SteamCharts(BasePlugin):
         )
 
     def _fetch_games(self, source, count):
-        """Fetch game list and enrich with sparkline data from steamcharts."""
+        """Fetch a homepage section and enrich it with chart data when needed."""
         if source == "steamcharts_trending":
             games = self._scrape_steamcharts_trending(count)
+            chart_data = self._fetch_chart_data_batch(
+                [g["app_id"] for g in games], sparkline_hours=48, include_change=True
+            )
+        elif source == "steamcharts_top_games":
+            games = self._scrape_steamcharts_top_games(count)
+            chart_data = self._fetch_chart_data_batch(
+                [g["app_id"] for g in games], sparkline_hours=30 * 24
+            )
+        elif source == "steamcharts_top_records":
+            games = self._scrape_steamcharts_top_records(count)
+            chart_data = self._fetch_chart_data_batch(
+                [g["app_id"] for g in games], sparkline_hours=48
+            )
         else:
-            games = self._scrape_steamcharts_top(count)
-
-        chart_data = self._fetch_chart_data_batch([g["app_id"] for g in games])
+            raise RuntimeError(f"Unknown chart source: {source}")
 
         for game in games:
             app_id = game["app_id"]
             stats = chart_data.get(app_id, {})
             game["sparkline_svg"] = stats.get("sparkline_svg")
-            if "change_24h_fmt" not in game:
+            if source == "steamcharts_trending" and "change_24h_fmt" not in game:
                 game["change_24h_fmt"] = self._format_change(stats.get("change_24h"))
-            if "current_players_fmt" not in game:
+            if source in {"steamcharts_trending", "steamcharts_top_games"} and "current_players_fmt" not in game:
                 game["current_players_fmt"] = self._format_count(
                     stats.get("current_players")
                 )
 
         return games
 
-    def _scrape_steamcharts_trending(self, count):
-        """Scrape the Trending section from steamcharts.com homepage."""
+    def _fetch_homepage(self, failure_message):
+        """Return SteamCharts homepage HTML or raise a descriptive runtime error."""
         try:
             session = get_http_session()
             resp = session.get(STEAMCHARTS_HOME_URL, timeout=15)
             resp.raise_for_status()
+            return resp.text
         except Exception as e:
-            logger.error(f"Failed to fetch steamcharts trending: {e}")
-            raise RuntimeError("Unable to fetch Steam trending data. Please try again later.")
+            logger.error(f"Failed to fetch SteamCharts homepage: {e}")
+            raise RuntimeError(failure_message)
 
-        trending_block = re.search(r"Trending.*?Top Records", resp.text, re.DOTALL)
-        if not trending_block:
-            raise RuntimeError("Trending section not found on steamcharts.com.")
+    @staticmethod
+    def _extract_table_rows(page_html, table_id, missing_message):
+        """Extract table rows from a specific homepage table id."""
+        table_match = re.search(
+            rf'<table[^>]*id="{re.escape(table_id)}"[^>]*>.*?</table>',
+            page_html,
+            re.DOTALL,
+        )
+        if not table_match:
+            raise RuntimeError(missing_message)
+        return re.findall(r"<tr[^>]*>.*?</tr>", table_match.group(0), re.DOTALL)
 
-        rows = re.findall(r"<tr[^>]*>.*?</tr>", trending_block.group(0), re.DOTALL)
+    @staticmethod
+    def _extract_app_id(row):
+        appid_match = re.search(r"/app/(\d+)", row)
+        if not appid_match:
+            return None
+        return int(appid_match.group(1))
+
+    @staticmethod
+    def _clean_cells(row):
+        tds = re.findall(r"<td[^>]*>(.*?)</td>", row, re.DOTALL)
+        return [
+            re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", td)).strip()
+            for td in tds
+        ]
+
+    def _scrape_steamcharts_trending(self, count):
+        """Scrape the Trending section from steamcharts.com homepage."""
+        homepage_html = self._fetch_homepage(
+            "Unable to fetch Steam trending data. Please try again later."
+        )
+        rows = self._extract_table_rows(
+            homepage_html,
+            "trending-recent",
+            "Trending section not found on steamcharts.com.",
+        )
+
         games = []
         for row in rows:
-            appid_match = re.search(r"/app/(\d+)", row)
-            if not appid_match:
+            app_id = self._extract_app_id(row)
+            if app_id is None:
                 continue
-            app_id = int(appid_match.group(1))
-            tds = re.findall(r"<td[^>]*>(.*?)</td>", row, re.DOTALL)
-            tds_clean = [
-                re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", td)).strip()
-                for td in tds
-            ]
+            tds_clean = self._clean_cells(row)
             if len(tds_clean) < 4:
                 continue
+
             name = tds_clean[0]
             change_fmt = html.unescape(tds_clean[1])
             players_raw = tds_clean[3]
+
             try:
                 players_int = int(players_raw.replace(",", ""))
                 players_fmt = self._format_count(players_int)
@@ -139,30 +190,26 @@ class SteamCharts(BasePlugin):
 
         return games
 
-    def _scrape_steamcharts_top(self, count):
-        """Scrape the top games table from steamcharts.com/top."""
-        try:
-            session = get_http_session()
-            resp = session.get(STEAMCHARTS_TOP_URL, timeout=15)
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(f"Failed to fetch steamcharts top: {e}")
-            raise RuntimeError("Unable to fetch Steam top games. Please try again later.")
+    def _scrape_steamcharts_top_games(self, count):
+        """Scrape the Top Games By Current Players section from the homepage."""
+        homepage_html = self._fetch_homepage(
+            "Unable to fetch Steam top games data. Please try again later."
+        )
+        rows = self._extract_table_rows(
+            homepage_html,
+            "top-games",
+            "Top games section not found on steamcharts.com.",
+        )
 
-        rows = re.findall(r"<tr[^>]*>.*?</tr>", resp.text, re.DOTALL)
         games = []
         for row in rows:
-            appid_match = re.search(r"/app/(\d+)", row)
-            if not appid_match:
+            app_id = self._extract_app_id(row)
+            if app_id is None:
                 continue
-            app_id = int(appid_match.group(1))
-            tds = re.findall(r"<td[^>]*>(.*?)</td>", row, re.DOTALL)
-            tds_clean = [
-                re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", td)).strip()
-                for td in tds
-            ]
-            if len(tds_clean) < 3:
+            tds_clean = self._clean_cells(row)
+            if len(tds_clean) < 6:
                 continue
+
             name = tds_clean[1]
             try:
                 players_int = int(tds_clean[2].replace(",", ""))
@@ -170,12 +217,19 @@ class SteamCharts(BasePlugin):
             except ValueError:
                 players_fmt = "--"
 
+            try:
+                peak_players_int = int(tds_clean[4].replace(",", ""))
+                peak_players_fmt = self._format_count(peak_players_int)
+            except ValueError:
+                peak_players_fmt = "--"
+
             games.append({
                 "rank": len(games) + 1,
                 "app_id": app_id,
                 "name": name,
                 "image": STEAM_CAPSULE_URL.format(appid=app_id),
                 "current_players_fmt": players_fmt,
+                "peak_players_fmt": peak_players_fmt,
             })
             if len(games) >= count:
                 break
@@ -185,12 +239,55 @@ class SteamCharts(BasePlugin):
 
         return games
 
-    def _fetch_chart_data_batch(self, app_ids):
-        """Fetch hourly chart data for multiple games in parallel."""
+    def _scrape_steamcharts_top_records(self, count):
+        """Scrape the Top Records section from the homepage."""
+        homepage_html = self._fetch_homepage(
+            "Unable to fetch Steam top records data. Please try again later."
+        )
+        rows = self._extract_table_rows(
+            homepage_html,
+            "toppeaks",
+            "Top records section not found on steamcharts.com.",
+        )
+
+        games = []
+        for row in rows:
+            app_id = self._extract_app_id(row)
+            if app_id is None:
+                continue
+            tds_clean = self._clean_cells(row)
+            if len(tds_clean) < 4:
+                continue
+
+            name = tds_clean[0]
+            try:
+                peak_players_int = int(tds_clean[1].replace(",", ""))
+                peak_players_fmt = self._format_count(peak_players_int)
+            except ValueError:
+                peak_players_fmt = "--"
+
+            games.append({
+                "rank": len(games) + 1,
+                "app_id": app_id,
+                "name": name,
+                "image": STEAM_CAPSULE_URL.format(appid=app_id),
+                "peak_players_fmt": peak_players_fmt,
+                "peak_time_fmt": self._format_peak_time(tds_clean[2]),
+            })
+            if len(games) >= count:
+                break
+
+        if not games:
+            raise RuntimeError("No top records found on steamcharts.com.")
+
+        return games
+
+    def _fetch_chart_data_batch(self, app_ids, sparkline_hours=48, include_change=False):
+        """Fetch chart data for multiple games in parallel with a mode-specific window."""
         results = {}
 
         def fetch_one(app_id):
-            return app_id, self._fetch_chart_stats(app_id)
+            return app_id, self._fetch_chart_stats(app_id, sparkline_hours, include_change)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = {executor.submit(fetch_one, aid): aid for aid in app_ids}
@@ -204,8 +301,8 @@ class SteamCharts(BasePlugin):
 
         return results
 
-    def _fetch_chart_stats(self, app_id):
-        """Fetch hourly data from steamcharts and compute sparkline + 24h change."""
+    def _fetch_chart_stats(self, app_id, sparkline_hours=48, include_change=True):
+        """Fetch chart data and compute a sparkline window plus optional 24h change."""
         try:
             session = get_http_session()
             url = STEAMCHARTS_CHART_URL.format(appid=app_id)
@@ -220,20 +317,20 @@ class SteamCharts(BasePlugin):
             return {}
 
         now_ms = time.time() * 1000
-        cutoff_48h_ms = now_ms - 48 * 3600 * 1000
-        cutoff_24h_ms = now_ms - 24 * 3600 * 1000
+        cutoff_window_ms = now_ms - sparkline_hours * 3600 * 1000
 
-        recent_48h = [p for p in data if p[0] >= cutoff_48h_ms]
+        recent_window = [p for p in data if p[0] >= cutoff_window_ms]
 
-        current_players = recent_48h[-1][1] if recent_48h else data[-1][1]
+        current_players = recent_window[-1][1] if recent_window else data[-1][1]
 
         change_24h = None
-        if len(data) >= 2:
+        if include_change and len(data) >= 2:
+            cutoff_24h_ms = now_ms - 24 * 3600 * 1000
             target_24h = min(data, key=lambda p: abs(p[0] - cutoff_24h_ms))
             if target_24h[1] > 0:
                 change_24h = ((current_players - target_24h[1]) / target_24h[1]) * 100
 
-        sparkline_svg = self._generate_sparkline_svg(recent_48h)
+        sparkline_svg = self._generate_sparkline_svg(recent_window)
 
         return {
             "current_players": current_players,
@@ -276,3 +373,13 @@ class SteamCharts(BasePlugin):
             return "--"
         sign = "+" if change >= 0 else ""
         return f"{sign}{change:.1f}%"
+
+    @staticmethod
+    def _format_peak_time(raw_value):
+        """Format SteamCharts Top Records timestamps like 'Aug 2024'."""
+        if not raw_value:
+            return "--"
+        try:
+            return datetime.strptime(raw_value, "%Y-%m-%dT%H:%M:%SZ").strftime("%b %Y")
+        except ValueError:
+            return raw_value

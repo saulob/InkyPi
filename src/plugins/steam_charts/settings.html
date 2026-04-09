@@ -39,6 +39,9 @@
 
         if (loadPluginSettings) {
             mode = pluginSettings.mode || "new_trending";
+            if (mode === 'top_sellers') {
+                mode = 'most_played';
+            }
             itemsCount = pluginSettings.itemsCount || "5";
             showImages = pluginSettings.showImages !== "false" && pluginSettings.showImages !== false;
         }
