@@ -1,27 +1,27 @@
 body {
     margin: 0 !important;
     padding: 0.72vw !important;
-    background: #ffffff !important;
+    background: #141414 !important;
     background-image: none !important;
-    color: #181818 !important;
+    color: #f0f0f0 !important;
 }
 
 .container {
     align-items: stretch;
     justify-content: flex-start;
-    background: #ffffff;
+    background: #141414;
 }
 
 .steam-container {
     --image-width: 12vw;
     --image-gap: 1.15vw;
-    --title-color: #111111;
-    --primary-text: #2f2f2f;
-    --secondary-text: #757575;
-    --muted-text: #8b8b8b;
-    --divider: rgba(0, 0, 0, 0.08);
-    --header-divider: rgba(0, 0, 0, 0.12);
-    --sparkline-color: #101010;
+    --title-color: #ffffff;
+    --primary-text: #e8e8e8;
+    --secondary-text: #a0a0a0;
+    --muted-text: #666666;
+    --divider: rgba(255, 255, 255, 0.07);
+    --header-divider: rgba(255, 255, 255, 0.13);
+    --sparkline-color: #9be330;
     display: flex;
     flex-direction: column;
     font-family: "Jost";
@@ -29,7 +29,7 @@ body {
     width: 100%;
     overflow: hidden;
     padding: 0.15dvh 0.35vw 0;
-    background: #ffffff;
+    background: #141414;
     color: var(--primary-text);
 }
 
@@ -41,9 +41,20 @@ body {
 .title {
     font-size: min(7.5dvh, 5.8vw);
     font-weight: 700;
-    letter-spacing: 0.08vw;
+    letter-spacing: 0.25vw;
     line-height: 0.96;
     color: var(--title-color);
+    text-transform: uppercase;
+}
+
+.title-steam {
+    color: #ffffff;
+    font-weight: 700;
+}
+
+.title-charts {
+    color: #9be330;
+    font-weight: 700;
 }
 
 .subtitle {
@@ -64,12 +75,14 @@ body {
 
 .charts-table thead th {
     font-size: min(2.7dvh, 2.1vw);
-    font-weight: 500;
+    font-weight: 700;
     text-align: left;
     padding-bottom: 0.42dvh;
     border-bottom: 1px solid var(--header-divider);
-    color: var(--secondary-text);
+    color: #ffffff;
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.05vw;
 }
 
 .charts-table th,
@@ -111,7 +124,7 @@ body {
     font-size: min(4.4dvh, 3.4vw);
     font-weight: 700;
     text-align: center;
-    color: #191919;
+    color: #aaaaaa;
     padding-right: 0.25vw;
 }
 
@@ -155,17 +168,17 @@ body {
 /* 24h change percentage */
 .change {
     font-size: min(3.9dvh, 3vw);
-    font-weight: 500;
+    font-weight: 600;
     text-align: center;
-    color: #474747;
+    color: var(--secondary-text);
 }
 
 .change.positive {
-    color: #2e7d32;
+    color: #9be330;
 }
 
 .change.negative {
-    color: #c62828;
+    color: #e05c5c;
 }
 
 /* Sparkline graph cell */
@@ -198,7 +211,7 @@ body {
     font-size: min(3.9dvh, 3vw);
     font-weight: 500;
     text-align: right;
-    color: #4a4a4a;
+    color: var(--primary-text);
     white-space: nowrap;
     padding-left: 0.2vw;
 }
