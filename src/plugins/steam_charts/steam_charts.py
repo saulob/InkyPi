@@ -1,6 +1,8 @@
 from plugins.base_plugin.base_plugin import BasePlugin
 from utils.http_client import get_http_session
+import base64
 import concurrent.futures
+from functools import lru_cache
 import requests
 from datetime import datetime
 import logging
@@ -14,6 +16,8 @@ logger = logging.getLogger(__name__)
 STEAMCHARTS_HOME_URL = "https://steamcharts.com"
 STEAMCHARTS_CHART_URL = "https://steamcharts.com/app/{appid}/chart-data.json"
 STEAM_CAPSULE_URL = "https://cdn.akamai.steamstatic.com/steam/apps/{appid}/capsule_sm_120.jpg"
+STEAM_CAPSULE_TIMEOUT = 15
+STEAM_CAPSULE_CACHE_SIZE = 128
 STEAMCHARTS_CHART_TIMEOUT = 30
 STEAMCHARTS_REQUESTS_PER_SECOND = 2
 
@@ -82,6 +86,8 @@ class SteamCharts(BasePlugin):
             raise RuntimeError(f"Unknown chart mode: {mode}")
 
         games = self._fetch_games(mode_config["source"], items_count)
+        if show_images:
+            self._apply_cached_images(games)
 
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
@@ -132,6 +138,16 @@ class SteamCharts(BasePlugin):
                 )
 
         return games
+
+    def _apply_cached_images(self, games):
+        for game in games:
+            app_id = game.get("app_id")
+            if app_id is None:
+                continue
+            try:
+                game["image"] = self._get_cached_capsule_image(app_id)
+            except Exception as e:
+                logger.warning(f"Failed to cache capsule image for app {app_id}: {e}")
 
     def _fetch_homepage(self, failure_message):
         """Return SteamCharts homepage HTML or raise a descriptive runtime error."""
@@ -329,6 +345,17 @@ class SteamCharts(BasePlugin):
                     results[aid] = {}
 
         return results
+
+    @staticmethod
+    @lru_cache(maxsize=STEAM_CAPSULE_CACHE_SIZE)
+    def _get_cached_capsule_image(app_id):
+        session = get_http_session()
+        resp = session.get(
+            STEAM_CAPSULE_URL.format(appid=app_id), timeout=STEAM_CAPSULE_TIMEOUT
+        )
+        resp.raise_for_status()
+        encoded_image = base64.b64encode(resp.content).decode("ascii")
+        return f"data:image/jpeg;base64,{encoded_image}"
 
     def _fetch_chart_stats(self, app_id, sparkline_hours=48, include_change=True):
         """Fetch chart data and compute a sparkline window plus optional 24h change."""
