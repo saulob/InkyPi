@@ -340,21 +340,49 @@ class SteamCharts(BasePlugin):
 
     @staticmethod
     def _generate_sparkline_svg(data_points, width=120, height=30):
-        """Generate inline SVG polyline string from [[timestamp_ms, count]] pairs."""
+        """
+        Generate inline SVG polyline string from [[timestamp_ms, count]] pairs.
+        Includes downsampling, smoothing, and normalization for e-paper.
+        """
         if not data_points or len(data_points) < 2:
             return None
 
+        # 1. Downsample to ~24 points max
+        target_points = 24
+        if len(data_points) > target_points:
+            indices = [int(i * (len(data_points) - 1) / (target_points - 1)) for i in range(target_points)]
+            data_points = [data_points[i] for i in indices]
+
         counts = [p[1] for p in data_points]
+
+        # 2. Simple Moving Average (window=3) to smooth the line
+        if len(counts) > 3:
+            smoothed = []
+            for i in range(len(counts)):
+                window = counts[max(0, i-1):min(len(counts), i+2)]
+                smoothed.append(sum(window) / len(window))
+            counts = smoothed
+
         min_c, max_c = min(counts), max(counts)
 
-        if max_c == min_c:
+        # 3. Handle flat line or very small variation
+        if max_c == min_c or (max_c - min_c) < (max_c * 0.001):
             y = height / 2
             return f'<polyline points="0,{y} {width},{y}" />'
+
+        # 4. Normalize vertical range with a small margin (10%) to avoid extreme spikes
+        # This keeps the variation readable but not exaggerated
+        range_c = max_c - min_c
+        margin = range_c * 0.1
+        plot_min = min_c - margin
+        plot_max = max_c + margin
+        plot_range = plot_max - plot_min
 
         points = []
         for i, c in enumerate(counts):
             x = (i / (len(counts) - 1)) * width
-            y = height - ((c - min_c) / (max_c - min_c)) * (height - 2) - 1
+            # Invert Y for SVG (0 is top)
+            y = height - ((c - plot_min) / plot_range) * height
             points.append(f"{x:.1f},{y:.1f}")
 
         return '<polyline points="{}" />'.format(" ".join(points))
