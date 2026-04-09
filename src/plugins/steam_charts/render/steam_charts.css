@@ -113,20 +113,23 @@ body {
 .col-peak      { text-align: right; }
 .col-time      { text-align: center; }
 
-.charts-table.variant-trending .col-name      { width: 42%; }
-.charts-table.variant-trending .col-change    { width: 16%; }
-.charts-table.variant-trending .col-sparkline { width: 22%; }
-.charts-table.variant-trending .col-players   { width: 16%; }
+/* ── Variant: Trending ── */
+.charts-table.variant-trending .col-name      { width: 44%; }
+.charts-table.variant-trending .col-change    { width: 14%; text-align: right; padding-right: 2.5vw; }
+.charts-table.variant-trending .col-sparkline { width: 27%; }
+.charts-table.variant-trending .col-players   { width: 11%; text-align: right; padding-left: 2.5vw; }
 
+/* ── Variant: Most Played (Top Games) ── */
 .charts-table.variant-top-games .col-name      { width: 40%; }
-.charts-table.variant-top-games .col-players   { width: 16%; }
-.charts-table.variant-top-games .col-sparkline { width: 22%; }
-.charts-table.variant-top-games .col-peak      { width: 18%; }
+.charts-table.variant-top-games .col-players   { width: 16%; text-align: right; padding-right: 2.5vw; }
+.charts-table.variant-top-games .col-sparkline { width: 28%; }
+.charts-table.variant-top-games .col-peak      { width: 12%; text-align: right; padding-left: 2.5vw; }
 
+/* ── Variant: Top Records ── */
 .charts-table.variant-top-records .col-name      { width: 40%; }
-.charts-table.variant-top-records .col-peak      { width: 18%; }
+.charts-table.variant-top-records .col-peak      { width: 16%; text-align: right; padding-right: 2.5vw; }
 .charts-table.variant-top-records .col-time      { width: 16%; }
-.charts-table.variant-top-records .col-sparkline { width: 22%; }
+.charts-table.variant-top-records .col-sparkline { width: 24%; }
 
 .charts-table.has-images thead .col-name {
     padding-left: calc(var(--image-width) + var(--image-gap));
@@ -213,7 +216,7 @@ body {
 /* ── Sparkline graph ─────────────────────────────────────── */
 .sparkline-cell {
     text-align: center;
-    padding: 0 0.25vw;
+    padding: 0;
 }
 
 .sparkline-cell svg {
