@@ -302,8 +302,9 @@ class SteamCharts(BasePlugin):
                     aid, stats = future.result()
                     results[aid] = stats
                 except Exception as e:
-                    logger.warning(f"Chart data fetch failed for an app: {e}")
-                    results[futures[future]] = {}
+                    aid = futures[future]
+                    logger.warning(f"Chart data fetch failed for app {aid}: {e}")
+                    results[aid] = {}
 
         return results
 
