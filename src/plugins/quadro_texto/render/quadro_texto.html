@@ -1,0 +1,25 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+<div class="quadro-container scheme-{{ color_scheme }}">
+
+    <div class="section top-section">
+        <div class="icon">{{ top_icon }}</div>
+        <div class="text-block">
+            <div class="label">{{ top_label }}</div>
+            <div class="value">{{ top_value }}</div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section bottom-section">
+        <div class="icon">{{ bottom_icon }}</div>
+        <div class="text-block">
+            <div class="label">{{ bottom_label }}</div>
+            <div class="value">{{ bottom_value }}</div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

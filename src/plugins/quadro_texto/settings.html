@@ -1,0 +1,139 @@
+<div class="form-group">
+
+    <div class="form-group">
+        <label for="top_text" class="form-label">Texto superior (rótulo pequeno)</label>
+        <input type="text" id="top_text" name="top_text" placeholder="Para contar" class="form-input">
+    </div>
+
+    <div class="form-group">
+        <label for="main_text" class="form-label">Texto principal (destaque grande)</label>
+        <input type="text" id="main_text" name="main_text" placeholder="2h extras" class="form-input">
+    </div>
+
+    <div class="form-group">
+        <label for="bottom_text" class="form-label">Texto inferior (rótulo pequeno)</label>
+        <input type="text" id="bottom_text" name="bottom_text" placeholder="Você sai às" class="form-input">
+    </div>
+
+    <div class="form-group">
+        <label for="time_text" class="form-label">Horário / valor inferior</label>
+        <input type="text" id="time_text" name="time_text" placeholder="19h" class="form-input">
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="form-group" style="flex:1; min-width:180px;">
+            <label for="layout" class="form-label">Layout</label>
+            <select id="layout" name="layout" class="form-input">
+                <option value="random">Aleatório</option>
+                <option value="split">Dividido (2 metades)</option>
+                <option value="poster">Poster (centralizado)</option>
+                <option value="minimal">Mínimo (só texto)</option>
+                <option value="badge">Badge / etiqueta</option>
+                <option value="dashboard">Dashboard (painel)</option>
+                <option value="blueprint">Blueprint / técnico</option>
+                <option value="doodle">Doodle / desenhado</option>
+                <option value="framed">Moldura interna</option>
+                <option value="sticker">Sticker / faixa</option>
+                <option value="lateral">Faixa lateral</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:180px;">
+            <label for="theme" class="form-label">Tema de cores</label>
+            <select id="theme" name="theme" class="form-input">
+                <option value="random">Aleatório</option>
+                <option value="black_white">Preto e branco (e-ink)</option>
+                <option value="ink_high_contrast">Alto contraste (fundo preto)</option>
+                <option value="grayscale">Tons de cinza</option>
+                <option value="blue_green">Azul / Verde</option>
+                <option value="ocean">Oceano (azul frio)</option>
+                <option value="purple_orange">Roxo / Laranja</option>
+                <option value="warm_corporate">Corporativo quente</option>
+                <option value="sunset">Sunset (laranja)</option>
+                <option value="pastel">Pastel</option>
+                <option value="forest">Floresta (verde)</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:180px;">
+            <label for="font_pack" class="form-label">Pacote de fontes</label>
+            <select id="font_pack" name="font_pack" class="form-input">
+                <option value="random">Aleatório</option>
+                <option value="bold_clean">Bold Clean (Jost)</option>
+                <option value="geometric">Geometric</option>
+                <option value="rounded">Rounded</option>
+                <option value="condensed">Condensed</option>
+                <option value="editorial">Editorial (Napoli serif)</option>
+                <option value="technical">Technical (DS-Digital)</option>
+                <option value="pixel">Pixel (Dogica)</option>
+            </select>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div class="form-group" style="flex:1; min-width:140px;">
+            <label for="border_style" class="form-label">Estilo de borda</label>
+            <select id="border_style" name="border_style" class="form-input">
+                <option value="random">Aleatório</option>
+                <option value="rounded">Arredondada</option>
+                <option value="double">Dupla</option>
+                <option value="blueprint">Blueprint</option>
+                <option value="none">Sem borda</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:140px;">
+            <label for="icon_style" class="form-label">Estilo de ícones</label>
+            <select id="icon_style" name="icon_style" class="form-input">
+                <option value="random">Aleatório</option>
+                <option value="clean">Limpo / geométrico</option>
+                <option value="doodle">Doodle / sketch</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:140px;">
+            <label for="show_icons" class="form-label">Mostrar ícones</label>
+            <select id="show_icons" name="show_icons" class="form-input">
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:140px;">
+            <label for="show_divider" class="form-label">Mostrar divisória</label>
+            <select id="show_divider" name="show_divider" class="form-input">
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:140px;">
+            <label for="prevent_repeat_last" class="form-label">Evitar repetição</label>
+            <select id="prevent_repeat_last" name="prevent_repeat_last" class="form-input">
+                <option value="true">Sim (recomendado)</option>
+                <option value="false">Não</option>
+            </select>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (loadPluginSettings) {
+            var s = pluginSettings;
+            document.getElementById('top_text').value            = s.top_text    || 'Para contar';
+            document.getElementById('main_text').value           = s.main_text   || '2h extras';
+            document.getElementById('bottom_text').value         = s.bottom_text || 'Você sai às';
+            document.getElementById('time_text').value           = s.time_text   || '19h';
+            document.getElementById('layout').value              = s.layout      || 'random';
+            document.getElementById('theme').value               = s.theme       || 'random';
+            document.getElementById('font_pack').value           = s.font_pack   || 'random';
+            document.getElementById('border_style').value        = s.border_style || 'random';
+            document.getElementById('icon_style').value          = s.icon_style  || 'random';
+            document.getElementById('show_icons').value          = s.show_icons  || 'true';
+            document.getElementById('show_divider').value        = s.show_divider || 'true';
+            document.getElementById('prevent_repeat_last').value = s.prevent_repeat_last || 'true';
+        }
+    });
+</script>

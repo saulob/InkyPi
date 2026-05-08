@@ -1,0 +1,109 @@
+/* ─── Reset ─────────────────────────────────────────────── */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ─── Layout ─────────────────────────────────────────────── */
+.quadro-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    font-family: "Jost";
+    overflow: hidden;
+}
+
+.section {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+    padding: 3dvh 6dvw;
+    gap: 5dvw;
+}
+
+.icon {
+    font-size: min(20dvh, 12dvw);
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.text-block {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.3dvh;
+}
+
+.label {
+    font-size: min(7dvh, 5dvw);
+    font-weight: normal;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
+}
+
+.value {
+    font-size: min(16dvh, 11dvw);
+    font-weight: bold;
+    line-height: 1;
+    letter-spacing: -0.01em;
+}
+
+.divider {
+    height: 2px;
+    width: 88%;
+    margin: 0 auto;
+    flex-shrink: 0;
+}
+
+/* ─── Scheme: light (default, ideal para e-ink) ──────────── */
+.scheme-light {
+    background: #FFFFFF;
+    color: #111111;
+}
+.scheme-light .divider {
+    background: #111111;
+}
+
+/* ─── Scheme: dark ───────────────────────────────────────── */
+.scheme-dark {
+    background: #111111;
+    color: #F5F5F5;
+}
+.scheme-dark .divider {
+    background: #F5F5F5;
+}
+
+/* ─── Scheme: split_blue (azul / verde) ──────────────────── */
+.scheme-split_blue .divider {
+    display: none;
+}
+.scheme-split_blue .top-section {
+    background: #E8F0FE;
+    color: #1a2e6e;
+}
+.scheme-split_blue .bottom-section {
+    background: #E6F4EA;
+    color: #1a4a1a;
+}
+
+/* ─── Scheme: split_purple (roxo / laranja) ──────────────── */
+.scheme-split_purple .divider {
+    background: #3d2a6e;
+    height: 3px;
+}
+.scheme-split_purple {
+    background: #FAF5FF;
+    color: #2d1a5e;
+}
+.scheme-split_purple .top-section {
+    color: #3d2a6e;
+}
+.scheme-split_purple .bottom-section {
+    color: #C45200;
+}
+.scheme-split_purple .value {
+    font-style: italic;
+}
