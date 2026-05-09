@@ -27,6 +27,7 @@ from doodle import (
     get_illustration_border_fn,
     resolve_illustration_style, ILLUSTRATION_STYLES,
 )
+from emoji_utils import choose_random_emoji, draw_emoji
 import state as state_mod
 import dependencies as deps_mod
 
@@ -84,6 +85,12 @@ class QuadroTexto(BasePlugin):
         icon_style    = settings.get("icon_style",  "random")
         illus_style   = settings.get("illustration_style", "random")
         jitter_raw    = settings.get("jitter_strength", "")
+        show_random_emoji = settings.get("show_random_emoji", "true") != "false"
+        emoji_mode = str(settings.get("emoji_mode", "random") or "random").strip().lower()
+        fixed_emoji = settings.get("fixed_emoji", "")
+        emoji_size = str(settings.get("emoji_size", "medium") or "medium").strip().lower()
+        emoji_position = str(settings.get("emoji_position", "random") or "random").strip().lower()
+        prevent_repeat_emoji = settings.get("prevent_repeat_emoji", "true") != "false"
 
         show_border  = settings.get("show_border",   "true") != "false"
         show_icons   = settings.get("show_icons",    "true") != "false"
@@ -187,5 +194,28 @@ class QuadroTexto(BasePlugin):
         except Exception as e:
             logger.error(f"quadro_texto: layout '{layout_key}' failed: {e}", exc_info=True)
             raise RuntimeError(f"Erro ao renderizar layout '{layout_key}': {e}")
+
+        if show_random_emoji and emoji_mode != "none":
+            try:
+                emoji = choose_random_emoji(
+                    plugin_dir=self.get_plugin_dir(),
+                    emoji_mode=emoji_mode,
+                    fixed_emoji=fixed_emoji,
+                    prevent_repeat_emoji=prevent_repeat_emoji,
+                )
+                draw_emoji(
+                    img,
+                    draw,
+                    emoji=emoji,
+                    layout_key=layout_key,
+                    theme=theme,
+                    illustration_style=illus_style,
+                    emoji_size=emoji_size,
+                    emoji_position=emoji_position,
+                    show_icons=show_icons,
+                    show_border=show_border,
+                )
+            except Exception as exc:
+                logger.warning("quadro_texto: emoji rendering disabled for this render: %s", exc)
 
         return img

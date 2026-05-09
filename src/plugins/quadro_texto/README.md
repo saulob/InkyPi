@@ -1,6 +1,6 @@
 # Texto — InkyPi Plugin
 
-Displays visual reminder cards drawn entirely with Pillow. No external APIs, no HTML rendering. Supports 10 layouts × 9 colour themes × 7 font packs with optional hand-drawn / doodle illustration styles.
+Displays visual reminder cards drawn entirely with Pillow. No external APIs, no HTML rendering. Supports multiple layouts, hand-drawn illustration styles, and an optional decorative emoji per render.
 
 ## Dependencies
 
@@ -48,6 +48,7 @@ pip install aggdraw cairosvg drawsvg
 
 # Advanced (optional)
 # pip install sketchify  # install from its repo if desired
+
 ```
 
 ### Checking what is active
@@ -82,6 +83,12 @@ INFO  quadro_texto: all optional dependencies available.
 | `show_icons` | `true` | Show clock / door icons |
 | `show_divider` | `true` | Show divider line between sections |
 | `prevent_repeat_last` | `true` | Anti-repetition shuffle when all values are `random` |
+| `show_random_emoji` | `true` | Show one decorative emoji per render |
+| `emoji_mode` | `random` | `random` / `fixed` / `none` |
+| `fixed_emoji` | `` | Fixed emoji when `emoji_mode=fixed` |
+| `emoji_size` | `medium` | `small` / `medium` / `large` |
+| `emoji_position` | `random` | `random` / `top_right` / `bottom_right` / `bottom_left` / `near_clock` / `near_exit` |
+| `prevent_repeat_emoji` | `true` | Avoid using the same emoji twice in a row |
 
 ## Layouts
 
@@ -97,6 +104,9 @@ INFO  quadro_texto: all optional dependencies available.
 | `framed` | Inner mat frame border around the content |
 | `sticker` | Bold text on solid-colour block with top/bottom accent stripes |
 | `lateral` | Coloured left stripe with dot pattern; text on right |
+| `sketch_note` | Handwritten paper-note look |
+| `marker_board` | Marker-highlight board style |
+| `doodle_card` | Stacked doodle cards with hand arrows |
 | `random` | Picks a layout on every refresh (anti-repeat when combined with other randoms) |
 
 ## Themes
@@ -105,7 +115,7 @@ INFO  quadro_texto: all optional dependencies available.
 
 ## Font packs
 
-`bold_clean` (Jost) · `geometric` · `rounded` · `condensed` · `editorial` (Napoli serif) · `technical` (DS-Digital) · `pixel` (Dogica) · `random`
+`bold_clean` (Jost) · `geometric` · `rounded` · `condensed` · `editorial` (Napoli serif) · `technical` (DS-Digital) · `handwritten` · `pixel` (Dogica) · `random`
 
 ## Illustration styles
 
@@ -114,9 +124,23 @@ INFO  quadro_texto: all optional dependencies available.
 | `clean` | Geometric Pillow shapes | — |
 | `doodle` | Wobbly lines, imperfect circles | — (better with aggdraw) |
 | `sketch` | Heavier pencil feel | sketchify (falls back to `doodle`) |
+| `cartoon` | Manual bold decorative style | — |
 | `sticker` | Thick marker strokes, speech bubbles | — |
 | `mixed` | Picks randomly per render | — |
 | `random` | Anti-repeat random across sessions | — |
+
+## Emoji decoration
+
+The plugin can place one decorative emoji in a free area of the card on every render.
+
+- Emoji source: fixed built-in allow-list
+- Placement: layout-aware safe anchors such as top-right, bottom-right, near clock, or near exit
+- Anti-repeat: saves the last emoji in `state.json` and excludes it on the next random pick when enabled
+- Rendering priority:
+  1. Twemoji SVG downloaded from CDN and rasterized with `cairosvg`
+  2. monochrome fallback badge (`:)`, `FUN`, `DEV`, `TRIP`, etc.) if SVG download/rasterization is unavailable
+
+This means the plugin does not require an emoji font installed on the Raspberry Pi.
 
 ## Example settings
 
@@ -131,6 +155,11 @@ INFO  quadro_texto: all optional dependencies available.
   "font_pack": "bold_clean",
   "border_style": "rounded",
   "illustration_style": "doodle",
+  "show_random_emoji": "true",
+  "emoji_mode": "random",
+  "emoji_size": "medium",
+  "emoji_position": "top_right",
+  "prevent_repeat_emoji": "true",
   "show_icons": "true",
   "show_divider": "true",
   "prevent_repeat_last": "true"
@@ -194,3 +223,17 @@ from dependencies import get_dependency_status, get_missing_optional_dependencie
 print(get_dependency_status())
 print("Missing:", get_missing_optional_dependencies())
 ```
+
+### Emoji does not render as a real emoji
+
+**Symptom:** the plugin shows a small monochrome badge like `FUN`, `DEV`, or `:)` instead of a Twemoji icon.
+
+**Cause:** the plugin could not fetch the Twemoji SVG or could not rasterize it with `cairosvg`.
+
+**Fix:**
+```bash
+pip install cairosvg
+sudo systemctl restart inkypi.service
+```
+
+If network access to the CDN is unavailable, the fallback badge is expected and safe; the plugin continues rendering normally.

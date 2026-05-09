@@ -1,141 +1,296 @@
-<div class="form-group">
+<style>
+.qt-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 
-    <div class="form-group">
-        <label for="top_text" class="form-label">Texto superior (rótulo pequeno)</label>
-        <input type="text" id="top_text" name="top_text" placeholder="Para contar" class="form-input">
+.qt-section {
+    border: 1px solid rgba(0,0,0,.10);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.qt-section-title {
+    margin: 0;
+    padding: 9px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #555;
+    background: rgba(0,0,0,.04);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+.qt-grid {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+}
+
+.qt-grid-1 { grid-template-columns: 1fr; }
+.qt-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.qt-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.qt-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 640px) {
+    .qt-grid-2,
+    .qt-grid-3,
+    .qt-grid-4 { grid-template-columns: 1fr; }
+}
+@media (min-width: 641px) and (max-width: 900px) {
+    .qt-grid-3 { grid-template-columns: repeat(2, 1fr); }
+    .qt-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+.qt-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 5px;
+}
+
+.qt-field .qt-hint {
+    font-size: 10.5px;
+    color: #888;
+    margin-top: 4px;
+    line-height: 1.3;
+}
+
+.qt-field input,
+.qt-field select {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.qt-emoji-conditional {
+    display: none;
+    grid-column: 1 / -1;
+}
+
+.qt-emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    width: 100%;
+}
+
+@media (max-width: 640px) {
+    .qt-emoji-grid { grid-template-columns: 1fr; }
+}
+@media (min-width: 641px) and (max-width: 900px) {
+    .qt-emoji-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+
+<div class="qt-settings">
+
+    <!-- ── Conteúdo ─────────────────────────────────────────────────────── -->
+    <div class="qt-section">
+        <p class="qt-section-title">Conteúdo</p>
+        <div class="qt-grid qt-grid-2">
+            <div class="qt-field">
+                <label for="top_text">Texto superior</label>
+                <input type="text" id="top_text" name="top_text" placeholder="Para contar" class="form-input">
+                <p class="qt-hint">Rótulo pequeno no topo</p>
+            </div>
+            <div class="qt-field">
+                <label for="main_text">Texto principal</label>
+                <input type="text" id="main_text" name="main_text" placeholder="2h extras" class="form-input">
+                <p class="qt-hint">Destaque grande (valor central)</p>
+            </div>
+            <div class="qt-field">
+                <label for="bottom_text">Texto inferior</label>
+                <input type="text" id="bottom_text" name="bottom_text" placeholder="Você sai às" class="form-input">
+                <p class="qt-hint">Rótulo pequeno na base</p>
+            </div>
+            <div class="qt-field">
+                <label for="time_text">Horário / valor inferior</label>
+                <input type="text" id="time_text" name="time_text" placeholder="19h" class="form-input">
+                <p class="qt-hint">Valor de destaque na seção inferior</p>
+            </div>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label for="main_text" class="form-label">Texto principal (destaque grande)</label>
-        <input type="text" id="main_text" name="main_text" placeholder="2h extras" class="form-input">
+    <!-- ── Aparência ─────────────────────────────────────────────────────── -->
+    <div class="qt-section">
+        <p class="qt-section-title">Aparência</p>
+        <div class="qt-grid qt-grid-3">
+            <div class="qt-field">
+                <label for="layout">Layout</label>
+                <select id="layout" name="layout" class="form-input">
+                    <option value="random">Aleatório</option>
+                    <option value="split">Dividido (2 metades)</option>
+                    <option value="poster">Poster (centralizado)</option>
+                    <option value="minimal">Mínimo (só texto)</option>
+                    <option value="badge">Badge / etiqueta</option>
+                    <option value="dashboard">Dashboard (painel)</option>
+                    <option value="blueprint">Blueprint / técnico</option>
+                    <option value="doodle">Doodle / desenhado</option>
+                    <option value="framed">Moldura interna</option>
+                    <option value="sticker">Sticker / faixa</option>
+                    <option value="lateral">Faixa lateral</option>
+                    <option value="sketch_note">Sketch Note</option>
+                    <option value="marker_board">Marker Board</option>
+                    <option value="doodle_card">Doodle Card</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="theme">Tema de cores</label>
+                <select id="theme" name="theme" class="form-input">
+                    <option value="random">Aleatório</option>
+                    <option value="black_white">Preto e branco</option>
+                    <option value="ink_high_contrast">Alto contraste (preto)</option>
+                    <option value="grayscale">Tons de cinza</option>
+                    <option value="blue_green">Azul / Verde</option>
+                    <option value="ocean">Oceano (azul frio)</option>
+                    <option value="purple_orange">Roxo / Laranja</option>
+                    <option value="warm_corporate">Corporativo quente</option>
+                    <option value="sunset">Sunset (laranja)</option>
+                    <option value="pastel">Pastel</option>
+                    <option value="forest">Floresta (verde)</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="font_pack">Pacote de fontes</label>
+                <select id="font_pack" name="font_pack" class="form-input">
+                    <option value="random">Aleatório</option>
+                    <option value="bold_clean">Bold Clean (Jost)</option>
+                    <option value="geometric">Geometric</option>
+                    <option value="rounded">Rounded</option>
+                    <option value="condensed">Condensed</option>
+                    <option value="editorial">Editorial (Napoli)</option>
+                    <option value="technical">Technical (DS-Digital)</option>
+                    <option value="handwritten">Handwritten</option>
+                    <option value="pixel">Pixel (Dogica)</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="illustration_style">Estilo de ilustrações</label>
+                <select id="illustration_style" name="illustration_style" class="form-input">
+                    <option value="random">Aleatório (anti-repetição)</option>
+                    <option value="clean">Clean (geométrico)</option>
+                    <option value="doodle">Doodle (esboço)</option>
+                    <option value="sketch">Sketch (lápis)</option>
+                    <option value="cartoon">Cartoon (bold manual)</option>
+                    <option value="sticker">Sticker (marcador grosso)</option>
+                    <option value="mixed">Mixed (varia por elemento)</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="border_style">Estilo de borda</label>
+                <select id="border_style" name="border_style" class="form-input">
+                    <option value="random">Aleatório</option>
+                    <option value="rounded">Arredondada</option>
+                    <option value="double">Dupla</option>
+                    <option value="blueprint">Blueprint</option>
+                    <option value="none">Sem borda</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="icon_style">Estilo de ícones</label>
+                <select id="icon_style" name="icon_style" class="form-input">
+                    <option value="random">Aleatório</option>
+                    <option value="clean">Limpo / geométrico</option>
+                    <option value="doodle">Doodle / sketch</option>
+                </select>
+                <p class="qt-hint">Legado — sobreposição pelo estilo de ilustrações</p>
+            </div>
+        </div>
+        <div class="qt-grid qt-grid-4" style="padding-top:0">
+            <div class="qt-field">
+                <label for="jitter_strength">Jitter</label>
+                <input type="number" id="jitter_strength" name="jitter_strength"
+                       min="2" max="5" step="0.5" class="form-input" placeholder="auto">
+                <p class="qt-hint">2–5 recomendado · vazio = automático</p>
+            </div>
+            <div class="qt-field">
+                <label for="show_icons">Mostrar ícones</label>
+                <select id="show_icons" name="show_icons" class="form-input">
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="show_divider">Mostrar divisória</label>
+                <select id="show_divider" name="show_divider" class="form-input">
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="prevent_repeat_last">Evitar repetição</label>
+                <select id="prevent_repeat_last" name="prevent_repeat_last" class="form-input">
+                    <option value="true">Sim (recomendado)</option>
+                    <option value="false">Não</option>
+                </select>
+                <p class="qt-hint">Evita repetir o último estilo</p>
+            </div>
+        </div>
     </div>
 
-    <div class="form-group">
-        <label for="bottom_text" class="form-label">Texto inferior (rótulo pequeno)</label>
-        <input type="text" id="bottom_text" name="bottom_text" placeholder="Você sai às" class="form-input">
-    </div>
+    <!-- ── Emoji ──────────────────────────────────────────────────────────── -->
+    <div class="qt-section">
+        <p class="qt-section-title">Emoji decorativo</p>
+        <div class="qt-grid qt-grid-3">
+            <div class="qt-field">
+                <label for="show_random_emoji">Mostrar emoji</label>
+                <select id="show_random_emoji" name="show_random_emoji" class="form-input"
+                        onchange="document.getElementById('qt-emoji-extra').style.display = this.value === 'true' ? 'contents' : 'none'">
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="emoji_mode">Modo</label>
+                <select id="emoji_mode" name="emoji_mode" class="form-input">
+                    <option value="random">Aleatório</option>
+                    <option value="fixed">Fixo</option>
+                    <option value="none">Nenhum</option>
+                </select>
+            </div>
+            <div class="qt-field">
+                <label for="fixed_emoji">Emoji fixo</label>
+                <input type="text" id="fixed_emoji" name="fixed_emoji" class="form-input" placeholder="😀">
+                <p class="qt-hint">Usado quando o modo for "Fixo"</p>
+            </div>
 
-    <div class="form-group">
-        <label for="time_text" class="form-label">Horário / valor inferior</label>
-        <input type="text" id="time_text" name="time_text" placeholder="19h" class="form-input">
-    </div>
-
-    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <div class="form-group" style="flex:1; min-width:180px;">
-            <label for="layout" class="form-label">Layout</label>
-            <select id="layout" name="layout" class="form-input">
-                <option value="random">Aleatório</option>
-                <option value="split">Dividido (2 metades)</option>
-                <option value="poster">Poster (centralizado)</option>
-                <option value="minimal">Mínimo (só texto)</option>
-                <option value="badge">Badge / etiqueta</option>
-                <option value="dashboard">Dashboard (painel)</option>
-                <option value="blueprint">Blueprint / técnico</option>
-                <option value="doodle">Doodle / desenhado</option>
-                <option value="framed">Moldura interna</option>
-                <option value="sticker">Sticker / faixa</option>
-                <option value="lateral">Faixa lateral</option>
-                <option value="sketch_note">Sketch Note (anotação)</option>
-                <option value="marker_board">Marker Board (marca-texto)</option>
-                <option value="doodle_card">Doodle Card (rabiscos)</option>
-            </select>
-        </div>
-
-        <div class="form-group" style="flex:1; min-width:180px;">
-            <label for="theme" class="form-label">Tema de cores</label>
-            <select id="theme" name="theme" class="form-input">
-                <option value="random">Aleatório</option>
-                <option value="black_white">Preto e branco (e-ink)</option>
-                <option value="ink_high_contrast">Alto contraste (fundo preto)</option>
-                <option value="grayscale">Tons de cinza</option>
-                <option value="blue_green">Azul / Verde</option>
-                <option value="ocean">Oceano (azul frio)</option>
-                <option value="purple_orange">Roxo / Laranja</option>
-                <option value="warm_corporate">Corporativo quente</option>
-                <option value="sunset">Sunset (laranja)</option>
-                <option value="pastel">Pastel</option>
-                <option value="forest">Floresta (verde)</option>
-            </select>
-        </div>
-
-        <div class="form-group" style="flex:1; min-width:180px;">
-            <label for="font_pack" class="form-label">Pacote de fontes</label>
-            <select id="font_pack" name="font_pack" class="form-input">
-                <option value="random">Aleatório</option>
-                <option value="bold_clean">Bold Clean (Jost)</option>
-                <option value="geometric">Geometric</option>
-                <option value="rounded">Rounded</option>
-                <option value="condensed">Condensed</option>
-                <option value="editorial">Editorial (Napoli serif)</option>
-                <option value="technical">Technical (DS-Digital)</option>
-                <option value="handwritten">Handwritten</option>
-                <option value="pixel">Pixel (Dogica)</option>
-            </select>
-        </div>
-    </div>
-
-    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <div class="form-group" style="flex:1; min-width:140px;">
-            <label for="border_style" class="form-label">Estilo de borda</label>
-            <select id="border_style" name="border_style" class="form-input">
-                <option value="random">Aleatório</option>
-                <option value="rounded">Arredondada</option>
-                <option value="double">Dupla</option>
-                <option value="blueprint">Blueprint</option>
-                <option value="none">Sem borda</option>
-            </select>
-        </div>
-
-        <div class="form-group" style="flex:1; min-width:140px;">
-            <label for="icon_style" class="form-label">Estilo de ícones (legado)</label>
-            <select id="icon_style" name="icon_style" class="form-input">
-                <option value="random">Aleatório</option>
-                <option value="clean">Limpo / geométrico</option>
-                <option value="doodle">Doodle / sketch</option>
-            </select>
-        </div>
-
-        <div class="form-group" style="flex:1; min-width:160px;">
-            <label for="illustration_style" class="form-label">Estilo de ilustrações</label>
-            <select id="illustration_style" name="illustration_style" class="form-input">
-                <option value="random">Aleatório (anti-repetição)</option>
-                <option value="clean">Clean (geométrico)</option>
-                <option value="doodle">Doodle (esboço)</option>
-                <option value="sketch">Sketch (lápis)</option>
-                <option value="cartoon">Cartoon (manual bold)</option>
-                <option value="sticker">Sticker (marcador grosso)</option>
-                <option value="mixed">Mixed (varia por elemento)</option>
-            </select>
-        </div>
-
-        <div class="form-group" style="flex:1; min-width:160px;">
-            <label for="jitter_strength" class="form-label">Jitter (2-5, vazio=auto)</label>
-            <input type="number" id="jitter_strength" name="jitter_strength"
-                   min="2" max="5" step="0.5" class="form-input" placeholder="auto">
-        </div>
-
-        <div class="form-group" style="flex:1; min-width:140px;">
-            <label for="show_icons" class="form-label">Mostrar ícones</label>
-            <select id="show_icons" name="show_icons" class="form-input">
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-            </select>
-        </div>
-
-        <div class="form-group" style="flex:1; min-width:140px;">
-            <label for="show_divider" class="form-label">Mostrar divisória</label>
-            <select id="show_divider" name="show_divider" class="form-input">
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-            </select>
-        </div>
-
-        <div class="form-group" style="flex:1; min-width:140px;">
-            <label for="prevent_repeat_last" class="form-label">Evitar repetição</label>
-            <select id="prevent_repeat_last" name="prevent_repeat_last" class="form-input">
-                <option value="true">Sim (recomendado)</option>
-                <option value="false">Não</option>
-            </select>
+            <!-- Shown only when emoji is enabled -->
+            <span id="qt-emoji-extra" style="display:contents">
+                <div class="qt-field">
+                    <label for="emoji_size">Tamanho</label>
+                    <select id="emoji_size" name="emoji_size" class="form-input">
+                        <option value="adaptive">Adaptativo (área livre)</option>
+                        <option value="random">Aleatório</option>
+                        <option value="large">Grande</option>
+                        <option value="medium">Médio</option>
+                        <option value="small">Pequeno</option>
+                    </select>
+                    <p class="qt-hint">Adaptativo usa a maior região vazia</p>
+                </div>
+                <div class="qt-field">
+                    <label for="emoji_position">Posição</label>
+                    <select id="emoji_position" name="emoji_position" class="form-input">
+                        <option value="adaptive">Adaptativa (maior área livre)</option>
+                        <option value="random">Aleatória</option>
+                        <option value="top_right">Topo direito</option>
+                        <option value="bottom_right">Base direita</option>
+                        <option value="bottom_left">Base esquerda</option>
+                        <option value="near_clock">Perto do relógio</option>
+                        <option value="near_exit">Perto da saída</option>
+                    </select>
+                </div>
+                <div class="qt-field">
+                    <label for="prevent_repeat_emoji">Evitar repetir emoji</label>
+                    <select id="prevent_repeat_emoji" name="prevent_repeat_emoji" class="form-input">
+                        <option value="true">Sim</option>
+                        <option value="false">Não</option>
+                    </select>
+                    <p class="qt-hint">Exclui o último emoji sorteado</p>
+                </div>
+            </span>
         </div>
     </div>
 
@@ -145,20 +300,33 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (loadPluginSettings) {
             var s = pluginSettings;
-            document.getElementById('top_text').value            = s.top_text    || 'Para contar';
-            document.getElementById('main_text').value           = s.main_text   || '2h extras';
-            document.getElementById('bottom_text').value         = s.bottom_text || 'Você sai às';
-            document.getElementById('time_text').value           = s.time_text   || '19h';
-            document.getElementById('layout').value              = s.layout      || 'random';
-            document.getElementById('theme').value               = s.theme       || 'random';
-            document.getElementById('font_pack').value           = s.font_pack   || 'random';
-            document.getElementById('border_style').value        = s.border_style || 'random';
-            document.getElementById('icon_style').value          = s.icon_style  || 'random';
+            document.getElementById('top_text').value             = s.top_text    || 'Para contar';
+            document.getElementById('main_text').value            = s.main_text   || '2h extras';
+            document.getElementById('bottom_text').value          = s.bottom_text || 'Você sai às';
+            document.getElementById('time_text').value            = s.time_text   || '19h';
+            document.getElementById('layout').value               = s.layout      || 'random';
+            document.getElementById('theme').value                = s.theme       || 'random';
+            document.getElementById('font_pack').value            = s.font_pack   || 'random';
+            document.getElementById('border_style').value         = s.border_style || 'random';
+            document.getElementById('icon_style').value           = s.icon_style  || 'random';
             document.getElementById('illustration_style').value   = s.illustration_style || 'random';
             document.getElementById('jitter_strength').value      = s.jitter_strength || '';
-            document.getElementById('show_icons').value          = s.show_icons  || 'true';
-            document.getElementById('show_divider').value        = s.show_divider || 'true';
-            document.getElementById('prevent_repeat_last').value = s.prevent_repeat_last || 'true';
+            document.getElementById('show_icons').value           = s.show_icons  || 'true';
+            document.getElementById('show_divider').value         = s.show_divider || 'true';
+            document.getElementById('prevent_repeat_last').value  = s.prevent_repeat_last || 'true';
+            document.getElementById('show_random_emoji').value    = s.show_random_emoji || 'true';
+            document.getElementById('emoji_mode').value           = s.emoji_mode  || 'random';
+            document.getElementById('fixed_emoji').value          = s.fixed_emoji || '';
+            document.getElementById('emoji_size').value           = s.emoji_size  || 'adaptive';
+            document.getElementById('emoji_position').value       = s.emoji_position || 'adaptive';
+            document.getElementById('prevent_repeat_emoji').value = s.prevent_repeat_emoji || 'true';
+
+            // Show/hide emoji extra fields on load
+            var emojiExtra = document.getElementById('qt-emoji-extra');
+            if (emojiExtra) {
+                emojiExtra.style.display = (s.show_random_emoji === 'false') ? 'none' : 'contents';
+            }
         }
     });
 </script>
+

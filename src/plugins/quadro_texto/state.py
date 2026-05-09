@@ -104,6 +104,7 @@ def record_fixed(plugin_dir: str, signature: str):
 
 _ILLUS_HISTORY_KEY = "illus_history"
 _ILLUS_CONCRETE = ["clean", "doodle", "sketch", "cartoon", "sticker"]
+_LAST_EMOJI_KEY = "last_emoji"
 
 def pick_illustration_style(plugin_dir: str) -> str:
     """Pick a concrete illustration style, avoiding recent repeats.
@@ -124,3 +125,27 @@ def pick_illustration_style(plugin_dir: str) -> str:
     history = history[-4:]
     _save(plugin_dir, {**state, _ILLUS_HISTORY_KEY: history})
     return chosen
+
+
+def pick_emoji(plugin_dir: str, emojis: list[str]) -> str | None:
+    """Pick an emoji while avoiding the most recently used one when possible."""
+    if not emojis:
+        return None
+
+    state = _load(plugin_dir)
+    last_emoji = state.get(_LAST_EMOJI_KEY)
+    available = [emoji for emoji in emojis if emoji != last_emoji]
+    if not available:
+        available = list(emojis)
+
+    chosen = random.choice(available)
+    _save(plugin_dir, {**state, _LAST_EMOJI_KEY: chosen})
+    return chosen
+
+
+def record_emoji(plugin_dir: str, emoji: str | None):
+    """Persist the last explicitly chosen emoji for future anti-repeat checks."""
+    if not emoji:
+        return
+    state = _load(plugin_dir)
+    _save(plugin_dir, {**state, _LAST_EMOJI_KEY: emoji})
