@@ -1,0 +1,31 @@
+# ── Quadro Texto — Plugin dependencies ───────────────────────────────────────
+#
+# Install with:
+#   pip install -r src/plugins/quadro_texto/requirements.txt
+#
+# Or individually:
+#   pip install Pillow aggdraw cairosvg drawsvg
+
+# ── Required ──────────────────────────────────────────────────────────────────
+# Pillow is already installed as part of InkyPi base requirements.
+# Listed here for completeness and standalone testing.
+Pillow>=9.0.0
+
+# ── Optional: recommended ─────────────────────────────────────────────────────
+# aggdraw — anti-aliased paths and smoother doodle / hand-drawn curves.
+#   Without it: doodle style uses Pillow line segments (slightly less smooth).
+aggdraw
+
+# cairosvg — renders local SVG files to PIL images (SVG icon support).
+#   Without it: all icons are drawn programmatically with Pillow.
+cairosvg
+
+# drawsvg — programmatic SVG generation from Python code.
+#   Without it: SVG export is disabled; only PNG output is produced.
+drawsvg
+
+# ── Optional: advanced ────────────────────────────────────────────────────────
+# sketchify — advanced sketch / pencil image-processing effects.
+#   Without it: the 'sketch' illustration_style falls back to 'doodle'.
+#   Note: not on PyPI by default; install from its repo if desired.
+# sketchify

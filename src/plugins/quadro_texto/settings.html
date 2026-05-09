@@ -83,11 +83,23 @@
         </div>
 
         <div class="form-group" style="flex:1; min-width:140px;">
-            <label for="icon_style" class="form-label">Estilo de ícones</label>
+            <label for="icon_style" class="form-label">Estilo de ícones (legado)</label>
             <select id="icon_style" name="icon_style" class="form-input">
                 <option value="random">Aleatório</option>
                 <option value="clean">Limpo / geométrico</option>
                 <option value="doodle">Doodle / sketch</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:160px;">
+            <label for="illustration_style" class="form-label">Estilo de ilustrações</label>
+            <select id="illustration_style" name="illustration_style" class="form-input">
+                <option value="random">Aleatório (anti-repetição)</option>
+                <option value="clean">Clean (geométrico)</option>
+                <option value="doodle">Doodle (esboço)</option>
+                <option value="sketch">Sketch (lápis)</option>
+                <option value="sticker">Sticker (marcador grosso)</option>
+                <option value="mixed">Mixed (varia por elemento)</option>
             </select>
         </div>
 
@@ -131,6 +143,7 @@
             document.getElementById('font_pack').value           = s.font_pack   || 'random';
             document.getElementById('border_style').value        = s.border_style || 'random';
             document.getElementById('icon_style').value          = s.icon_style  || 'random';
+            document.getElementById('illustration_style').value   = s.illustration_style || 'random';
             document.getElementById('show_icons').value          = s.show_icons  || 'true';
             document.getElementById('show_divider').value        = s.show_divider || 'true';
             document.getElementById('prevent_repeat_last').value = s.prevent_repeat_last || 'true';

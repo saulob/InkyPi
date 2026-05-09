@@ -98,3 +98,27 @@ def record_fixed(plugin_dir: str, signature: str):
     history.append(signature)
     history = history[-MAX_HISTORY:]
     _save(plugin_dir, {**state, "history": history})
+
+
+# ── Illustration-style anti-repeat (simple last-N history) ────────────────────
+
+_ILLUS_HISTORY_KEY = "illus_history"
+_ILLUS_CONCRETE = ["clean", "doodle", "sketch", "sticker"]
+
+def pick_illustration_style(plugin_dir: str) -> str:
+    """Pick a concrete illustration style, avoiding recent repeats.
+
+    Used when illustration_style == 'random'.
+    """
+    state = _load(plugin_dir)
+    history: list = state.get(_ILLUS_HISTORY_KEY, [])
+    forbidden = set(history[-2:])  # avoid last 2 styles
+    available = [s for s in _ILLUS_CONCRETE if s not in forbidden]
+    if not available:
+        available = _ILLUS_CONCRETE
+
+    chosen = random.choice(available)
+    history.append(chosen)
+    history = history[-4:]
+    _save(plugin_dir, {**state, _ILLUS_HISTORY_KEY: history})
+    return chosen

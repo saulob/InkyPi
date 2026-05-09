@@ -22,7 +22,15 @@ from themes       import THEMES, THEME_NAMES
 from fonts        import FONT_PACKS, FONT_PACK_NAMES, load_font
 from layouts      import LAYOUTS, LAYOUT_NAMES
 from illustrations import get_clock_fn, get_door_fn, get_border_fn
+from doodle import (
+    get_illustration_clock_fn, get_illustration_door_fn,
+    resolve_illustration_style, ILLUSTRATION_STYLES,
+)
 import state as state_mod
+import dependencies as deps_mod
+
+# Log available optional features once at import time
+deps_mod.log_startup_summary()
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +72,7 @@ class QuadroTexto(BasePlugin):
         font_pack_key = settings.get("font_pack",  "random")
         border_style  = settings.get("border_style", "random")
         icon_style    = settings.get("icon_style",  "random")
+        illus_style   = settings.get("illustration_style", "random")
 
         show_border  = settings.get("show_border",   "true") != "false"
         show_icons   = settings.get("show_icons",    "true") != "false"
@@ -90,7 +99,29 @@ class QuadroTexto(BasePlugin):
                 sig = f"{layout_key}|{theme_key}|{font_pack_key}|{border_style}|{icon_style}"
                 state_mod.record_fixed(self.get_plugin_dir(), sig)
 
-        theme  = THEMES.get(theme_key, THEMES["black_white"])
+        # ── Resolve illustration_style (new setting) ──────────────────────
+        plugin_dir = self.get_plugin_dir()
+        if illus_style == "random":
+            illus_style = state_mod.pick_illustration_style(plugin_dir)
+        elif illus_style == "mixed":
+            illus_style = resolve_illustration_style("mixed")
+
+        # Apply dependency-aware fallback (sketch→doodle, doodle→clean, etc.)
+        illus_style = deps_mod.resolve_illustration_style(illus_style)
+
+        # illustration_style overrides icon_style when set to a concrete value
+        # (icon_style kept for backward compatibility)
+        use_illus = illus_style in ("sketch", "sticker")
+        if use_illus:
+            clock_fn = get_illustration_clock_fn(illus_style)
+            door_fn  = get_illustration_door_fn(illus_style)
+        else:
+            # fallback: use legacy icon_style (clean / doodle)
+            effective_icon = illus_style if illus_style in ("clean", "doodle") else icon_style
+            clock_fn = get_clock_fn(effective_icon)
+            door_fn  = get_door_fn(effective_icon)
+
+        theme     = THEMES.get(theme_key, THEMES["black_white"])
         layout_fn = LAYOUTS.get(layout_key, LAYOUTS["split"])
 
         # font loader bound to chosen pack + canvas height
@@ -98,9 +129,10 @@ class QuadroTexto(BasePlugin):
             return load_font(font_pack_key, role, h)
 
         illu = {
-            "clock_fn":  get_clock_fn(icon_style),
-            "door_fn":   get_door_fn(icon_style),
-            "border_fn": get_border_fn(border_style if show_border else "none"),
+            "clock_fn":        clock_fn,
+            "door_fn":         door_fn,
+            "border_fn":       get_border_fn(border_style if show_border else "none"),
+            "illustration_style": illus_style,
         }
 
         opts = {
