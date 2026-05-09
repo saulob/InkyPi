@@ -11,6 +11,7 @@ Available local fonts (InkyPi static/fonts/):
   Napoli        normal              (serif / editorial)
   Dogica        pixel + bold        (retro pixel)
   DS-DIGI       normal              (digital / LCD)
+    Handwritten   auto-detected handwritten candidate with safe fallback
 
 size_label / size_value / size_sub are multipliers relative to canvas height.
 """
@@ -18,6 +19,28 @@ size_label / size_value / size_sub are multipliers relative to canvas height.
 import os
 from PIL import ImageFont
 from utils.app_utils import resolve_path
+
+
+_HANDWRITTEN_CANDIDATES = [
+    # Prefer true handwritten families if present in future deployments.
+    "PatrickHand-Regular.ttf",
+    "Kalam-Regular.ttf",
+    "Caveat-Regular.ttf",
+    "GloriaHallelujah-Regular.ttf",
+    "NanumPenScript-Regular.ttf",
+    # Current repo fallback candidates.
+    "Napoli.ttf",
+    "Jost.ttf",
+]
+
+
+def _pick_handwritten_file() -> str:
+    """Return best available handwritten-ish font file in static/fonts."""
+    for candidate in _HANDWRITTEN_CANDIDATES:
+        p = resolve_path(os.path.join("static", "fonts", candidate))
+        if os.path.exists(p):
+            return candidate
+    return "Jost.ttf"
 
 # ── Size multipliers (× display height) ────────────────────────────────────────
 FONT_PACKS = {
@@ -51,6 +74,12 @@ FONT_PACKS = {
         "value":  ("DS-Digital", 0.200, "normal"),
         "sub":    ("DS-Digital", 0.048, "normal"),
     },
+    "handwritten": {
+        "label":  ("Handwritten", 0.074, "normal"),
+        # Keep the main value highly legible on e-paper.
+        "value":  ("Jost",        0.198, "bold"),
+        "sub":    ("Handwritten", 0.060, "normal"),
+    },
     "pixel": {
         "label":  ("Dogica",  0.052, "normal"),
         "value":  ("Dogica",  0.130, "bold"),
@@ -75,6 +104,7 @@ def load_font(pack_name: str, role: str, h: int):
         "Jost":       {"normal": "Jost.ttf", "bold": "Jost-SemiBold.ttf"},
         "Napoli":     {"normal": "Napoli.ttf", "bold": "Napoli.ttf"},
         "Dogica":     {"normal": "dogicapixel.ttf", "bold": "dogicapixelbold.ttf"},
+        "Handwritten": {"normal": _pick_handwritten_file(), "bold": _pick_handwritten_file()},
         "DS-Digital": {"normal": os.path.join("DS-DIGI", "DS-DIGI.TTF"),
                        "bold":   os.path.join("DS-DIGI", "DS-DIGI.TTF")},
     }

@@ -120,17 +120,18 @@ def get_missing_optional_dependencies() -> list:
 # Maps requested style → required dependency (None = always available)
 _STYLE_DEPS = {
     "clean":   None,
-    "doodle":  "aggdraw",   # nicer with aggdraw, falls back to clean without it
-    "sketch":  "sketchify", # requires sketchify; falls back to doodle
-    "sticker": None,        # uses only Pillow
-    "mixed":   None,        # picks at runtime from available styles
-    "random":  None,        # anti-repeat; resolved by state.pick_illustration_style
+    # Doodle works with Pillow alone; aggdraw only improves smoothness.
+    "doodle":  None,
+    "sketch":  "sketchify",  # requires sketchify; falls back to doodle
+    "cartoon": None,
+    "sticker": None,
+    "mixed":   None,
+    "random":  None,
 }
 
 # Fallback chain: if a style's dependency is missing, use this instead
 _FALLBACKS = {
     "sketch": "doodle",
-    "doodle": "clean",
 }
 
 
@@ -138,9 +139,8 @@ def resolve_illustration_style(requested: str) -> str:
     """Return the best available style for *requested*, applying fallbacks.
 
     - ``sketch`` without sketchify  → ``doodle``
-    - ``doodle`` without aggdraw    → ``clean``
     - ``mixed`` / ``random``        → left for caller to resolve
-    - ``clean`` / ``sticker``       → always available
+    - ``clean`` / ``doodle`` / ``cartoon`` / ``sticker`` → always available
 
     Logs a warning each time a fallback is applied.
     """

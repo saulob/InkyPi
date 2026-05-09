@@ -35,6 +35,9 @@
                 <option value="framed">Moldura interna</option>
                 <option value="sticker">Sticker / faixa</option>
                 <option value="lateral">Faixa lateral</option>
+                <option value="sketch_note">Sketch Note (anotação)</option>
+                <option value="marker_board">Marker Board (marca-texto)</option>
+                <option value="doodle_card">Doodle Card (rabiscos)</option>
             </select>
         </div>
 
@@ -65,6 +68,7 @@
                 <option value="condensed">Condensed</option>
                 <option value="editorial">Editorial (Napoli serif)</option>
                 <option value="technical">Technical (DS-Digital)</option>
+                <option value="handwritten">Handwritten</option>
                 <option value="pixel">Pixel (Dogica)</option>
             </select>
         </div>
@@ -98,9 +102,16 @@
                 <option value="clean">Clean (geométrico)</option>
                 <option value="doodle">Doodle (esboço)</option>
                 <option value="sketch">Sketch (lápis)</option>
+                <option value="cartoon">Cartoon (manual bold)</option>
                 <option value="sticker">Sticker (marcador grosso)</option>
                 <option value="mixed">Mixed (varia por elemento)</option>
             </select>
+        </div>
+
+        <div class="form-group" style="flex:1; min-width:160px;">
+            <label for="jitter_strength" class="form-label">Jitter (2-5, vazio=auto)</label>
+            <input type="number" id="jitter_strength" name="jitter_strength"
+                   min="2" max="5" step="0.5" class="form-input" placeholder="auto">
         </div>
 
         <div class="form-group" style="flex:1; min-width:140px;">
@@ -144,6 +155,7 @@
             document.getElementById('border_style').value        = s.border_style || 'random';
             document.getElementById('icon_style').value          = s.icon_style  || 'random';
             document.getElementById('illustration_style').value   = s.illustration_style || 'random';
+            document.getElementById('jitter_strength').value      = s.jitter_strength || '';
             document.getElementById('show_icons').value          = s.show_icons  || 'true';
             document.getElementById('show_divider').value        = s.show_divider || 'true';
             document.getElementById('prevent_repeat_last').value = s.prevent_repeat_last || 'true';

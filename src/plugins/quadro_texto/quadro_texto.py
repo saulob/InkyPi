@@ -24,6 +24,7 @@ from layouts      import LAYOUTS, LAYOUT_NAMES
 from illustrations import get_clock_fn, get_door_fn, get_border_fn
 from doodle import (
     get_illustration_clock_fn, get_illustration_door_fn,
+    get_illustration_border_fn,
     resolve_illustration_style, ILLUSTRATION_STYLES,
 )
 import state as state_mod
@@ -52,6 +53,15 @@ def _all_combinations():
 _ALL_COMBOS = _all_combinations()
 
 
+def _text_setting(settings, key, default):
+    """Return a cleaned text setting, falling back when blank or None."""
+    value = settings.get(key, default)
+    if value is None:
+        return default
+    value = str(value).strip()
+    return value or default
+
+
 class QuadroTexto(BasePlugin):
 
     def generate_image(self, settings, device_config):
@@ -61,10 +71,10 @@ class QuadroTexto(BasePlugin):
         w, h = dimensions
 
         texts = {
-            "top_text":    settings.get("top_text",    "Para contar"),
-            "main_text":   settings.get("main_text",   "2h extras"),
-            "bottom_text": settings.get("bottom_text", "Você sai às"),
-            "time_text":   settings.get("time_text",   "19h"),
+            "top_text":    _text_setting(settings, "top_text",    "Para contar"),
+            "main_text":   _text_setting(settings, "main_text",   "2h extras"),
+            "bottom_text": _text_setting(settings, "bottom_text", "Você sai às"),
+            "time_text":   _text_setting(settings, "time_text",   "19h"),
         }
 
         layout_key    = settings.get("layout",     "random")
@@ -73,11 +83,23 @@ class QuadroTexto(BasePlugin):
         border_style  = settings.get("border_style", "random")
         icon_style    = settings.get("icon_style",  "random")
         illus_style   = settings.get("illustration_style", "random")
+        jitter_raw    = settings.get("jitter_strength", "")
 
         show_border  = settings.get("show_border",   "true") != "false"
         show_icons   = settings.get("show_icons",    "true") != "false"
         show_divider = settings.get("show_divider",  "true") != "false"
         prevent_rpt  = settings.get("prevent_repeat_last", "true") != "false"
+
+        jitter_strength = None
+        if str(jitter_raw).strip().lower() not in ("", "auto", "none"):
+            try:
+                jitter_strength = float(jitter_raw)
+                jitter_strength = max(2.0, min(5.0, jitter_strength))
+            except (TypeError, ValueError):
+                logger.warning(
+                    "quadro_texto: invalid jitter_strength '%s', using auto.",
+                    jitter_raw,
+                )
 
         # ── Resolve random values (with anti-repeat when all are random) ──────
         all_random = (layout_key == "random" and theme_key == "random"
@@ -105,21 +127,36 @@ class QuadroTexto(BasePlugin):
             illus_style = state_mod.pick_illustration_style(plugin_dir)
         elif illus_style == "mixed":
             illus_style = resolve_illustration_style("mixed")
+        else:
+            illus_style = resolve_illustration_style(illus_style)
 
-        # Apply dependency-aware fallback (sketch→doodle, doodle→clean, etc.)
+        # Apply dependency-aware fallback (e.g. sketch→doodle without sketchify).
         illus_style = deps_mod.resolve_illustration_style(illus_style)
+
+        # Pixel font does not pair well with hand-drawn styles.
+        if illus_style in ("doodle", "sketch", "cartoon") and font_pack_key == "pixel":
+            fallback_pack = "handwritten" if "handwritten" in FONT_PACKS else "rounded"
+            logger.warning(
+                "quadro_texto: font_pack 'pixel' is not recommended for illustration_style '%s'. "
+                "Using '%s' instead.",
+                illus_style,
+                fallback_pack,
+            )
+            font_pack_key = fallback_pack
 
         # illustration_style overrides icon_style when set to a concrete value
         # (icon_style kept for backward compatibility)
-        use_illus = illus_style in ("sketch", "sticker")
+        use_illus = illus_style in ("doodle", "sketch", "cartoon", "sticker")
         if use_illus:
             clock_fn = get_illustration_clock_fn(illus_style)
             door_fn  = get_illustration_door_fn(illus_style)
+            border_fn = get_illustration_border_fn(illus_style) if show_border else get_border_fn("none")
         else:
             # fallback: use legacy icon_style (clean / doodle)
             effective_icon = illus_style if illus_style in ("clean", "doodle") else icon_style
             clock_fn = get_clock_fn(effective_icon)
             door_fn  = get_door_fn(effective_icon)
+            border_fn = get_border_fn(border_style if show_border else "none")
 
         theme     = THEMES.get(theme_key, THEMES["black_white"])
         layout_fn = LAYOUTS.get(layout_key, LAYOUTS["split"])
@@ -131,8 +168,9 @@ class QuadroTexto(BasePlugin):
         illu = {
             "clock_fn":        clock_fn,
             "door_fn":         door_fn,
-            "border_fn":       get_border_fn(border_style if show_border else "none"),
+            "border_fn":       border_fn,
             "illustration_style": illus_style,
+            "jitter_strength": jitter_strength,
         }
 
         opts = {

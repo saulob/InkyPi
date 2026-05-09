@@ -21,6 +21,9 @@ Available layouts:
   framed         — inner frame / mat border
   sticker        — bold label on solid-color block with accent stripe
   lateral        — coloured left stripe with text on right
+    sketch_note    — looks like a handwritten paper note
+    marker_board   — marker-highlight style board
+    doodle_card    — two stacked doodle cards with hand arrows
 """
 
 import math
@@ -32,6 +35,15 @@ from illustrations import (
     draw_border_rounded, draw_border_double, draw_border_blueprint,
     get_clock_fn, get_door_fn, get_border_fn,
     draw_building, draw_sun,
+)
+from doodle import (
+    draw_paper_texture,
+    draw_jittered_line,
+    draw_jittered_rounded_rectangle,
+    draw_double_sketch_border,
+    draw_marker_stroke,
+    draw_scribble_underline,
+    draw_handdrawn_arrow,
 )
 
 
@@ -342,56 +354,103 @@ def render_blueprint(img, draw, w, h, texts, theme, lf, illu, opts):
 # ── 7. DOODLE ─────────────────────────────────────────────────────────────────
 
 def render_doodle(img, draw, w, h, texts, theme, lf, illu, opts):
-    _section_bg(img, draw, 0, 0, w, h, theme["bg"])
-    lbl_f  = lf("label")
-    val_f  = lf("value")
-    sub_f  = lf("sub")
-    gap    = int(h * 0.025)
-    pad    = int(w * 0.06)
+    jitter = illu.get("jitter_strength")
+    draw_paper_texture(draw, w, h, base_color=(248, 246, 240), density=0.0016, strength=9)
 
-    # Doodle background circles
-    doodle_col = tuple(max(0, c - 20) if theme["bg"][0] > 128 else min(255, c + 20)
-                       for c in theme["bg"])
-    draw_doodle_circle(draw, int(w * 0.82), int(h * 0.15), int(h * 0.18), doodle_col, lw=3)
-    draw_doodle_circle(draw, int(w * 0.12), int(h * 0.78), int(h * 0.12), doodle_col, lw=2)
+    lbl_f = lf("label")
+    val_f = lf("value")
+    gap   = int(h * 0.024)
+    pad   = int(w * 0.06)
 
-    # Underline accent behind main_text
+    if opts.get("show_border", True):
+        draw_double_sketch_border(
+            draw,
+            w,
+            h,
+            theme["border"],
+            width=max(2, h // 120),
+            jitter_strength=jitter,
+            gap=max(8, h // 52),
+        )
+
     lbl_h = int(h * 0.082)
-    val_h = int(h * 0.215)
-    y = int(h * 0.10)
+    val_h = int(h * 0.210)
+    y = int(h * 0.11)
 
     if opts.get("show_icons", True):
-        icon_r = int(h * 0.09)
-        from illustrations import draw_clock_doodle
-        draw_clock_doodle(draw, pad + icon_r, y + icon_r, icon_r, theme["top_text"])
-        tx = pad + icon_r * 2 + int(pad * 0.5)
+        icon_r = int(h * 0.085)
+        illu["clock_fn"](draw, pad + icon_r, y + icon_r, icon_r, theme["top_text"])
+        tx = pad + icon_r * 2 + int(pad * 0.45)
     else:
         tx = pad
 
     _draw_text(draw, tx, y, texts["top_text"], lbl_f, theme["top_text"])
     y += lbl_h + gap
+    _draw_text(draw, tx, y, texts["main_text"], val_f, theme["top_text"])
 
     tw = int(_text_w(draw, texts["main_text"], val_f))
-    _draw_text(draw, tx, y, texts["main_text"], val_f, theme["top_text"])
-    ul_y = y + val_h + int(gap * 0.4)
-    draw_underline(draw, tx, ul_y, min(tw + 10, w - tx - pad),
-                   max(3, h // 80), theme["accent"])
-    y = ul_y + int(h * 0.06)
+    ul_y = y + val_h + int(gap * 0.35)
+    draw_scribble_underline(
+        draw,
+        tx,
+        ul_y,
+        min(w - pad, tx + tw + int(w * 0.06)),
+        theme["accent"],
+        width=max(3, h // 95),
+        jitter_strength=jitter,
+    )
 
+    # Decorative hand-drawn arrow near divider region.
+    arrow_y = ul_y + int(h * 0.048)
+    draw_handdrawn_arrow(
+        draw,
+        tx,
+        arrow_y,
+        min(w - pad, tx + int(w * 0.20)),
+        arrow_y,
+        theme["divider"],
+        width=max(2, h // 120),
+        jitter_strength=jitter,
+    )
+
+    y = arrow_y + int(h * 0.040)
     if opts.get("show_divider", True):
-        dw = int(w * 0.35)
-        _divider(draw, tx, y, tx + dw, theme["divider"], h, "dashed")
-        y += int(h * 0.035)
+        draw_jittered_line(
+            draw,
+            tx,
+            y,
+            min(w - pad, tx + int(w * 0.38)),
+            y,
+            theme["divider"],
+            width=max(2, h // 120),
+            jitter_strength=jitter,
+            passes=2,
+            segments=10,
+        )
+        y += int(h * 0.036)
 
     if opts.get("show_icons", True):
-        icon_r2 = int(h * 0.08)
-        from illustrations import draw_door_doodle
-        draw_door_doodle(draw, pad + icon_r2, y + icon_r2, icon_r2, theme["bottom_text"])
-        bx = pad + icon_r2 * 2 + int(pad * 0.5)
+        icon_r2 = int(h * 0.076)
+        illu["door_fn"](draw, pad + icon_r2, y + icon_r2, icon_r2, theme["bottom_text"])
+        bx = pad + icon_r2 * 2 + int(pad * 0.45)
     else:
         bx = pad
+
     _draw_text(draw, bx, y, texts["bottom_text"], lbl_f, theme["bottom_text"])
     y += lbl_h + gap
+
+    # Marker-like accent behind time text.
+    txw = int(_text_w(draw, texts["time_text"], val_f))
+    draw_marker_stroke(
+        draw,
+        bx,
+        y + int(h * 0.08),
+        min(w - pad, bx + txw + int(w * 0.03)),
+        y + int(h * 0.08),
+        theme["accent"],
+        width=max(10, h // 18),
+        jitter_strength=jitter,
+    )
     _draw_text(draw, bx, y, texts["time_text"], val_f, theme["bottom_text"])
 
 
@@ -553,6 +612,287 @@ def render_lateral(img, draw, w, h, texts, theme, lf, illu, opts):
         illu["border_fn"](draw, w, h, theme["border"])
 
 
+# ── 11. SKETCH NOTE ──────────────────────────────────────────────────────────
+
+def render_sketch_note(img, draw, w, h, texts, theme, lf, illu, opts):
+    jitter = illu.get("jitter_strength")
+    draw_paper_texture(draw, w, h, base_color=(249, 247, 242), density=0.0018, strength=8)
+
+    lbl_f = lf("label")
+    val_f = lf("value")
+    sub_f = lf("sub")
+    pad   = int(w * 0.06)
+    gap   = int(h * 0.022)
+
+    # Inner note area
+    nx0, ny0 = pad, int(h * 0.07)
+    nx1, ny1 = w - pad, h - int(h * 0.07)
+    draw.rectangle([nx0 + 4, ny0 + 4, nx1 - 4, ny1 - 4], fill=(252, 250, 245))
+    draw_jittered_rounded_rectangle(
+        draw,
+        nx0,
+        ny0,
+        nx1,
+        ny1,
+        radius=max(12, h // 18),
+        color=theme["border"],
+        width=max(2, h // 130),
+        jitter_strength=jitter,
+        passes=2,
+    )
+
+    # Small "paper tape" strips.
+    tape_c = (227, 222, 205)
+    tape_w = int(w * 0.18)
+    tape_h = int(h * 0.032)
+    draw.rectangle([w // 2 - tape_w - 8, ny0 - tape_h // 2, w // 2 - 8, ny0 + tape_h // 2], fill=tape_c)
+    draw.rectangle([w // 2 + 8, ny0 - tape_h // 2, w // 2 + tape_w + 8, ny0 + tape_h // 2], fill=tape_c)
+
+    y = ny0 + int(h * 0.07)
+    if opts.get("show_icons", True):
+        ir = int(h * 0.070)
+        illu["clock_fn"](draw, nx1 - int(w * 0.12), y + ir, ir, theme["top_text"])
+
+    _draw_text(draw, nx0 + int(w * 0.03), y, texts["top_text"], lbl_f, theme["top_text"])
+    y += int(h * 0.084)
+    _draw_text(draw, nx0 + int(w * 0.03), y, texts["main_text"], val_f, theme["top_text"])
+    y += int(h * 0.205)
+
+    draw_scribble_underline(
+        draw,
+        nx0 + int(w * 0.03),
+        y,
+        nx1 - int(w * 0.06),
+        theme["accent"],
+        width=max(3, h // 105),
+        jitter_strength=jitter,
+    )
+    y += int(h * 0.05)
+
+    if opts.get("show_divider", True):
+        draw_jittered_line(
+            draw,
+            nx0 + int(w * 0.03),
+            y,
+            nx1 - int(w * 0.03),
+            y,
+            theme["divider"],
+            width=max(2, h // 125),
+            jitter_strength=jitter,
+            passes=2,
+            segments=10,
+        )
+        y += int(h * 0.032)
+
+    if opts.get("show_icons", True):
+        ir2 = int(h * 0.068)
+        illu["door_fn"](draw, nx1 - int(w * 0.12), y + ir2, ir2, theme["bottom_text"])
+
+    _draw_text(draw, nx0 + int(w * 0.03), y, texts["bottom_text"], sub_f, theme["bottom_text"])
+    y += int(h * 0.074) + gap
+    _draw_text(draw, nx0 + int(w * 0.03), y, texts["time_text"], val_f, theme["bottom_text"])
+
+    if opts.get("show_border", True):
+        draw_double_sketch_border(
+            draw,
+            w,
+            h,
+            theme["border"],
+            width=max(2, h // 120),
+            jitter_strength=jitter,
+            gap=max(8, h // 54),
+        )
+
+
+# ── 12. MARKER BOARD ─────────────────────────────────────────────────────────
+
+def render_marker_board(img, draw, w, h, texts, theme, lf, illu, opts):
+    jitter = illu.get("jitter_strength")
+    draw_paper_texture(draw, w, h, base_color=(245, 246, 239), density=0.0014, strength=8)
+
+    lbl_f = lf("label")
+    val_f = lf("value")
+    sub_f = lf("sub")
+    pad   = int(w * 0.055)
+
+    bx0, by0 = pad, int(h * 0.09)
+    bx1, by1 = w - pad, h - int(h * 0.09)
+
+    # Board surface
+    draw.rectangle([bx0 + 4, by0 + 4, bx1 - 4, by1 - 4], fill=(252, 252, 246))
+    draw_jittered_rounded_rectangle(
+        draw,
+        bx0,
+        by0,
+        bx1,
+        by1,
+        radius=max(14, h // 16),
+        color=theme["border"],
+        width=max(2, h // 125),
+        jitter_strength=jitter,
+        passes=2,
+    )
+
+    tx = bx0 + int(w * 0.045)
+    y = by0 + int(h * 0.065)
+
+    draw_marker_stroke(
+        draw,
+        tx,
+        y + int(h * 0.034),
+        min(bx1 - int(w * 0.04), tx + int(w * 0.42)),
+        y + int(h * 0.034),
+        theme["accent"],
+        width=max(10, h // 16),
+        jitter_strength=jitter,
+    )
+    _draw_text(draw, tx, y, texts["top_text"], lbl_f, theme["top_text"])
+    y += int(h * 0.085)
+
+    _draw_text(draw, tx, y, texts["main_text"], val_f, theme["top_text"])
+    y += int(h * 0.205)
+
+    if opts.get("show_icons", True):
+        ir = int(h * 0.073)
+        illu["clock_fn"](draw, bx1 - int(w * 0.12), by0 + int(h * 0.16), ir, theme["top_text"])
+
+    if opts.get("show_divider", True):
+        draw_handdrawn_arrow(
+            draw,
+            tx,
+            y,
+            min(bx1 - int(w * 0.12), tx + int(w * 0.26)),
+            y,
+            theme["divider"],
+            width=max(2, h // 118),
+            jitter_strength=jitter,
+        )
+        y += int(h * 0.050)
+
+    _draw_text(draw, tx, y, texts["bottom_text"], sub_f, theme["bottom_text"])
+    y += int(h * 0.075)
+
+    draw_marker_stroke(
+        draw,
+        tx,
+        y + int(h * 0.06),
+        min(bx1 - int(w * 0.04), tx + int(w * 0.30)),
+        y + int(h * 0.06),
+        theme["accent"],
+        width=max(11, h // 15),
+        jitter_strength=jitter,
+    )
+    _draw_text(draw, tx, y, texts["time_text"], val_f, theme["bottom_text"])
+
+    if opts.get("show_icons", True):
+        ir2 = int(h * 0.068)
+        illu["door_fn"](draw, bx1 - int(w * 0.12), y + int(h * 0.06), ir2, theme["bottom_text"])
+
+    if opts.get("show_border", True):
+        draw_double_sketch_border(
+            draw,
+            w,
+            h,
+            theme["border"],
+            width=max(2, h // 124),
+            jitter_strength=jitter,
+            gap=max(7, h // 56),
+        )
+
+
+# ── 13. DOODLE CARD ──────────────────────────────────────────────────────────
+
+def render_doodle_card(img, draw, w, h, texts, theme, lf, illu, opts):
+    jitter = illu.get("jitter_strength")
+    draw_paper_texture(draw, w, h, base_color=(247, 245, 239), density=0.0016, strength=10)
+
+    lbl_f = lf("label")
+    val_f = lf("value")
+    sub_f = lf("sub")
+
+    pad = int(w * 0.06)
+    card_gap = int(h * 0.040)
+    card_h = int((h - pad * 2 - card_gap) / 2)
+
+    c1 = (pad, pad, w - pad, pad + card_h)
+    c2 = (pad, pad + card_h + card_gap, w - pad, h - pad)
+
+    draw.rectangle([c1[0] + 4, c1[1] + 4, c1[2] - 4, c1[3] - 4], fill=theme["top_bg"])
+    draw.rectangle([c2[0] + 4, c2[1] + 4, c2[2] - 4, c2[3] - 4], fill=theme["bottom_bg"])
+
+    draw_jittered_rounded_rectangle(
+        draw,
+        c1[0], c1[1], c1[2], c1[3],
+        radius=max(14, h // 20),
+        color=theme["border"],
+        width=max(2, h // 125),
+        jitter_strength=jitter,
+        passes=2,
+    )
+    draw_jittered_rounded_rectangle(
+        draw,
+        c2[0], c2[1], c2[2], c2[3],
+        radius=max(14, h // 20),
+        color=theme["border"],
+        width=max(2, h // 125),
+        jitter_strength=jitter,
+        passes=2,
+    )
+
+    # Connector arrow between cards.
+    mid_y = c1[3] + card_gap // 2
+    draw_handdrawn_arrow(
+        draw,
+        int(w * 0.35),
+        mid_y,
+        int(w * 0.65),
+        mid_y,
+        theme["accent"],
+        width=max(2, h // 118),
+        jitter_strength=jitter,
+    )
+
+    # Card 1 (top)
+    t1x = c1[0] + int(w * 0.04)
+    t1y = c1[1] + int(h * 0.045)
+    if opts.get("show_icons", True):
+        ir = int(h * 0.066)
+        illu["clock_fn"](draw, c1[2] - int(w * 0.09), t1y + ir, ir, theme["top_text"])
+    _draw_text(draw, t1x, t1y, texts["top_text"], lbl_f, theme["top_text"])
+    _draw_text(draw, t1x, t1y + int(h * 0.083), texts["main_text"], val_f, theme["top_text"])
+
+    # Card 2 (bottom)
+    t2x = c2[0] + int(w * 0.04)
+    t2y = c2[1] + int(h * 0.045)
+    if opts.get("show_icons", True):
+        ir2 = int(h * 0.062)
+        illu["door_fn"](draw, c2[2] - int(w * 0.09), t2y + ir2, ir2, theme["bottom_text"])
+    _draw_text(draw, t2x, t2y, texts["bottom_text"], sub_f, theme["bottom_text"])
+    _draw_text(draw, t2x, t2y + int(h * 0.083), texts["time_text"], val_f, theme["bottom_text"])
+
+    if opts.get("show_divider", True):
+        draw_scribble_underline(
+            draw,
+            t2x,
+            t2y + int(h * 0.17),
+            min(c2[2] - int(w * 0.12), t2x + int(w * 0.34)),
+            theme["accent"],
+            width=max(3, h // 105),
+            jitter_strength=jitter,
+        )
+
+    if opts.get("show_border", True):
+        draw_double_sketch_border(
+            draw,
+            w,
+            h,
+            theme["border"],
+            width=max(2, h // 124),
+            jitter_strength=jitter,
+            gap=max(7, h // 58),
+        )
+
+
 # ── Registry ───────────────────────────────────────────────────────────────────
 
 LAYOUTS = {
@@ -566,6 +906,9 @@ LAYOUTS = {
     "framed":    render_framed,
     "sticker":   render_sticker,
     "lateral":   render_lateral,
+    "sketch_note":  render_sketch_note,
+    "marker_board": render_marker_board,
+    "doodle_card":  render_doodle_card,
 }
 
 LAYOUT_NAMES = list(LAYOUTS.keys())
