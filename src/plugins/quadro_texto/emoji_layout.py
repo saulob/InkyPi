@@ -164,8 +164,8 @@ def calculate_adaptive_emoji_size(layout_key: str, w: int, h: int,
 
     x0, y0, x1, y1 = target["px"]
     zone_w, zone_h = x1 - x0, y1 - y0
-    raw = int(min(zone_w, zone_h) * 0.552)
-    return max(72, min(raw, int(min(w, h) * 0.36)))
+    raw = int(min(zone_w, zone_h) * 0.70)
+    return max(80, min(raw, int(min(w, h) * 0.46)))
 
 
 def choose_best_emoji_position(

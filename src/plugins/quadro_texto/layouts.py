@@ -220,11 +220,13 @@ def render_badge(img, draw, w, h, texts, theme, lf, illu, opts):
         tx = pad
     _draw_text(draw, tx, y, texts["top_text"], lbl_f, theme["top_text"])
 
-    # Badge pill for main_text
-    bh = int(h * 0.190)
+    # Badge pill for main_text — width fits text, not full canvas
+    bh = int(h * 0.200)
     by = y + int(h * 0.085)
-    bx0 = pad
-    bx1 = w - pad
+    txw = int(_text_w(draw, texts["main_text"], val_f))
+    pill_pad = int(w * 0.07)
+    bx0 = max(pad, w // 2 - txw // 2 - pill_pad)
+    bx1 = min(w - pad, w // 2 + txw // 2 + pill_pad)
     try:
         draw.rounded_rectangle([bx0, by, bx1, by + bh], radius=bh // 2,
                                 fill=theme["accent"])
@@ -345,13 +347,7 @@ def render_blueprint(img, draw, w, h, texts, theme, lf, illu, opts):
     y += lbl_h + gap
     _draw_text(draw, pad, y, texts["time_text"], val_f, theme["bottom_text"])
 
-    # Blueprint label tag bottom-right
-    tag_text = "WORK REMINDER"
-    sub_f2 = lf("sub")
-    tag_w = int(_text_w(draw, tag_text, sub_f2))
-    tag_x = w - pad - tag_w
-    tag_y = h - int(h * 0.07)
-    _draw_text(draw, tag_x, tag_y, tag_text, sub_f2, theme["accent"])
+
 
 
 # ── 7. DOODLE ─────────────────────────────────────────────────────────────────
@@ -442,19 +438,19 @@ def render_doodle(img, draw, w, h, texts, theme, lf, illu, opts):
     _draw_text(draw, bx, y, texts["bottom_text"], lbl_f, theme["bottom_text"])
     y += lbl_h + gap
 
-    # Marker-like accent behind time text.
+    # Marker-like accent under time text (underline style).
     txw = int(_text_w(draw, texts["time_text"], val_f))
+    _draw_text(draw, bx, y, texts["time_text"], val_f, theme["bottom_text"])
     draw_marker_stroke(
         draw,
         bx,
-        y + int(h * 0.08),
+        y + int(h * 0.175),
         min(w - pad, bx + txw + int(w * 0.03)),
-        y + int(h * 0.08),
+        y + int(h * 0.175),
         theme["accent"],
-        width=max(10, h // 18),
+        width=max(8, h // 22),
         jitter_strength=jitter,
     )
-    _draw_text(draw, bx, y, texts["time_text"], val_f, theme["bottom_text"])
 
 
 # ── 8. FRAMED ─────────────────────────────────────────────────────────────────
@@ -775,17 +771,17 @@ def render_marker_board(img, draw, w, h, texts, theme, lf, illu, opts):
     _draw_text(draw, tx, y, texts["bottom_text"], sub_f, theme["bottom_text"])
     y += int(h * 0.075)
 
+    _draw_text(draw, tx, y, texts["time_text"], val_f, theme["bottom_text"])
     draw_marker_stroke(
         draw,
         tx,
-        y + int(h * 0.06),
+        y + int(h * 0.175),
         min(bx1 - int(w * 0.04), tx + int(w * 0.30)),
-        y + int(h * 0.06),
+        y + int(h * 0.175),
         theme["accent"],
-        width=max(11, h // 15),
+        width=max(8, h // 22),
         jitter_strength=jitter,
     )
-    _draw_text(draw, tx, y, texts["time_text"], val_f, theme["bottom_text"])
 
     if opts.get("show_icons", True):
         ir2 = int(h * 0.068)

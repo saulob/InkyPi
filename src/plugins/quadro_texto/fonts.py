@@ -46,45 +46,45 @@ def _pick_handwritten_file() -> str:
 # ── Size multipliers (× display height) ────────────────────────────────────────
 FONT_PACKS = {
     "bold_clean": {
-        "label":  ("Jost",    0.072, "normal"),
+        "label":  ("Jost",    0.086, "normal"),
         "value":  ("Jost",    0.200, "bold"),
-        "sub":    ("Jost",    0.058, "normal"),
+        "sub":    ("Jost",    0.070, "normal"),
     },
     "geometric": {
-        "label":  ("Jost",    0.065, "normal"),
+        "label":  ("Jost",    0.078, "normal"),
         "value":  ("Jost",    0.215, "bold"),
-        "sub":    ("Jost",    0.052, "bold"),
+        "sub":    ("Jost",    0.062, "bold"),
     },
     "rounded": {
-        "label":  ("Jost",    0.070, "normal"),
+        "label":  ("Jost",    0.084, "normal"),
         "value":  ("Jost",    0.195, "bold"),
-        "sub":    ("Jost",    0.060, "normal"),
+        "sub":    ("Jost",    0.072, "normal"),
     },
     "condensed": {
-        "label":  ("Jost",    0.058, "bold"),
+        "label":  ("Jost",    0.070, "bold"),
         "value":  ("Jost",    0.230, "bold"),
-        "sub":    ("Jost",    0.045, "normal"),
+        "sub":    ("Jost",    0.054, "normal"),
     },
     "editorial": {
-        "label":  ("Napoli",  0.065, "normal"),
+        "label":  ("Napoli",  0.078, "normal"),
         "value":  ("Napoli",  0.195, "normal"),
-        "sub":    ("Napoli",  0.050, "normal"),
+        "sub":    ("Napoli",  0.060, "normal"),
     },
     "technical": {
-        "label":  ("DS-Digital", 0.060, "normal"),
+        "label":  ("DS-Digital", 0.072, "normal"),
         "value":  ("DS-Digital", 0.200, "normal"),
-        "sub":    ("DS-Digital", 0.048, "normal"),
+        "sub":    ("DS-Digital", 0.058, "normal"),
     },
     "handwritten": {
-        "label":  ("Handwritten", 0.074, "normal"),
+        "label":  ("Handwritten", 0.089, "normal"),
         # Keep the main value highly legible on e-paper.
         "value":  ("Jost",        0.198, "bold"),
-        "sub":    ("Handwritten", 0.060, "normal"),
+        "sub":    ("Handwritten", 0.072, "normal"),
     },
     "pixel": {
-        "label":  ("Dogica",  0.052, "normal"),
+        "label":  ("Dogica",  0.062, "normal"),
         "value":  ("Dogica",  0.130, "bold"),
-        "sub":    ("Dogica",  0.040, "normal"),
+        "sub":    ("Dogica",  0.048, "normal"),
     },
 }
 

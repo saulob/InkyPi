@@ -38,7 +38,7 @@
 }
 
 .label {
-    font-size: min(7dvh, 5dvw);
+    font-size: min(8.4dvh, 6dvw);
     font-weight: normal;
     line-height: 1.1;
     letter-spacing: 0.01em;
