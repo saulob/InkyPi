@@ -2,7 +2,8 @@
 emoji_utils.py — Decorative emoji helpers for Quadro Texto.
 
 Emoji rendering is intentionally resilient:
-    - prefers Twemoji SVG assets rasterized into PIL images (no emoji font needed)
+    - prefers Twemoji PNG assets loaded directly into PIL (no emoji font needed)
+    - falls back to SVG rasterization when cairosvg is available
     - falls back to a monochrome token badge if download/rasterization is unavailable
     - never raises an error that breaks card rendering
 """
@@ -38,6 +39,7 @@ def _unique_emojis(items):
 
 TWEMOJI_RELEASE = "14.0.2"
 TWEMOJI_BASE_URL = f"https://cdn.jsdelivr.net/gh/twitter/twemoji@{TWEMOJI_RELEASE}/assets/svg"
+TWEMOJI_PNG_BASE_URL = f"https://cdn.jsdelivr.net/gh/twitter/twemoji@{TWEMOJI_RELEASE}/assets/72x72"
 
 
 ALLOWED_EMOJIS = _unique_emojis([
@@ -105,6 +107,32 @@ def _emoji_to_twemoji_url(emoji: str) -> str:
     return f"{TWEMOJI_BASE_URL}/{codepoints}.svg"
 
 
+def _emoji_to_twemoji_png_url(emoji: str) -> str:
+    codepoints = "-".join(f"{ord(c):x}" for c in emoji if ord(c) != 0xFE0F)
+    return f"{TWEMOJI_PNG_BASE_URL}/{codepoints}.png"
+
+
+@lru_cache(maxsize=128)
+def _fetch_twemoji_png(emoji: str) -> bytes | None:
+    global _WARNED_TWEMOJI
+
+    url = _emoji_to_twemoji_png_url(emoji)
+    try:
+        resp = get_http_session().get(url, timeout=10)
+        resp.raise_for_status()
+        return resp.content
+    except Exception as exc:
+        if not _WARNED_TWEMOJI:
+            logger.warning(
+                "quadro_texto: failed to fetch Twemoji PNG '%s': %s. %s",
+                url,
+                exc,
+                "Trying SVG fallback." if HAS_CAIROSVG else "Using fallback badges.",
+            )
+            _WARNED_TWEMOJI = True
+        return None
+
+
 @lru_cache(maxsize=128)
 def _fetch_twemoji_svg(emoji: str) -> bytes | None:
     global _WARNED_TWEMOJI
@@ -134,6 +162,18 @@ def _fetch_twemoji_svg(emoji: str) -> bytes | None:
 
 @lru_cache(maxsize=256)
 def _render_twemoji_rgba(emoji: str, size_px: int) -> Image.Image | None:
+    png_bytes = _fetch_twemoji_png(emoji)
+    if png_bytes:
+        try:
+            png = Image.open(BytesIO(png_bytes)).convert("RGBA")
+            return png.resize((size_px, size_px), Image.LANCZOS)
+        except Exception as exc:
+            logger.warning(
+                "quadro_texto: failed to decode Twemoji PNG '%s': %s. Trying SVG fallback.",
+                emoji,
+                exc,
+            )
+
     svg_bytes = _fetch_twemoji_svg(emoji)
     if not svg_bytes:
         return None

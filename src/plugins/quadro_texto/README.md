@@ -117,6 +117,8 @@ INFO  quadro_texto: all optional dependencies available.
 
 `bold_clean` (Jost) · `geometric` · `rounded` · `condensed` · `editorial` (Napoli serif) · `technical` (DS-Digital) · `handwritten` · `pixel` (Dogica) · `random`
 
+When a decorative pack does not include a required glyph (for example `ç`, `ê`, or `à`), the plugin automatically falls back to a matching Jost variant for that whole string so Portuguese text stays readable on hardware.
+
 ## Illustration styles
 
 | Value | Description | Requires |
@@ -137,8 +139,9 @@ The plugin can place one decorative emoji in a free area of the card on every re
 - Placement: layout-aware safe anchors such as top-right, bottom-right, near clock, or near exit
 - Anti-repeat: saves the last emoji in `state.json` and excludes it on the next random pick when enabled
 - Rendering priority:
-  1. Twemoji SVG downloaded from CDN and rasterized with `cairosvg`
-  2. monochrome fallback badge (`:)`, `FUN`, `DEV`, `TRIP`, etc.) if SVG download/rasterization is unavailable
+  1. Twemoji PNG downloaded from CDN and composited directly with Pillow
+  2. Twemoji SVG rasterized with `cairosvg` when PNG loading is unavailable
+  3. monochrome fallback badge (`:)`, `FUN`, `DEV`, `TRIP`, etc.) if remote assets are unavailable
 
 This means the plugin does not require an emoji font installed on the Raspberry Pi.
 
@@ -228,7 +231,7 @@ print("Missing:", get_missing_optional_dependencies())
 
 **Symptom:** the plugin shows a small monochrome badge like `FUN`, `DEV`, or `:)` instead of a Twemoji icon.
 
-**Cause:** the plugin could not fetch the Twemoji SVG or could not rasterize it with `cairosvg`.
+**Cause:** the plugin could not fetch the Twemoji asset from the CDN. If PNG loading fails and `cairosvg` is not installed, the SVG fallback is also unavailable.
 
 **Fix:**
 ```bash
@@ -236,4 +239,4 @@ pip install cairosvg
 sudo systemctl restart inkypi.service
 ```
 
-If network access to the CDN is unavailable, the fallback badge is expected and safe; the plugin continues rendering normally.
+`cairosvg` is now only needed as an extra fallback path. If network access to the CDN is unavailable, the badge fallback is expected and safe; the plugin continues rendering normally.

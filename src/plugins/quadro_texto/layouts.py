@@ -45,11 +45,13 @@ from doodle import (
     draw_scribble_underline,
     draw_handdrawn_arrow,
 )
+from fonts import resolve_text_font
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────────
 
 def _text_w(draw, text, font):
+    font = resolve_text_font(font, text)
     try:
         return draw.textlength(text, font=font)
     except AttributeError:
@@ -57,6 +59,7 @@ def _text_w(draw, text, font):
 
 
 def _draw_text(draw, x, y, text, font, color, anchor="lt"):
+    font = resolve_text_font(font, text)
     draw.text((x, y), text, font=font, fill=color, anchor=anchor)
 
 
