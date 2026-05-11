@@ -1,0 +1,22 @@
+<div class="form-group">
+    <label for="textPrompt" class="form-label">Text Prompt:</label>
+    <textarea id="textPrompt" name="textPrompt" rows="4" placeholder="Describe the image you want to generate" required class="form-input"></textarea>
+    <small style="width: 100%; color: var(--text-primary);">Uses the Hugging Face token configured in the system as HF_TOKEN.</small>
+</div>
+
+<div class="form-group">
+    <label for="model" class="form-label">Model:</label>
+    <input type="text" id="model" name="model" value="black-forest-labs/FLUX.1-schnell" class="form-input">
+    <small style="width: 100%; color: var(--text-primary);">Default test model: black-forest-labs/FLUX.1-schnell</small>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!loadPluginSettings) {
+            return;
+        }
+
+        document.getElementById('textPrompt').value = pluginSettings.textPrompt || '';
+        document.getElementById('model').value = pluginSettings.model || 'black-forest-labs/FLUX.1-schnell';
+    });
+</script>
