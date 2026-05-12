@@ -24,6 +24,11 @@ Available layouts:
     sketch_note    — looks like a handwritten paper note
     marker_board   — marker-highlight style board
     doodle_card    — two stacked doodle cards with hand arrows
+        hero_banner    — bold hero card with lower metric block
+        editorial      — poster/editorial composition with strong time card
+        modern_widget  — nested rounded widget panels
+        focus_mode     — centered premium poster with framed time block
+        split_hero     — asymmetrical hero block plus lower info banner
 """
 
 import math
@@ -46,16 +51,32 @@ from doodle import (
     draw_handdrawn_arrow,
 )
 from fonts import resolve_text_font
+from spacing import layout_scale, split_y
+from contrast import (
+    get_safe_text_color_for_surface as _surf_tc,
+    get_safe_divider_color as _surf_div,
+    DIVIDER_MIN_RATIO,
+)
+from visual_balance import fit_span, vertical_origin, split_columns
+from decorative_shapes import (
+    draw_round_panel,
+    draw_soft_disc,
+    draw_corner_accents,
+    draw_editorial_frame,
+    draw_accent_band,
+)
+from hero_elements import draw_icon_tile, draw_icon_disc, draw_value_panel
+from composition_helpers import text_size as _measure_text, draw_label_chip, draw_editorial_divider
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────────
 
 def _text_w(draw, text, font):
-    font = resolve_text_font(font, text)
-    try:
-        return draw.textlength(text, font=font)
-    except AttributeError:
-        return draw.textsize(text, font=font)[0]
+    return _measure_text(draw, text, font)[0]
+
+
+def _text_h(draw, text, font):
+    return _measure_text(draw, text, font)[1]
 
 
 def _draw_text(draw, x, y, text, font, color, anchor="lt"):
@@ -86,43 +107,98 @@ def _divider(draw, x0, y, x1, color, h_ref, style="solid"):
 # ── 1. SPLIT ──────────────────────────────────────────────────────────────────
 
 def render_split(img, draw, w, h, texts, theme, lf, illu, opts):
-    pad     = int(w * 0.045)
-    icon_r  = int(h * 0.115)
-    gap     = int(h * 0.022)
-    lbl_f   = lf("label")
-    val_f   = lf("value")
+    sc = layout_scale(w, h)
+    pad = sc["pad_x"]
+    lbl_f = lf("label")
+    val_f = lf("value")
+    hero_y = split_y(h, 0.58)
 
-    div_y  = h // 2
-    div_th = max(2, h // 120)
-
-    _section_bg(img, draw, 0, 0, w, div_y, theme["top_bg"])
-    _section_bg(img, draw, 0, div_y, w, h,  theme["bottom_bg"])
+    _section_bg(img, draw, 0, 0, w, hero_y, theme["top_bg"])
+    _section_bg(img, draw, 0, hero_y, w, h, theme["bottom_bg"])
 
     if opts.get("show_divider", True):
-        draw.rectangle([0, div_y - div_th, w, div_y + div_th], fill=theme["divider"])
+        draw_accent_band(
+            draw,
+            0,
+            hero_y - sc["divider_mid"],
+            w,
+            hero_y + sc["divider_mid"],
+            theme["divider"],
+        )
 
-    icon_cx = pad + icon_r
-    text_x  = (icon_cx + icon_r + pad) if opts.get("show_icons", True) else pad
+    label_y = int(h * 0.09)
+    draw_label_chip(
+        draw,
+        pad,
+        label_y,
+        texts["top_text"],
+        lbl_f,
+        theme["top_text"],
+        theme["mid_bg"],
+        pad_x=18,
+        pad_y=10,
+        radius=sc["radius_sm"],
+    )
+    value_y = label_y + int(h * 0.13)
+    _draw_text(draw, pad, value_y, texts["main_text"], val_f, theme["top_text"])
 
-    lbl_h = int(h * 0.072)
-    val_h = int(h * 0.200)
-    total_h = lbl_h + gap + val_h
+    main_w = int(_text_w(draw, texts["main_text"], val_f))
+    draw_editorial_divider(
+        draw,
+        pad,
+        value_y + int(h * 0.185),
+        min(w - pad, pad + main_w + int(w * 0.10)),
+        theme["divider"],
+        sc["divider_mid"],
+        style="split",
+    )
 
-    # Top section
-    top_cy = div_y // 2
     if opts.get("show_icons", True):
-        illu["clock_fn"](draw, icon_cx, top_cy, icon_r, theme["top_text"])
-    ty = top_cy - total_h // 2
-    _draw_text(draw, text_x, ty, texts["top_text"], lbl_f, theme["top_text"])
-    _draw_text(draw, text_x, ty + lbl_h + gap, texts["main_text"], val_f, theme["top_text"])
+        disc_r = sc["icon_xl"]
+        draw_icon_disc(
+            draw,
+            w - pad - disc_r,
+            int(hero_y * 0.42),
+            disc_r,
+            theme["mid_bg"],
+            theme["border"],
+            illu["clock_fn"],
+            theme["top_text"],
+            ring_width=max(2, h // 130),
+        )
 
-    # Bottom section
-    bot_cy = div_y + (h - div_y) // 2
+    bottom_y = hero_y + int(h * 0.08)
     if opts.get("show_icons", True):
-        illu["door_fn"](draw, icon_cx, bot_cy, icon_r, theme["bottom_text"])
-    ty2 = bot_cy - total_h // 2
-    _draw_text(draw, text_x, ty2, texts["bottom_text"], lbl_f, theme["bottom_text"])
-    _draw_text(draw, text_x, ty2 + lbl_h + gap, texts["time_text"], val_f, theme["bottom_text"])
+        tile = int(h * 0.20)
+        draw_icon_tile(
+            draw,
+            pad + tile // 2,
+            bottom_y + tile // 2,
+            tile,
+            theme["mid_bg"],
+            theme["border"],
+            illu["door_fn"],
+            theme["bottom_text"],
+            outline_width=max(2, h // 140),
+        )
+        text_x = pad + tile + int(w * 0.04)
+    else:
+        text_x = pad
+
+    _draw_text(draw, text_x, bottom_y, texts["bottom_text"], lbl_f, theme["bottom_text"])
+    time_y = bottom_y + int(h * 0.11)
+    _draw_text(draw, text_x, time_y, texts["time_text"], val_f, theme["bottom_text"])
+
+    time_w = int(_text_w(draw, texts["time_text"], val_f))
+    draw_editorial_divider(
+        draw,
+        text_x,
+        time_y + int(h * 0.19),
+        min(w - pad, text_x + time_w + int(w * 0.08)),
+        theme["accent"],
+        sc["divider_thick"],
+        style="underline",
+    )
 
     if opts.get("show_border", True):
         illu["border_fn"](draw, w, h, theme["border"])
@@ -132,34 +208,86 @@ def render_split(img, draw, w, h, texts, theme, lf, illu, opts):
 
 def render_poster(img, draw, w, h, texts, theme, lf, illu, opts):
     _section_bg(img, draw, 0, 0, w, h, theme["bg"])
-    icon_r = int(h * 0.09)
-    lbl_f  = lf("label")
-    val_f  = lf("value")
-    val_f2 = lf("sub")
-    gap    = int(h * 0.025)
+    sc = layout_scale(w, h)
+    pad = sc["pad_x"]
+    lbl_f = lf("label")
+    val_f = lf("value")
 
-    y = int(h * 0.06)
     if opts.get("show_icons", True):
-        illu["clock_fn"](draw, w // 2, y + icon_r, icon_r, theme["top_text"])
-        y += icon_r * 2 + gap
+        draw_icon_disc(
+            draw,
+            w // 2,
+            int(h * 0.17),
+            int(h * 0.105),
+            theme["mid_bg"],
+            theme["border"],
+            illu["clock_fn"],
+            theme["top_text"],
+            ring_width=max(2, h // 140),
+        )
 
-    _draw_text(draw, w // 2, y, texts["top_text"], lbl_f, theme["top_text"], anchor="mt")
-    y += int(h * 0.072) + gap
-    _draw_text(draw, w // 2, y, texts["main_text"], val_f, theme["top_text"], anchor="mt")
-    y += int(h * 0.200) + gap * 2
+    label_w = int(_text_w(draw, texts["top_text"], lbl_f)) + 40
+    draw_label_chip(
+        draw,
+        (w - label_w) // 2,
+        int(h * 0.26),
+        texts["top_text"],
+        lbl_f,
+        theme["top_text"],
+        theme["mid_bg"],
+        pad_x=20,
+        pad_y=10,
+        radius=sc["radius_sm"],
+    )
 
+    panel_y0 = int(h * 0.37)
+    panel_h = int(h * 0.22)
+    text_w = int(_text_w(draw, texts["main_text"], val_f))
+    panel_x0, panel_x1 = fit_span(w // 2, text_w, pad, w - pad, int(w * 0.10))
+    hero_fill = theme["accent"]
+    hero_lum = sum(hero_fill) / 3
+    hero_tc = (255, 255, 255) if hero_lum < 128 else (10, 10, 10)
+    draw_value_panel(
+        draw,
+        panel_x0,
+        panel_y0,
+        panel_x1,
+        panel_y0 + panel_h,
+        hero_fill,
+        radius=sc["radius_lg"],
+    )
+    _draw_text(draw, w // 2, panel_y0 + panel_h // 2, texts["main_text"], val_f, hero_tc, anchor="mm")
+
+    divider_y = panel_y0 + panel_h + int(h * 0.07)
     if opts.get("show_divider", True):
-        dw = int(w * 0.45)
-        _divider(draw, (w - dw) // 2, y, (w + dw) // 2, theme["divider"], h)
-        y += int(h * 0.030)
+        draw_editorial_divider(
+            draw,
+            int(w * 0.26),
+            divider_y,
+            int(w * 0.74),
+            theme["divider"],
+            sc["divider_mid"],
+            style="split",
+        )
 
-    _draw_text(draw, w // 2, y, texts["bottom_text"], lbl_f, theme["bottom_text"], anchor="mt")
-    y += int(h * 0.072) + gap
-    _draw_text(draw, w // 2, y, texts["time_text"], val_f, theme["bottom_text"], anchor="mt")
+    bottom_label_y = divider_y + int(h * 0.06)
+    _draw_text(draw, w // 2, bottom_label_y, texts["bottom_text"], lbl_f, theme["bottom_text"], anchor="mt")
+    time_y = bottom_label_y + int(h * 0.11)
+    _draw_text(draw, w // 2, time_y, texts["time_text"], val_f, theme["bottom_text"], anchor="mt")
 
     if opts.get("show_icons", True):
-        dr = int(icon_r * 0.65)
-        illu["door_fn"](draw, w - int(w * 0.09), h - int(h * 0.11), dr, theme["bottom_text"])
+        tile = int(h * 0.14)
+        draw_icon_tile(
+            draw,
+            w - pad - tile // 2,
+            h - int(h * 0.13),
+            tile,
+            theme["mid_bg"],
+            theme["border"],
+            illu["door_fn"],
+            theme["bottom_text"],
+            outline_width=max(2, h // 150),
+        )
 
     if opts.get("show_border", True):
         illu["border_fn"](draw, w, h, theme["border"])
@@ -169,32 +297,59 @@ def render_poster(img, draw, w, h, texts, theme, lf, illu, opts):
 
 def render_minimal(img, draw, w, h, texts, theme, lf, illu, opts):
     _section_bg(img, draw, 0, 0, w, h, theme["bg"])
-    lbl_f  = lf("label")
-    val_f  = lf("value")
-    val_f2 = lf("sub")
-    gap    = int(h * 0.025)
-    gap2   = int(h * 0.048)
-    lbl_h  = int(h * 0.088)
-    val_h  = int(h * 0.225)
-    val_sm = int(h * 0.130)
-    dh     = max(2, h // 120)
+    sc = layout_scale(w, h)
+    lbl_f = lf("label")
+    val_f = lf("value")
 
-    total_h = lbl_h + gap + val_h + gap2 + dh + gap2 + lbl_h + gap + val_sm
-    y = (h - total_h) // 2
+    total_h = int(h * 0.54)
+    y = vertical_origin(int(h * 0.04), h - int(h * 0.08), total_h, bias=0.40)
 
-    _draw_text(draw, w // 2, y, texts["top_text"], lbl_f, theme["top_text"], "mt")
-    y += lbl_h + gap
+    if opts.get("show_icons", True):
+        draw_icon_disc(
+            draw,
+            w // 2,
+            y + int(h * 0.03),
+            sc["icon_md"],
+            theme["mid_bg"],
+            theme["border"],
+            illu["clock_fn"],
+            theme["top_text"],
+            ring_width=max(2, h // 150),
+        )
+        y += int(h * 0.10)
+
+    chip_w = int(_text_w(draw, texts["top_text"], lbl_f)) + 36
+    draw_label_chip(
+        draw,
+        (w - chip_w) // 2,
+        y,
+        texts["top_text"],
+        lbl_f,
+        theme["top_text"],
+        theme["mid_bg"],
+        pad_x=18,
+        pad_y=9,
+        radius=sc["radius_sm"],
+    )
+    y += int(h * 0.11)
     _draw_text(draw, w // 2, y, texts["main_text"], val_f, theme["top_text"], "mt")
-    y += val_h + gap2
+    y += int(h * 0.19)
 
     if opts.get("show_divider", True):
-        dw = int(w * 0.32)
-        _divider(draw, (w - dw) // 2, y, (w + dw) // 2, theme["divider"], h)
-    y += dh + gap2
+        draw_editorial_divider(
+            draw,
+            int(w * 0.32),
+            y,
+            int(w * 0.68),
+            theme["divider"],
+            sc["divider_mid"],
+            style="underline",
+        )
+        y += int(h * 0.06)
 
     _draw_text(draw, w // 2, y, texts["bottom_text"], lbl_f, theme["bottom_text"], "mt")
-    y += lbl_h + gap
-    _draw_text(draw, w // 2, y, texts["time_text"], val_f2, theme["bottom_text"], "mt")
+    y += int(h * 0.11)
+    _draw_text(draw, w // 2, y, texts["time_text"], val_f, theme["bottom_text"], "mt")
 
     if opts.get("show_border", True):
         illu["border_fn"](draw, w, h, theme["border"])
@@ -204,55 +359,93 @@ def render_minimal(img, draw, w, h, texts, theme, lf, illu, opts):
 
 def render_badge(img, draw, w, h, texts, theme, lf, illu, opts):
     _section_bg(img, draw, 0, 0, w, h, theme["bg"])
-    lbl_f  = lf("label")
-    val_f  = lf("value")
-    sub_f  = lf("sub")
-    gap    = int(h * 0.028)
-    pad    = int(w * 0.06)
+    sc = layout_scale(w, h)
+    pad = sc["pad_x"]
+    lbl_f = lf("label")
+    val_f = lf("value")
 
-    # Top area: label + large pill with main_text
-    y = int(h * 0.09)
+    y = int(h * 0.10)
+    draw_label_chip(
+        draw,
+        pad,
+        y,
+        texts["top_text"],
+        lbl_f,
+        theme["top_text"],
+        theme["mid_bg"],
+        pad_x=18,
+        pad_y=10,
+        radius=sc["radius_sm"],
+    )
+
+    pill_y = y + int(h * 0.12)
+    pill_h = int(h * 0.22)
+    text_w = int(_text_w(draw, texts["main_text"], val_f))
+    pill_x0 = pad
+    pill_x1 = min(w - pad - int(w * 0.10), pad + text_w + int(w * 0.18))
+    fill = theme["accent"]
+    fill_lum = sum(fill) / 3
+    text_c = (255, 255, 255) if fill_lum < 128 else (10, 10, 10)
+    draw_value_panel(draw, pill_x0, pill_y, pill_x1, pill_y + pill_h, fill, radius=pill_h // 2)
+    _draw_text(draw, (pill_x0 + pill_x1) // 2, pill_y + pill_h // 2, texts["main_text"], val_f, text_c, "mm")
+
     if opts.get("show_icons", True):
-        icon_r = int(h * 0.07)
-        illu["clock_fn"](draw, pad + icon_r, y + icon_r, icon_r, theme["top_text"])
-        tx = pad + icon_r * 2 + int(pad * 0.6)
-    else:
-        tx = pad
-    _draw_text(draw, tx, y, texts["top_text"], lbl_f, theme["top_text"])
+        draw_icon_disc(
+            draw,
+            w - pad - int(h * 0.12),
+            int(h * 0.24),
+            int(h * 0.12),
+            theme["mid_bg"],
+            theme["border"],
+            illu["clock_fn"],
+            theme["top_text"],
+            ring_width=max(2, h // 140),
+        )
 
-    # Badge pill for main_text — width fits text, not full canvas
-    bh = int(h * 0.200)
-    by = y + int(h * 0.085)
-    txw = int(_text_w(draw, texts["main_text"], val_f))
-    pill_pad = int(w * 0.07)
-    bx0 = max(pad, w // 2 - txw // 2 - pill_pad)
-    bx1 = min(w - pad, w // 2 + txw // 2 + pill_pad)
-    try:
-        draw.rounded_rectangle([bx0, by, bx1, by + bh], radius=bh // 2,
-                                fill=theme["accent"])
-    except AttributeError:
-        draw.rectangle([bx0, by, bx1, by + bh], fill=theme["accent"])
-    # text on badge
-    bg_lum = sum(theme["accent"]) / 3
-    badge_tc = (255, 255, 255) if bg_lum < 128 else (10, 10, 10)
-    _draw_text(draw, w // 2, by + bh // 2, texts["main_text"], val_f, badge_tc, "mm")
-
-    # Bottom: divider + bottom_text + time pill
-    y2 = by + bh + int(h * 0.065)
+    divider_y = pill_y + pill_h + int(h * 0.06)
     if opts.get("show_divider", True):
-        dw = int(w * 0.55)
-        _divider(draw, (w - dw) // 2, y2, (w + dw) // 2, theme["divider"], h)
-        y2 += int(h * 0.030)
+        draw_editorial_divider(
+            draw,
+            pad,
+            divider_y,
+            pill_x1,
+            theme["divider"],
+            sc["divider_mid"],
+            style="split",
+        )
 
+    bottom_y = divider_y + int(h * 0.06)
     if opts.get("show_icons", True):
-        icon_r2 = int(h * 0.065)
-        illu["door_fn"](draw, pad + icon_r2, y2 + icon_r2, icon_r2, theme["bottom_text"])
-        bx2 = pad + icon_r2 * 2 + int(pad * 0.5)
+        tile = int(h * 0.15)
+        draw_icon_tile(
+            draw,
+            pad + tile // 2,
+            bottom_y + tile // 2,
+            tile,
+            theme["mid_bg"],
+            theme["border"],
+            illu["door_fn"],
+            theme["bottom_text"],
+            outline_width=max(2, h // 150),
+        )
+        text_x = pad + tile + int(w * 0.035)
     else:
-        bx2 = pad
-    _draw_text(draw, bx2, y2, texts["bottom_text"], sub_f, theme["bottom_text"])
-    y2 += int(h * 0.065)
-    _draw_text(draw, bx2, y2, texts["time_text"], val_f, theme["bottom_text"])
+        text_x = pad
+
+    _draw_text(draw, text_x, bottom_y, texts["bottom_text"], lbl_f, theme["bottom_text"])
+    time_y = bottom_y + int(h * 0.11)
+    _draw_text(draw, text_x, time_y, texts["time_text"], val_f, theme["bottom_text"])
+
+    time_w = int(_text_w(draw, texts["time_text"], val_f))
+    draw_editorial_divider(
+        draw,
+        text_x,
+        time_y + int(h * 0.19),
+        min(w - pad, text_x + time_w + int(w * 0.08)),
+        theme["accent"],
+        sc["divider_thick"],
+        style="underline",
+    )
 
     if opts.get("show_border", True):
         illu["border_fn"](draw, w, h, theme["border"])
@@ -261,43 +454,105 @@ def render_badge(img, draw, w, h, texts, theme, lf, illu, opts):
 # ── 5. DASHBOARD ──────────────────────────────────────────────────────────────
 
 def render_dashboard(img, draw, w, h, texts, theme, lf, illu, opts):
-    panel_w = int(w * 0.30)
-    _section_bg(img, draw, 0, 0, panel_w, h, theme["mid_bg"])
-    _section_bg(img, draw, panel_w, 0, w, h, theme["bg"])
+    sc = layout_scale(w, h)
+    panel_w, _ = split_columns(w, 0.34)
+    outer_pad = int(w * 0.025)
 
-    lbl_f  = lf("label")
-    val_f  = lf("value")
-    sub_f  = lf("sub")
-    icon_r = int(h * 0.12)
-    pad    = int(h * 0.04)
-    gap    = int(h * 0.028)
+    _section_bg(img, draw, 0, 0, w, h, theme["bg"])
+    draw_value_panel(
+        draw,
+        outer_pad,
+        int(h * 0.04),
+        panel_w,
+        h - int(h * 0.04),
+        theme["mid_bg"],
+        outline=theme["border"],
+        radius=sc["radius_lg"],
+        outline_width=max(2, h // 140),
+    )
 
-    # Left panel: stacked icons
-    cy1 = h // 3
-    cy2 = h * 2 // 3
+    lbl_f = lf("label")
+    val_f = lf("value")
+
     if opts.get("show_icons", True):
-        illu["clock_fn"](draw, panel_w // 2, cy1, icon_r, theme["top_text"])
-        illu["door_fn"](draw, panel_w // 2, cy2, int(icon_r * 0.85), theme["bottom_text"])
+        icon_size = int(h * 0.19)
+        cx = (outer_pad + panel_w) // 2
+        draw_icon_tile(
+            draw,
+            cx,
+            int(h * 0.25),
+            icon_size,
+            theme["bg"],
+            theme["border"],
+            illu["clock_fn"],
+            theme["top_text"],
+            outline_width=max(2, h // 150),
+        )
+        draw_accent_band(
+            draw,
+            outer_pad + int(w * 0.04),
+            int(h * 0.46),
+            panel_w - int(w * 0.04),
+            int(h * 0.48),
+            theme["accent"],
+            radius=sc["radius_sm"],
+        )
+        draw_icon_tile(
+            draw,
+            cx,
+            int(h * 0.69),
+            int(h * 0.17),
+            theme["bg"],
+            theme["border"],
+            illu["door_fn"],
+            theme["bottom_text"],
+            outline_width=max(2, h // 150),
+        )
 
-    # Right panel: text blocks
     tx = panel_w + int(w * 0.05)
-    lbl_h = int(h * 0.080)
-    val_h = int(h * 0.200)
-    total = lbl_h + gap + val_h + int(h * 0.06) + lbl_h + gap + int(h * 0.150)
-    ty = (h - total) // 2
-
-    _draw_text(draw, tx, ty, texts["top_text"], lbl_f, theme["top_text"])
-    ty += lbl_h + gap
-    _draw_text(draw, tx, ty, texts["main_text"], val_f, theme["top_text"])
-    ty += val_h + int(h * 0.06)
+    draw_label_chip(
+        draw,
+        tx,
+        int(h * 0.08),
+        texts["top_text"],
+        lbl_f,
+        theme["top_text"],
+        theme["mid_bg"],
+        pad_x=18,
+        pad_y=10,
+        radius=sc["radius_sm"],
+    )
+    main_y = int(h * 0.24)
+    _draw_text(draw, tx, main_y, texts["main_text"], val_f, theme["top_text"])
 
     if opts.get("show_divider", True):
-        _divider(draw, tx, ty, w - int(w * 0.05), theme["divider"], h, "dashed")
-        ty += int(h * 0.030)
+        draw_editorial_divider(
+            draw,
+            tx,
+            main_y + int(h * 0.20),
+            min(w - int(w * 0.08), tx + int(w * 0.42)),
+            theme["divider"],
+            sc["divider_mid"],
+            style="split",
+        )
 
-    _draw_text(draw, tx, ty, texts["bottom_text"], lbl_f, theme["bottom_text"])
-    ty += lbl_h + gap
-    _draw_text(draw, tx, ty, texts["time_text"], val_f, theme["bottom_text"])
+    card_y0 = int(h * 0.60)
+    time_w = int(_text_w(draw, texts["time_text"], val_f))
+    card_x0 = tx
+    card_x1 = min(w - int(w * 0.14), tx + time_w + int(w * 0.20))
+    draw_value_panel(
+        draw,
+        card_x0,
+        card_y0,
+        card_x1,
+        card_y0 + int(h * 0.24),
+        theme["top_bg"],
+        outline=theme["border"],
+        radius=sc["radius_md"],
+        outline_width=max(2, h // 150),
+    )
+    _draw_text(draw, card_x0 + int(w * 0.03), card_y0 + int(h * 0.035), texts["bottom_text"], lbl_f, theme["bottom_text"])
+    _draw_text(draw, card_x0 + int(w * 0.03), card_y0 + int(h * 0.11), texts["time_text"], val_f, theme["bottom_text"])
 
     if opts.get("show_border", True):
         illu["border_fn"](draw, w, h, theme["border"])
@@ -318,34 +573,64 @@ def render_blueprint(img, draw, w, h, texts, theme, lf, illu, opts):
     for gx in range(0, w, grid_sp):
         draw.line([gx, 0, gx, h], fill=grid_c, width=1)
 
-    lbl_f  = lf("label")
-    val_f  = lf("value")
-    sub_f  = lf("sub")
-    gap    = int(h * 0.030)
-    pad    = int(w * 0.06)
-    lbl_h  = int(h * 0.072)
-    val_h  = int(h * 0.200)
+    sc = layout_scale(w, h)
+    lbl_f = lf("label")
+    val_f = lf("value")
+    pad = sc["pad_x"]
 
-    total_h = (lbl_h + gap + val_h) * 2 + int(h * 0.08)
-    y = (h - total_h) // 2
+    draw_corner_accents(
+        draw,
+        int(w * 0.03),
+        int(h * 0.04),
+        w - int(w * 0.03),
+        h - int(h * 0.04),
+        int(h * 0.08),
+        theme["border"],
+        lw=2,
+    )
 
-    # Corner brackets decoration
-    bpad = int(h * 0.04)
-    bsize = int(h * 0.08)
-    draw_all_corner_brackets(draw, bpad, bpad, w - bpad, h - bpad, bsize, theme["border"], lw=2)
+    if opts.get("show_icons", True):
+        draw_icon_disc(
+            draw,
+            w - int(w * 0.14),
+            int(h * 0.23),
+            int(h * 0.105),
+            theme["mid_bg"],
+            theme["border"],
+            illu["clock_fn"],
+            theme["top_text"],
+            ring_width=max(2, h // 150),
+        )
 
-    _draw_text(draw, pad, y, texts["top_text"], lbl_f, theme["top_text"])
-    y += lbl_h + gap
-    _draw_text(draw, pad, y, texts["main_text"], val_f, theme["top_text"])
-    y += val_h + int(h * 0.05)
+    draw_label_chip(
+        draw,
+        pad,
+        int(h * 0.12),
+        texts["top_text"],
+        lbl_f,
+        theme["top_text"],
+        theme["mid_bg"],
+        pad_x=16,
+        pad_y=9,
+        radius=sc["radius_sm"],
+    )
+    main_y = int(h * 0.27)
+    _draw_text(draw, pad, main_y, texts["main_text"], val_f, theme["top_text"])
 
-    dw = int(w * 0.50)
-    _divider(draw, pad, y, pad + dw, theme["divider"], h, "dashed")
-    y += int(h * 0.03)
+    if opts.get("show_divider", True):
+        draw_editorial_divider(
+            draw,
+            pad,
+            main_y + int(h * 0.19),
+            pad + int(w * 0.48),
+            theme["divider"],
+            sc["divider_mid"],
+            style="dashed",
+        )
 
-    _draw_text(draw, pad, y, texts["bottom_text"], lbl_f, theme["bottom_text"])
-    y += lbl_h + gap
-    _draw_text(draw, pad, y, texts["time_text"], val_f, theme["bottom_text"])
+    bottom_y = int(h * 0.63)
+    _draw_text(draw, pad, bottom_y, texts["bottom_text"], lbl_f, theme["bottom_text"])
+    _draw_text(draw, pad, bottom_y + int(h * 0.11), texts["time_text"], val_f, theme["bottom_text"])
 
 
 
@@ -354,101 +639,121 @@ def render_blueprint(img, draw, w, h, texts, theme, lf, illu, opts):
 
 def render_doodle(img, draw, w, h, texts, theme, lf, illu, opts):
     jitter = illu.get("jitter_strength")
-    draw_paper_texture(draw, w, h, base_color=(248, 246, 240), density=0.0016, strength=9)
+    _PAPER = (248, 246, 240)
+    draw_paper_texture(draw, w, h, base_color=_PAPER, density=0.0016, strength=9)
 
+    # Contrast-safe colours for the paper surface
+    top_tc = _surf_tc(theme["top_text"],    _PAPER)
+    bot_tc = _surf_tc(theme["bottom_text"], _PAPER)
+    acc_c  = _surf_tc(theme["accent"],  _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+    div_c  = _surf_tc(theme["divider"], _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+    brd_c  = _surf_tc(theme["border"],  _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+
+    sc = layout_scale(w, h)
     lbl_f = lf("label")
     val_f = lf("value")
-    gap   = int(h * 0.024)
-    pad   = int(w * 0.06)
+    gap = int(h * 0.026)
+    pad = sc["pad_x"]
 
     if opts.get("show_border", True):
         draw_double_sketch_border(
             draw,
             w,
             h,
-            theme["border"],
+            brd_c,
             width=max(2, h // 120),
             jitter_strength=jitter,
             gap=max(8, h // 52),
         )
 
-    lbl_h = int(h * 0.082)
-    val_h = int(h * 0.210)
-    y = int(h * 0.11)
+    lbl_h = int(h * 0.088)
+    y = int(h * 0.10)
 
     if opts.get("show_icons", True):
-        icon_r = int(h * 0.085)
-        illu["clock_fn"](draw, pad + icon_r, y + icon_r, icon_r, theme["top_text"])
-        tx = pad + icon_r * 2 + int(pad * 0.45)
+        icon_r = int(h * 0.105)
+        illu["clock_fn"](draw, pad + icon_r, y + icon_r, icon_r, top_tc)
+        tx = pad + icon_r * 2 + int(pad * 0.55)
     else:
         tx = pad
 
-    _draw_text(draw, tx, y, texts["top_text"], lbl_f, theme["top_text"])
-    y += lbl_h + gap
-    _draw_text(draw, tx, y, texts["main_text"], val_f, theme["top_text"])
+    _draw_text(draw, tx, y, texts["top_text"], lbl_f, top_tc)
+    y += int(h * 0.10)
+    _draw_text(draw, tx, y, texts["main_text"], val_f, top_tc)
 
     tw = int(_text_w(draw, texts["main_text"], val_f))
-    ul_y = y + val_h + int(gap * 0.35)
+    ul_y = y + int(h * 0.19)
     draw_scribble_underline(
         draw,
         tx,
         ul_y,
-        min(w - pad, tx + tw + int(w * 0.06)),
-        theme["accent"],
-        width=max(3, h // 95),
+        min(w - pad, tx + tw + int(w * 0.10)),
+        acc_c,
+        width=max(4, h // 85),
         jitter_strength=jitter,
     )
 
     # Decorative hand-drawn arrow near divider region.
-    arrow_y = ul_y + int(h * 0.048)
+    arrow_y = ul_y + int(h * 0.06)
     draw_handdrawn_arrow(
         draw,
         tx,
         arrow_y,
-        min(w - pad, tx + int(w * 0.20)),
+        min(w - pad, tx + int(w * 0.28)),
         arrow_y,
-        theme["divider"],
+        div_c,
         width=max(2, h // 120),
         jitter_strength=jitter,
     )
 
-    y = arrow_y + int(h * 0.040)
+    y = arrow_y + int(h * 0.05)
     if opts.get("show_divider", True):
         draw_jittered_line(
             draw,
             tx,
             y,
-            min(w - pad, tx + int(w * 0.38)),
+            min(w - pad, tx + int(w * 0.52)),
             y,
-            theme["divider"],
-            width=max(2, h // 120),
+            div_c,
+            width=max(3, h // 105),
             jitter_strength=jitter,
             passes=2,
             segments=10,
         )
-        y += int(h * 0.036)
+        y += int(h * 0.045)
 
     if opts.get("show_icons", True):
-        icon_r2 = int(h * 0.076)
-        illu["door_fn"](draw, pad + icon_r2, y + icon_r2, icon_r2, theme["bottom_text"])
-        bx = pad + icon_r2 * 2 + int(pad * 0.45)
+        box = int(h * 0.16)
+        draw_jittered_rounded_rectangle(
+            draw,
+            pad,
+            y,
+            pad + box,
+            y + box,
+            radius=max(12, h // 18),
+            color=brd_c,
+            width=max(2, h // 125),
+            jitter_strength=jitter,
+            passes=2,
+        )
+        illu["door_fn"](draw, pad + box // 2, y + box // 2, int(box * 0.26), bot_tc)
+        bx = pad + box + int(w * 0.04)
     else:
         bx = pad
 
-    _draw_text(draw, bx, y, texts["bottom_text"], lbl_f, theme["bottom_text"])
-    y += lbl_h + gap
+    _draw_text(draw, bx, y, texts["bottom_text"], lbl_f, bot_tc)
+    y += int(h * 0.10)
 
     # Marker-like accent under time text (underline style).
     txw = int(_text_w(draw, texts["time_text"], val_f))
-    _draw_text(draw, bx, y, texts["time_text"], val_f, theme["bottom_text"])
+    _draw_text(draw, bx, y, texts["time_text"], val_f, bot_tc)
     draw_marker_stroke(
         draw,
         bx,
-        y + int(h * 0.175),
-        min(w - pad, bx + txw + int(w * 0.03)),
-        y + int(h * 0.175),
-        theme["accent"],
-        width=max(8, h // 22),
+        y + int(h * 0.185),
+        min(w - pad, bx + txw + int(w * 0.06)),
+        y + int(h * 0.185),
+        acc_c,
+        width=max(9, h // 21),
         jitter_strength=jitter,
     )
 
@@ -456,102 +761,164 @@ def render_doodle(img, draw, w, h, texts, theme, lf, illu, opts):
 # ── 8. FRAMED ─────────────────────────────────────────────────────────────────
 
 def render_framed(img, draw, w, h, texts, theme, lf, illu, opts):
+    sc = layout_scale(w, h)
     _section_bg(img, draw, 0, 0, w, h, theme["mid_bg"])
 
-    # Inner mat
-    mat = int(min(w, h) * 0.055)
+    mat = int(min(w, h) * 0.050)
     inner_x0, inner_y0 = mat, mat
     inner_x1, inner_y1 = w - mat, h - mat
-    _section_bg(img, draw, inner_x0, inner_y0, inner_x1, inner_y1, theme["bg"])
-    # Mat border
-    lw = max(2, mat // 5)
-    draw.rectangle([inner_x0, inner_y0, inner_x1, inner_y1], outline=theme["border"], width=lw)
+    draw_value_panel(
+        draw,
+        inner_x0,
+        inner_y0,
+        inner_x1,
+        inner_y1,
+        theme["bg"],
+        outline=theme["border"],
+        radius=sc["radius_md"],
+        outline_width=max(3, mat // 5),
+    )
 
     iw = inner_x1 - inner_x0
     ih = inner_y1 - inner_y0
     pad = int(iw * 0.06)
-    icon_r = int(ih * 0.11)
-    gap = int(ih * 0.025)
-    lbl_h = int(ih * 0.082)
-    val_h = int(ih * 0.200)
-
     div_y = inner_y0 + ih // 2
     if opts.get("show_divider", True):
-        dw2 = int(iw * 0.88)
-        _divider(draw, inner_x0 + (iw - dw2) // 2, div_y,
-                 inner_x0 + (iw + dw2) // 2, theme["divider"], ih)
+        draw_editorial_divider(
+            draw,
+            inner_x0 + int(iw * 0.08),
+            div_y,
+            inner_x1 - int(iw * 0.08),
+            theme["divider"],
+            sc["divider_mid"],
+            style="bar",
+        )
 
-    icon_cx = inner_x0 + pad + icon_r
-    tx = icon_cx + icon_r + pad
-
-    # Top
-    top_cy = inner_y0 + ih // 4
+    tx = inner_x0 + pad
     if opts.get("show_icons", True):
-        illu["clock_fn"](draw, icon_cx, top_cy, icon_r, theme["top_text"])
-    ty = top_cy - (lbl_h + gap + val_h) // 2
-    _draw_text(draw, tx, ty, texts["top_text"], lf("label"), theme["top_text"])
-    _draw_text(draw, tx, ty + lbl_h + gap, texts["main_text"], lf("value"), theme["top_text"])
+        draw_icon_tile(
+            draw,
+            inner_x1 - int(iw * 0.11),
+            inner_y0 + int(ih * 0.22),
+            int(h * 0.15),
+            theme["mid_bg"],
+            theme["border"],
+            illu["clock_fn"],
+            theme["top_text"],
+            outline_width=max(2, h // 150),
+        )
+        draw_icon_tile(
+            draw,
+            inner_x1 - int(iw * 0.11),
+            inner_y0 + int(ih * 0.72),
+            int(h * 0.14),
+            theme["mid_bg"],
+            theme["border"],
+            illu["door_fn"],
+            theme["bottom_text"],
+            outline_width=max(2, h // 150),
+        )
 
-    # Bottom
-    bot_cy = inner_y0 + ih * 3 // 4
-    if opts.get("show_icons", True):
-        illu["door_fn"](draw, icon_cx, bot_cy, icon_r, theme["bottom_text"])
-    ty2 = bot_cy - (lbl_h + gap + val_h) // 2
-    _draw_text(draw, tx, ty2, texts["bottom_text"], lf("label"), theme["bottom_text"])
-    _draw_text(draw, tx, ty2 + lbl_h + gap, texts["time_text"], lf("value"), theme["bottom_text"])
+    draw_label_chip(draw, tx, inner_y0 + int(ih * 0.09), texts["top_text"], lf("label"), theme["top_text"], theme["mid_bg"], pad_x=16, pad_y=8, radius=sc["radius_sm"])
+    _draw_text(draw, tx, inner_y0 + int(ih * 0.23), texts["main_text"], lf("value"), theme["top_text"])
+    _draw_text(draw, tx, inner_y0 + int(ih * 0.61), texts["bottom_text"], lf("label"), theme["bottom_text"])
+    _draw_text(draw, tx, inner_y0 + int(ih * 0.73), texts["time_text"], lf("value"), theme["bottom_text"])
 
-    # Outer border
     if opts.get("show_border", True):
-        draw.rectangle([0, 0, w - 1, h - 1], outline=theme["border"],
-                       width=max(3, mat // 4))
+        draw_editorial_frame(draw, w, h, theme["border"], inset=max(4, mat // 3), lw=max(2, mat // 5), inner_gap=0, radius=sc["radius_md"])
 
 
 # ── 9. STICKER ────────────────────────────────────────────────────────────────
 
 def render_sticker(img, draw, w, h, texts, theme, lf, illu, opts):
     _section_bg(img, draw, 0, 0, w, h, theme["bg"])
-
-    stripe_h = int(h * 0.115)
-    _section_bg(img, draw, 0, 0, w, stripe_h, theme["accent"])
-    _section_bg(img, draw, 0, h - stripe_h, w, h, theme["accent"])
-
+    sc = layout_scale(w, h)
     lbl_f = lf("label")
     val_f = lf("value")
-    sub_f = lf("sub")
-    pad   = int(w * 0.055)
-    gap   = int(h * 0.022)
+    pad = sc["pad_x"]
+    stripe_h = int(h * 0.11)
 
-    lbl_h = int(h * 0.082)
-    val_h = int(h * 0.200)
-    tot1  = lbl_h + gap + val_h
-    tot2  = lbl_h + gap + int(h * 0.150)
-    inner = h - stripe_h * 2
-    y = stripe_h + (inner - tot1 - int(h * 0.07) - tot2) // 2
+    draw_accent_band(draw, 0, 0, w, stripe_h, theme["accent"])
 
     if opts.get("show_icons", True):
-        icon_r = int(h * 0.08)
-        illu["clock_fn"](draw, pad + icon_r, y + icon_r, icon_r, theme["top_text"])
-        tx = pad + icon_r * 2 + int(pad * 0.4)
-    else:
-        tx = pad
+        draw_icon_tile(
+            draw,
+            w - pad - int(h * 0.06),
+            stripe_h // 2,
+            int(h * 0.12),
+            theme["bg"],
+            None,
+            illu["clock_fn"],
+            theme["accent"],
+        )
 
-    _draw_text(draw, tx, y, texts["top_text"], lbl_f, theme["top_text"])
-    _draw_text(draw, tx, y + lbl_h + gap, texts["main_text"], val_f, theme["top_text"])
-    y += tot1 + int(h * 0.04)
+    label_y = int(h * 0.16)
+    draw_label_chip(
+        draw,
+        pad,
+        label_y,
+        texts["top_text"],
+        lbl_f,
+        theme["top_text"],
+        theme["mid_bg"],
+        pad_x=18,
+        pad_y=10,
+        radius=sc["radius_sm"],
+    )
 
+    pill_y = label_y + int(h * 0.11)
+    pill_h = int(h * 0.20)
+    text_w = int(_text_w(draw, texts["main_text"], val_f))
+    pill_x0 = pad
+    pill_x1 = min(w - pad - int(w * 0.12), pad + text_w + int(w * 0.18))
+    fill_lum = sum(theme["accent"]) / 3
+    hero_tc = (255, 255, 255) if fill_lum < 128 else (10, 10, 10)
+    draw_value_panel(draw, pill_x0, pill_y, pill_x1, pill_y + pill_h, theme["accent"], radius=pill_h // 2)
+    _draw_text(draw, (pill_x0 + pill_x1) // 2, pill_y + pill_h // 2, texts["main_text"], val_f, hero_tc, "mm")
+
+    divider_y = pill_y + pill_h + int(h * 0.06)
     if opts.get("show_divider", True):
-        dw = int(w * 0.45)
-        _divider(draw, pad, y, pad + dw, theme["divider"], h)
-        y += int(h * 0.030)
+        draw_editorial_divider(
+            draw,
+            pad,
+            divider_y,
+            pill_x1,
+            theme["divider"],
+            sc["divider_mid"],
+            style="split",
+        )
 
+    bottom_y = divider_y + int(h * 0.06)
     if opts.get("show_icons", True):
-        icon_r2 = int(h * 0.07)
-        illu["door_fn"](draw, pad + icon_r2, y + icon_r2, icon_r2, theme["bottom_text"])
-        bx = pad + icon_r2 * 2 + int(pad * 0.4)
+        tile = int(h * 0.15)
+        draw_icon_tile(
+            draw,
+            pad + tile // 2,
+            bottom_y + tile // 2,
+            tile,
+            theme["mid_bg"],
+            theme["border"],
+            illu["door_fn"],
+            theme["bottom_text"],
+            outline_width=max(2, h // 150),
+        )
+        bx = pad + tile + int(w * 0.035)
     else:
         bx = pad
-    _draw_text(draw, bx, y, texts["bottom_text"], sub_f, theme["bottom_text"])
-    _draw_text(draw, bx, y + lbl_h + gap, texts["time_text"], val_f, theme["bottom_text"])
+    _draw_text(draw, bx, bottom_y, texts["bottom_text"], lbl_f, theme["bottom_text"])
+    time_y = bottom_y + int(h * 0.11)
+    _draw_text(draw, bx, time_y, texts["time_text"], val_f, theme["bottom_text"])
+
+    time_w = int(_text_w(draw, texts["time_text"], val_f))
+    draw_editorial_divider(
+        draw,
+        bx,
+        time_y + int(h * 0.19),
+        min(w - pad, bx + time_w + int(w * 0.08)),
+        theme["accent"],
+        sc["divider_thick"],
+        style="underline",
+    )
 
     if opts.get("show_border", True):
         illu["border_fn"](draw, w, h, theme["border"])
@@ -560,52 +927,89 @@ def render_sticker(img, draw, w, h, texts, theme, lf, illu, opts):
 # ── 10. LATERAL ───────────────────────────────────────────────────────────────
 
 def render_lateral(img, draw, w, h, texts, theme, lf, illu, opts):
-    stripe_w = int(w * 0.14)
-    _section_bg(img, draw, 0, 0, stripe_w, h, theme["accent"])
-    _section_bg(img, draw, stripe_w, 0, w, h, theme["bg"])
+    sc = layout_scale(w, h)
+    _section_bg(img, draw, 0, 0, w, h, theme["bg"])
+
+    side_x0 = int(w * 0.02)
+    side_x1 = int(w * 0.27)
+    draw_value_panel(
+        draw,
+        side_x0,
+        int(h * 0.04),
+        side_x1,
+        h - int(h * 0.04),
+        theme["accent"],
+        outline=theme["border"],
+        radius=sc["radius_lg"],
+        outline_width=max(2, h // 145),
+    )
+
+    if opts.get("show_icons", True):
+        cx = (side_x0 + side_x1) // 2
+        draw_icon_disc(
+            draw,
+            cx,
+            int(h * 0.24),
+            int(h * 0.105),
+            theme["bg"],
+            theme["bg"],
+            illu["clock_fn"],
+            theme["accent"],
+            ring_width=max(2, h // 160),
+        )
+        draw_accent_band(
+            draw,
+            side_x0 + int(w * 0.03),
+            int(h * 0.46),
+            side_x1 - int(w * 0.03),
+            int(h * 0.48),
+            theme["bg"],
+            radius=sc["radius_sm"],
+        )
+        draw_icon_tile(
+            draw,
+            cx,
+            int(h * 0.70),
+            int(h * 0.17),
+            theme["bg"],
+            theme["bg"],
+            illu["door_fn"],
+            theme["accent"],
+        )
 
     lbl_f = lf("label")
     val_f = lf("value")
-    sub_f = lf("sub")
-    pad   = int(w * 0.045)
-    gap   = int(h * 0.025)
-
-    # Rotated text in stripe — we simulate with dots
-    dot_r = max(3, int(stripe_w * 0.10))
-    for dy in range(int(h * 0.12), h - int(h * 0.12), int(h * 0.09)):
-        draw.ellipse([stripe_w // 2 - dot_r, dy - dot_r,
-                      stripe_w // 2 + dot_r, dy + dot_r], fill=theme["bg"])
-
-    tx = stripe_w + pad
-    lbl_h = int(h * 0.082)
-    val_h = int(h * 0.200)
-    total_h = lbl_h + gap + val_h + int(h * 0.07) + lbl_h + gap + int(h * 0.150)
-    y = (h - total_h) // 2
-
-    icon_r = int(h * 0.100)
-    if opts.get("show_icons", True):
-        illu["clock_fn"](draw, tx + icon_r, y + icon_r, icon_r, theme["top_text"])
-        ftx = tx + icon_r * 2 + gap
-    else:
-        ftx = tx
-
-    _draw_text(draw, ftx, y, texts["top_text"], lbl_f, theme["top_text"])
-    _draw_text(draw, ftx, y + lbl_h + gap, texts["main_text"], val_f, theme["top_text"])
-    y += val_h + lbl_h + int(h * 0.05)
+    tx = side_x1 + int(w * 0.05)
+    pad = sc["pad_x"]
+    draw_label_chip(
+        draw,
+        tx,
+        int(h * 0.10),
+        texts["top_text"],
+        lbl_f,
+        theme["top_text"],
+        theme["mid_bg"],
+        pad_x=18,
+        pad_y=10,
+        radius=sc["radius_sm"],
+    )
+    main_y = int(h * 0.24)
+    _draw_text(draw, tx, main_y, texts["main_text"], val_f, theme["top_text"])
 
     if opts.get("show_divider", True):
-        _divider(draw, tx, y, w - pad, theme["divider"], h)
-        y += int(h * 0.035)
+        draw_editorial_divider(
+            draw,
+            tx,
+            main_y + int(h * 0.20),
+            min(w - pad, tx + int(w * 0.46)),
+            theme["divider"],
+            sc["divider_mid"],
+            style="bar",
+        )
 
-    if opts.get("show_icons", True):
-        icon_r2 = int(h * 0.085)
-        illu["door_fn"](draw, tx + icon_r2, y + icon_r2, icon_r2, theme["bottom_text"])
-        fbx = tx + icon_r2 * 2 + gap
-    else:
-        fbx = tx
-
-    _draw_text(draw, fbx, y, texts["bottom_text"], lbl_f, theme["bottom_text"])
-    _draw_text(draw, fbx, y + lbl_h + gap, texts["time_text"], val_f, theme["bottom_text"])
+    bottom_y = int(h * 0.63)
+    _draw_text(draw, tx, bottom_y, texts["bottom_text"], lbl_f, theme["bottom_text"])
+    _draw_text(draw, tx, bottom_y + int(h * 0.11), texts["time_text"], val_f, theme["bottom_text"])
 
     if opts.get("show_border", True):
         illu["border_fn"](draw, w, h, theme["border"])
@@ -615,18 +1019,27 @@ def render_lateral(img, draw, w, h, texts, theme, lf, illu, opts):
 
 def render_sketch_note(img, draw, w, h, texts, theme, lf, illu, opts):
     jitter = illu.get("jitter_strength")
+    _PAPER = (252, 250, 245)  # inner note surface (lighter than outer texture)
     draw_paper_texture(draw, w, h, base_color=(249, 247, 242), density=0.0018, strength=8)
 
+    # Contrast-safe colours for the paper note surface
+    top_tc = _surf_tc(theme["top_text"],    _PAPER)
+    bot_tc = _surf_tc(theme["bottom_text"], _PAPER)
+    acc_c  = _surf_tc(theme["accent"],  _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+    div_c  = _surf_tc(theme["divider"], _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+    brd_c  = _surf_tc(theme["border"],  _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+
+    sc = layout_scale(w, h)
     lbl_f = lf("label")
     val_f = lf("value")
     sub_f = lf("sub")
-    pad   = int(w * 0.06)
-    gap   = int(h * 0.022)
+    pad = sc["pad_x"]
+    gap = int(h * 0.024)
 
     # Inner note area
     nx0, ny0 = pad, int(h * 0.07)
     nx1, ny1 = w - pad, h - int(h * 0.07)
-    draw.rectangle([nx0 + 4, ny0 + 4, nx1 - 4, ny1 - 4], fill=(252, 250, 245))
+    draw.rectangle([nx0 + 4, ny0 + 4, nx1 - 4, ny1 - 4], fill=_PAPER)
     draw_jittered_rounded_rectangle(
         draw,
         nx0,
@@ -634,7 +1047,7 @@ def render_sketch_note(img, draw, w, h, texts, theme, lf, illu, opts):
         nx1,
         ny1,
         radius=max(12, h // 18),
-        color=theme["border"],
+        color=brd_c,
         width=max(2, h // 130),
         jitter_strength=jitter,
         passes=2,
@@ -642,31 +1055,31 @@ def render_sketch_note(img, draw, w, h, texts, theme, lf, illu, opts):
 
     # Small "paper tape" strips.
     tape_c = (227, 222, 205)
-    tape_w = int(w * 0.18)
-    tape_h = int(h * 0.032)
+    tape_w = int(w * 0.20)
+    tape_h = int(h * 0.040)
     draw.rectangle([w // 2 - tape_w - 8, ny0 - tape_h // 2, w // 2 - 8, ny0 + tape_h // 2], fill=tape_c)
     draw.rectangle([w // 2 + 8, ny0 - tape_h // 2, w // 2 + tape_w + 8, ny0 + tape_h // 2], fill=tape_c)
 
     y = ny0 + int(h * 0.07)
     if opts.get("show_icons", True):
-        ir = int(h * 0.070)
-        illu["clock_fn"](draw, nx1 - int(w * 0.12), y + ir, ir, theme["top_text"])
+        ir = int(h * 0.082)
+        illu["clock_fn"](draw, nx1 - int(w * 0.12), y + ir, ir, top_tc)
 
-    _draw_text(draw, nx0 + int(w * 0.03), y, texts["top_text"], lbl_f, theme["top_text"])
-    y += int(h * 0.084)
-    _draw_text(draw, nx0 + int(w * 0.03), y, texts["main_text"], val_f, theme["top_text"])
-    y += int(h * 0.205)
+    _draw_text(draw, nx0 + int(w * 0.03), y, texts["top_text"], lbl_f, top_tc)
+    y += int(h * 0.094)
+    _draw_text(draw, nx0 + int(w * 0.03), y, texts["main_text"], val_f, top_tc)
+    y += int(h * 0.212)
 
     draw_scribble_underline(
         draw,
         nx0 + int(w * 0.03),
         y,
-        nx1 - int(w * 0.06),
-        theme["accent"],
-        width=max(3, h // 105),
+        nx1 - int(w * 0.10),
+        acc_c,
+        width=max(4, h // 92),
         jitter_strength=jitter,
     )
-    y += int(h * 0.05)
+    y += int(h * 0.06)
 
     if opts.get("show_divider", True):
         draw_jittered_line(
@@ -675,7 +1088,7 @@ def render_sketch_note(img, draw, w, h, texts, theme, lf, illu, opts):
             y,
             nx1 - int(w * 0.03),
             y,
-            theme["divider"],
+            div_c,
             width=max(2, h // 125),
             jitter_strength=jitter,
             passes=2,
@@ -684,19 +1097,31 @@ def render_sketch_note(img, draw, w, h, texts, theme, lf, illu, opts):
         y += int(h * 0.032)
 
     if opts.get("show_icons", True):
-        ir2 = int(h * 0.068)
-        illu["door_fn"](draw, nx1 - int(w * 0.12), y + ir2, ir2, theme["bottom_text"])
+        ir2 = int(h * 0.078)
+        illu["door_fn"](draw, nx1 - int(w * 0.12), y + ir2, ir2, bot_tc)
 
-    _draw_text(draw, nx0 + int(w * 0.03), y, texts["bottom_text"], sub_f, theme["bottom_text"])
+    _draw_text(draw, nx0 + int(w * 0.03), y, texts["bottom_text"], sub_f, bot_tc)
     y += int(h * 0.074) + gap
-    _draw_text(draw, nx0 + int(w * 0.03), y, texts["time_text"], val_f, theme["bottom_text"])
+    _draw_text(draw, nx0 + int(w * 0.03), y, texts["time_text"], val_f, bot_tc)
+
+    txw = int(_text_w(draw, texts["time_text"], val_f))
+    draw_marker_stroke(
+        draw,
+        nx0 + int(w * 0.03),
+        y + int(h * 0.165),
+        min(nx1 - int(w * 0.16), nx0 + int(w * 0.03) + txw + int(w * 0.05)),
+        y + int(h * 0.165),
+        acc_c,
+        width=max(8, h // 24),
+        jitter_strength=jitter,
+    )
 
     if opts.get("show_border", True):
         draw_double_sketch_border(
             draw,
             w,
             h,
-            theme["border"],
+            brd_c,
             width=max(2, h // 120),
             jitter_strength=jitter,
             gap=max(8, h // 54),
@@ -707,18 +1132,27 @@ def render_sketch_note(img, draw, w, h, texts, theme, lf, illu, opts):
 
 def render_marker_board(img, draw, w, h, texts, theme, lf, illu, opts):
     jitter = illu.get("jitter_strength")
+    _PAPER = (252, 252, 246)  # inner board surface
     draw_paper_texture(draw, w, h, base_color=(245, 246, 239), density=0.0014, strength=8)
 
+    # Contrast-safe colours for the whiteboard surface
+    top_tc = _surf_tc(theme["top_text"],    _PAPER)
+    bot_tc = _surf_tc(theme["bottom_text"], _PAPER)
+    acc_c  = _surf_tc(theme["accent"],  _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+    div_c  = _surf_tc(theme["divider"], _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+    brd_c  = _surf_tc(theme["border"],  _PAPER, min_ratio=DIVIDER_MIN_RATIO)
+
+    sc = layout_scale(w, h)
     lbl_f = lf("label")
     val_f = lf("value")
     sub_f = lf("sub")
-    pad   = int(w * 0.055)
+    pad = int(w * 0.05)
 
     bx0, by0 = pad, int(h * 0.09)
     bx1, by1 = w - pad, h - int(h * 0.09)
 
     # Board surface
-    draw.rectangle([bx0 + 4, by0 + 4, bx1 - 4, by1 - 4], fill=(252, 252, 246))
+    draw.rectangle([bx0 + 4, by0 + 4, bx1 - 4, by1 - 4], fill=_PAPER)
     draw_jittered_rounded_rectangle(
         draw,
         bx0,
@@ -726,73 +1160,73 @@ def render_marker_board(img, draw, w, h, texts, theme, lf, illu, opts):
         bx1,
         by1,
         radius=max(14, h // 16),
-        color=theme["border"],
+        color=brd_c,
         width=max(2, h // 125),
         jitter_strength=jitter,
         passes=2,
     )
 
-    tx = bx0 + int(w * 0.045)
+    tx = bx0 + int(w * 0.05)
     y = by0 + int(h * 0.065)
 
     draw_marker_stroke(
         draw,
         tx,
         y + int(h * 0.034),
-        min(bx1 - int(w * 0.04), tx + int(w * 0.42)),
+        min(bx1 - int(w * 0.05), tx + int(w * 0.50)),
         y + int(h * 0.034),
-        theme["accent"],
-        width=max(10, h // 16),
+        acc_c,
+        width=max(11, h // 15),
         jitter_strength=jitter,
     )
-    _draw_text(draw, tx, y, texts["top_text"], lbl_f, theme["top_text"])
-    y += int(h * 0.085)
+    _draw_text(draw, tx, y, texts["top_text"], lbl_f, top_tc)
+    y += int(h * 0.095)
 
-    _draw_text(draw, tx, y, texts["main_text"], val_f, theme["top_text"])
-    y += int(h * 0.205)
+    _draw_text(draw, tx, y, texts["main_text"], val_f, top_tc)
+    y += int(h * 0.215)
 
     if opts.get("show_icons", True):
-        ir = int(h * 0.073)
-        illu["clock_fn"](draw, bx1 - int(w * 0.12), by0 + int(h * 0.16), ir, theme["top_text"])
+        ir = int(h * 0.085)
+        illu["clock_fn"](draw, bx1 - int(w * 0.12), by0 + int(h * 0.16), ir, top_tc)
 
     if opts.get("show_divider", True):
         draw_handdrawn_arrow(
             draw,
             tx,
             y,
-            min(bx1 - int(w * 0.12), tx + int(w * 0.26)),
+            min(bx1 - int(w * 0.12), tx + int(w * 0.34)),
             y,
-            theme["divider"],
-            width=max(2, h // 118),
+            div_c,
+            width=max(3, h // 104),
             jitter_strength=jitter,
         )
-        y += int(h * 0.050)
+        y += int(h * 0.058)
 
-    _draw_text(draw, tx, y, texts["bottom_text"], sub_f, theme["bottom_text"])
-    y += int(h * 0.075)
+    _draw_text(draw, tx, y, texts["bottom_text"], sub_f, bot_tc)
+    y += int(h * 0.084)
 
-    _draw_text(draw, tx, y, texts["time_text"], val_f, theme["bottom_text"])
+    _draw_text(draw, tx, y, texts["time_text"], val_f, bot_tc)
     draw_marker_stroke(
         draw,
         tx,
-        y + int(h * 0.175),
-        min(bx1 - int(w * 0.04), tx + int(w * 0.30)),
-        y + int(h * 0.175),
-        theme["accent"],
-        width=max(8, h // 22),
+        y + int(h * 0.182),
+        min(bx1 - int(w * 0.05), tx + int(w * 0.38)),
+        y + int(h * 0.182),
+        acc_c,
+        width=max(9, h // 21),
         jitter_strength=jitter,
     )
 
     if opts.get("show_icons", True):
-        ir2 = int(h * 0.068)
-        illu["door_fn"](draw, bx1 - int(w * 0.12), y + int(h * 0.06), ir2, theme["bottom_text"])
+        ir2 = int(h * 0.080)
+        illu["door_fn"](draw, bx1 - int(w * 0.12), y + int(h * 0.06), ir2, bot_tc)
 
     if opts.get("show_border", True):
         draw_double_sketch_border(
             draw,
             w,
             h,
-            theme["border"],
+            brd_c,
             width=max(2, h // 124),
             jitter_strength=jitter,
             gap=max(7, h // 56),
@@ -805,16 +1239,17 @@ def render_doodle_card(img, draw, w, h, texts, theme, lf, illu, opts):
     jitter = illu.get("jitter_strength")
     draw_paper_texture(draw, w, h, base_color=(247, 245, 239), density=0.0016, strength=10)
 
+    sc = layout_scale(w, h)
     lbl_f = lf("label")
     val_f = lf("value")
     sub_f = lf("sub")
 
-    pad = int(w * 0.06)
+    pad = sc["pad_x"]
     card_gap = int(h * 0.040)
     card_h = int((h - pad * 2 - card_gap) / 2)
 
-    c1 = (pad, pad, w - pad, pad + card_h)
-    c2 = (pad, pad + card_h + card_gap, w - pad, h - pad)
+    c1 = (pad, pad, w - pad - int(w * 0.04), pad + card_h)
+    c2 = (pad + int(w * 0.04), pad + card_h + card_gap, w - pad, h - pad)
 
     draw.rectangle([c1[0] + 4, c1[1] + 4, c1[2] - 4, c1[3] - 4], fill=theme["top_bg"])
     draw.rectangle([c2[0] + 4, c2[1] + 4, c2[2] - 4, c2[3] - 4], fill=theme["bottom_bg"])
@@ -842,12 +1277,12 @@ def render_doodle_card(img, draw, w, h, texts, theme, lf, illu, opts):
     mid_y = c1[3] + card_gap // 2
     draw_handdrawn_arrow(
         draw,
-        int(w * 0.35),
+        int(w * 0.31),
         mid_y,
-        int(w * 0.65),
+        int(w * 0.69),
         mid_y,
         theme["accent"],
-        width=max(2, h // 118),
+        width=max(3, h // 104),
         jitter_strength=jitter,
     )
 
@@ -855,28 +1290,28 @@ def render_doodle_card(img, draw, w, h, texts, theme, lf, illu, opts):
     t1x = c1[0] + int(w * 0.04)
     t1y = c1[1] + int(h * 0.045)
     if opts.get("show_icons", True):
-        ir = int(h * 0.066)
+        ir = int(h * 0.078)
         illu["clock_fn"](draw, c1[2] - int(w * 0.09), t1y + ir, ir, theme["top_text"])
     _draw_text(draw, t1x, t1y, texts["top_text"], lbl_f, theme["top_text"])
-    _draw_text(draw, t1x, t1y + int(h * 0.083), texts["main_text"], val_f, theme["top_text"])
+    _draw_text(draw, t1x, t1y + int(h * 0.092), texts["main_text"], val_f, theme["top_text"])
 
     # Card 2 (bottom)
     t2x = c2[0] + int(w * 0.04)
     t2y = c2[1] + int(h * 0.045)
     if opts.get("show_icons", True):
-        ir2 = int(h * 0.062)
+        ir2 = int(h * 0.074)
         illu["door_fn"](draw, c2[2] - int(w * 0.09), t2y + ir2, ir2, theme["bottom_text"])
     _draw_text(draw, t2x, t2y, texts["bottom_text"], sub_f, theme["bottom_text"])
-    _draw_text(draw, t2x, t2y + int(h * 0.083), texts["time_text"], val_f, theme["bottom_text"])
+    _draw_text(draw, t2x, t2y + int(h * 0.092), texts["time_text"], val_f, theme["bottom_text"])
 
     if opts.get("show_divider", True):
         draw_scribble_underline(
             draw,
             t2x,
-            t2y + int(h * 0.17),
-            min(c2[2] - int(w * 0.12), t2x + int(w * 0.34)),
+            t2y + int(h * 0.18),
+            min(c2[2] - int(w * 0.12), t2x + int(w * 0.42)),
             theme["accent"],
-            width=max(3, h // 105),
+            width=max(4, h // 94),
             jitter_strength=jitter,
         )
 
@@ -890,6 +1325,192 @@ def render_doodle_card(img, draw, w, h, texts, theme, lf, illu, opts):
             jitter_strength=jitter,
             gap=max(7, h // 58),
         )
+
+
+# ── 14. HERO BANNER ──────────────────────────────────────────────────────────
+
+def render_hero_banner(img, draw, w, h, texts, theme, lf, illu, opts):
+    sc = layout_scale(w, h)
+    pad = sc["pad_x"]
+    lbl_f = lf("label")
+    val_f = lf("value")
+    _section_bg(img, draw, 0, 0, w, h, theme["bg"])
+
+    hero_x0 = pad
+    hero_y0 = int(h * 0.10)
+    hero_x1 = int(w * 0.74)
+    hero_y1 = int(h * 0.46)
+    fill_lum = sum(theme["accent"]) / 3
+    hero_tc = (255, 255, 255) if fill_lum < 128 else (10, 10, 10)
+    draw_value_panel(draw, hero_x0, hero_y0, hero_x1, hero_y1, theme["accent"], radius=sc["radius_lg"])
+    draw_label_chip(draw, hero_x0 + int(w * 0.03), hero_y0 + int(h * 0.03), texts["top_text"], lbl_f, theme["accent"], theme["bg"], pad_x=18, pad_y=10, radius=sc["radius_sm"])
+    _draw_text(draw, hero_x0 + int(w * 0.03), hero_y0 + int(h * 0.17), texts["main_text"], val_f, hero_tc)
+
+    if opts.get("show_icons", True):
+        draw_icon_disc(
+            draw,
+            w - pad - int(h * 0.14),
+            int(h * 0.24),
+            int(h * 0.13),
+            theme["mid_bg"],
+            theme["border"],
+            illu["clock_fn"],
+            theme["top_text"],
+            ring_width=max(2, h // 150),
+        )
+
+    lower_x0 = pad
+    lower_y0 = int(h * 0.58)
+    lower_x1 = int(w * 0.56)
+    lower_y1 = int(h * 0.86)
+    draw_value_panel(draw, lower_x0, lower_y0, lower_x1, lower_y1, theme["mid_bg"], outline=theme["border"], radius=sc["radius_md"], outline_width=max(2, h // 150))
+    if opts.get("show_icons", True):
+        draw_icon_tile(draw, lower_x0 + int(h * 0.09), lower_y0 + int(h * 0.11), int(h * 0.15), theme["bg"], theme["border"], illu["door_fn"], theme["bottom_text"], outline_width=max(2, h // 150))
+        tx = lower_x0 + int(h * 0.18)
+    else:
+        tx = lower_x0 + int(w * 0.03)
+    _draw_text(draw, tx, lower_y0 + int(h * 0.04), texts["bottom_text"], lbl_f, theme["bottom_text"])
+    _draw_text(draw, tx, lower_y0 + int(h * 0.14), texts["time_text"], val_f, theme["bottom_text"])
+
+    if opts.get("show_border", True):
+        illu["border_fn"](draw, w, h, theme["border"])
+
+
+# ── 15. EDITORIAL ────────────────────────────────────────────────────────────
+
+def render_editorial(img, draw, w, h, texts, theme, lf, illu, opts):
+    sc = layout_scale(w, h)
+    pad = sc["pad_x"]
+    lbl_f = lf("label")
+    val_f = lf("value")
+    _section_bg(img, draw, 0, 0, w, h, theme["bg"])
+    draw_corner_accents(draw, int(w * 0.03), int(h * 0.04), w - int(w * 0.03), h - int(h * 0.04), int(h * 0.08), theme["border"], lw=3)
+
+    draw_label_chip(draw, pad, int(h * 0.10), texts["top_text"], lbl_f, theme["top_text"], theme["mid_bg"], pad_x=18, pad_y=10, radius=sc["radius_sm"])
+    _draw_text(draw, pad, int(h * 0.26), texts["main_text"], val_f, theme["top_text"])
+    if opts.get("show_divider", True):
+        draw_editorial_divider(draw, pad, int(h * 0.57), int(w * 0.78), theme["divider"], sc["divider_mid"], style="split")
+
+    if opts.get("show_icons", True):
+        draw_icon_disc(draw, w - pad - int(h * 0.11), int(h * 0.20), int(h * 0.11), theme["mid_bg"], theme["border"], illu["clock_fn"], theme["top_text"], ring_width=max(2, h // 150))
+
+    bottom_y = int(h * 0.66)
+    _draw_text(draw, pad, bottom_y, texts["bottom_text"], lbl_f, theme["bottom_text"])
+    time_w = int(_text_w(draw, texts["time_text"], val_f))
+    card_x1 = w - pad
+    card_x0 = max(int(w * 0.42), card_x1 - time_w - int(w * 0.16))
+    draw_value_panel(draw, card_x0, int(h * 0.62), card_x1, int(h * 0.88), theme["mid_bg"], outline=theme["border"], radius=sc["radius_md"], outline_width=max(2, h // 150))
+    _draw_text(draw, card_x0 + int(w * 0.03), int(h * 0.71), texts["time_text"], val_f, theme["bottom_text"])
+
+    if opts.get("show_border", True):
+        illu["border_fn"](draw, w, h, theme["border"])
+
+
+# ── 16. MODERN WIDGET ────────────────────────────────────────────────────────
+
+def render_modern_widget(img, draw, w, h, texts, theme, lf, illu, opts):
+    sc = layout_scale(w, h)
+    fx0 = int(w * 0.04)
+    fy0 = int(h * 0.06)
+    fx1 = w - int(w * 0.04)
+    fy1 = h - int(h * 0.06)
+    lbl_f = lf("label")
+    val_f = lf("value")
+    _section_bg(img, draw, 0, 0, w, h, theme["bg"])
+    draw_value_panel(draw, fx0, fy0, fx1, fy1, theme["top_bg"], outline=theme["border"], radius=sc["radius_lg"], outline_width=max(2, h // 150))
+
+    draw_label_chip(draw, fx0 + int(w * 0.03), fy0 + int(h * 0.03), texts["top_text"], lbl_f, theme["top_text"], theme["mid_bg"], pad_x=18, pad_y=10, radius=sc["radius_sm"])
+    hero_x0 = fx0 + int(w * 0.03)
+    hero_y0 = fy0 + int(h * 0.16)
+    hero_x1 = fx1 - int(w * 0.18)
+    hero_y1 = fy0 + int(h * 0.40)
+    draw_value_panel(draw, hero_x0, hero_y0, hero_x1, hero_y1, theme["mid_bg"], radius=sc["radius_md"])
+    _draw_text(draw, hero_x0 + int(w * 0.03), hero_y0 + int(h * 0.08), texts["main_text"], val_f, theme["top_text"])
+
+    if opts.get("show_icons", True):
+        ix = fx1 - int(w * 0.10)
+        draw_icon_tile(draw, ix, fy0 + int(h * 0.20), int(h * 0.15), theme["bg"], theme["border"], illu["clock_fn"], theme["top_text"], outline_width=max(2, h // 150))
+        draw_icon_tile(draw, ix, fy0 + int(h * 0.46), int(h * 0.14), theme["bg"], theme["border"], illu["door_fn"], theme["bottom_text"], outline_width=max(2, h // 150))
+
+    lower_x0 = fx0 + int(w * 0.03)
+    lower_y0 = fy0 + int(h * 0.54)
+    lower_x1 = int(w * 0.56)
+    lower_y1 = fy1 - int(h * 0.03)
+    draw_value_panel(draw, lower_x0, lower_y0, lower_x1, lower_y1, theme["bg"], outline=theme["border"], radius=sc["radius_md"], outline_width=max(2, h // 150))
+    _draw_text(draw, lower_x0 + int(w * 0.03), lower_y0 + int(h * 0.03), texts["bottom_text"], lbl_f, theme["bottom_text"])
+    _draw_text(draw, lower_x0 + int(w * 0.03), lower_y0 + int(h * 0.13), texts["time_text"], val_f, theme["bottom_text"])
+
+    if opts.get("show_border", True):
+        illu["border_fn"](draw, w, h, theme["border"])
+
+
+# ── 17. FOCUS MODE ───────────────────────────────────────────────────────────
+
+def render_focus_mode(img, draw, w, h, texts, theme, lf, illu, opts):
+    sc = layout_scale(w, h)
+    lbl_f = lf("label")
+    val_f = lf("value")
+    _section_bg(img, draw, 0, 0, w, h, theme["bg"])
+
+    if opts.get("show_border", True):
+        draw_editorial_frame(draw, w, h, theme["border"], inset=int(h * 0.03), lw=max(2, h // 130), inner_gap=12, radius=sc["radius_md"])
+
+    top_y = int(h * 0.12)
+    if opts.get("show_icons", True):
+        draw_icon_disc(draw, w // 2, top_y + int(h * 0.05), int(h * 0.10), theme["mid_bg"], theme["border"], illu["clock_fn"], theme["top_text"], ring_width=max(2, h // 150))
+        top_y += int(h * 0.14)
+
+    chip_w = int(_text_w(draw, texts["top_text"], lbl_f)) + 40
+    draw_label_chip(draw, (w - chip_w) // 2, top_y, texts["top_text"], lbl_f, theme["top_text"], theme["mid_bg"], pad_x=20, pad_y=10, radius=sc["radius_sm"])
+    _draw_text(draw, w // 2, int(h * 0.42), texts["main_text"], val_f, theme["top_text"], anchor="mm")
+
+    if opts.get("show_divider", True):
+        draw_editorial_divider(draw, int(w * 0.26), int(h * 0.58), int(w * 0.74), theme["divider"], sc["divider_thick"], style="split")
+
+    card_x0 = int(w * 0.24)
+    card_x1 = int(w * 0.76)
+    card_y0 = int(h * 0.66)
+    card_y1 = int(h * 0.88)
+    draw_value_panel(draw, card_x0, card_y0, card_x1, card_y1, theme["mid_bg"], outline=theme["border"], radius=sc["radius_md"], outline_width=max(2, h // 150))
+    _draw_text(draw, w // 2, card_y0 + int(h * 0.045), texts["bottom_text"], lbl_f, theme["bottom_text"], anchor="mt")
+    _draw_text(draw, w // 2, card_y0 + int(h * 0.13), texts["time_text"], val_f, theme["bottom_text"], anchor="mt")
+
+
+# ── 18. SPLIT HERO ───────────────────────────────────────────────────────────
+
+def render_split_hero(img, draw, w, h, texts, theme, lf, illu, opts):
+    sc = layout_scale(w, h)
+    pad = sc["pad_x"]
+    lbl_f = lf("label")
+    val_f = lf("value")
+    _section_bg(img, draw, 0, 0, w, h, theme["bg"])
+
+    hero_x0 = pad
+    hero_y0 = int(h * 0.08)
+    hero_x1 = int(w * 0.60)
+    hero_y1 = int(h * 0.58)
+    fill_lum = sum(theme["accent"]) / 3
+    hero_tc = (255, 255, 255) if fill_lum < 128 else (10, 10, 10)
+    draw_value_panel(draw, hero_x0, hero_y0, hero_x1, hero_y1, theme["accent"], radius=sc["radius_lg"])
+    draw_label_chip(draw, hero_x0 + int(w * 0.03), hero_y0 + int(h * 0.03), texts["top_text"], lbl_f, theme["accent"], theme["bg"], pad_x=18, pad_y=10, radius=sc["radius_sm"])
+    _draw_text(draw, hero_x0 + int(w * 0.03), hero_y0 + int(h * 0.18), texts["main_text"], val_f, hero_tc)
+
+    if opts.get("show_icons", True):
+        draw_icon_disc(draw, w - pad - int(h * 0.13), int(h * 0.28), int(h * 0.13), theme["mid_bg"], theme["border"], illu["clock_fn"], theme["top_text"], ring_width=max(2, h // 150))
+
+    lower_y0 = int(h * 0.66)
+    lower_y1 = int(h * 0.90)
+    draw_value_panel(draw, pad, lower_y0, w - pad, lower_y1, theme["bottom_bg"], outline=theme["border"], radius=sc["radius_md"], outline_width=max(2, h // 150))
+    if opts.get("show_icons", True):
+        draw_icon_tile(draw, pad + int(h * 0.09), lower_y0 + int(h * 0.11), int(h * 0.15), theme["mid_bg"], theme["border"], illu["door_fn"], theme["bottom_text"], outline_width=max(2, h // 150))
+        tx = pad + int(h * 0.18)
+    else:
+        tx = pad + int(w * 0.03)
+    _draw_text(draw, tx, lower_y0 + int(h * 0.04), texts["bottom_text"], lbl_f, theme["bottom_text"])
+    _draw_text(draw, tx, lower_y0 + int(h * 0.14), texts["time_text"], val_f, theme["bottom_text"])
+
+    if opts.get("show_border", True):
+        illu["border_fn"](draw, w, h, theme["border"])
 
 
 # ── Registry ───────────────────────────────────────────────────────────────────
@@ -908,6 +1529,11 @@ LAYOUTS = {
     "sketch_note":  render_sketch_note,
     "marker_board": render_marker_board,
     "doodle_card":  render_doodle_card,
+    "hero_banner":  render_hero_banner,
+    "editorial":    render_editorial,
+    "modern_widget": render_modern_widget,
+    "focus_mode":   render_focus_mode,
+    "split_hero":   render_split_hero,
 }
 
 LAYOUT_NAMES = list(LAYOUTS.keys())

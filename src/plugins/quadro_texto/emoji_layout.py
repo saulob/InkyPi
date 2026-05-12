@@ -33,8 +33,8 @@ LAYOUT_ZONES: dict[str, list[dict]] = {
     # split: top half has long main text (~65-85% wide); bottom half has short
     # time text (~35-50% wide).  Prefer the wide open lower-right area.
     "split": [
-        {"id": "bottom_free",  "rect": (0.40, 0.57, 0.95, 0.97), "weight": "featured"},
-        {"id": "top_corner",   "rect": (0.84, 0.03, 0.97, 0.20), "weight": "subtle"},
+        {"id": "bottom_free",  "rect": (0.60, 0.60, 0.95, 0.97), "weight": "featured"},
+        {"id": "lower_right",  "rect": (0.68, 0.50, 0.95, 0.74), "weight": "balanced"},
     ],
     # poster: text centred.  Bottom corners free; top-right corner free.
     # Door icon sits at ~(91%, 89%) — avoid bottom-right corner.
@@ -52,18 +52,19 @@ LAYOUT_ZONES: dict[str, list[dict]] = {
     ],
     # badge: wide pill in top-60%.  Large free area to the right below the pill.
     "badge": [
-        {"id": "lower_right", "rect": (0.60, 0.44, 0.96, 0.93), "weight": "featured"},
-        {"id": "top_right",   "rect": (0.60, 0.02, 0.96, 0.16), "weight": "subtle"},
+        {"id": "lower_right", "rect": (0.60, 0.52, 0.96, 0.93), "weight": "featured"},
+        {"id": "right_center", "rect": (0.66, 0.22, 0.96, 0.48), "weight": "balanced"},
     ],
     # dashboard: right panel has wide main text (can reach 85%).  Lower-right
     # region (right of short "19h" text) is reliably free.
     "dashboard": [
-        {"id": "lower_right",  "rect": (0.48, 0.62, 0.97, 0.95), "weight": "featured"},
-        {"id": "panel_bottom", "rect": (0.02, 0.74, 0.27, 0.93), "weight": "balanced"},
+        {"id": "lower_right",  "rect": (0.66, 0.56, 0.97, 0.95), "weight": "featured"},
+        {"id": "right_center", "rect": (0.72, 0.22, 0.97, 0.48), "weight": "balanced"},
     ],
-    # blueprint: text on left.  Large right region free (above "WORK REMINDER" tag).
+    # blueprint: text-heavy left editorial area; emoji fits better in the lower-right field.
     "blueprint": [
-        {"id": "right_zone", "rect": (0.55, 0.08, 0.91, 0.78), "weight": "featured"},
+        {"id": "lower_right", "rect": (0.64, 0.52, 0.93, 0.88), "weight": "featured"},
+        {"id": "right_zone", "rect": (0.66, 0.34, 0.92, 0.60), "weight": "balanced"},
     ],
     # doodle: text + underline/arrow takes 0%-60% width.  Right zone is free but
     # the arrow/underline goes to ~75% at y≈47%.  Use upper-right above arrow OR
@@ -79,14 +80,14 @@ LAYOUT_ZONES: dict[str, list[dict]] = {
     ],
     # sticker: top/bottom accent stripes (11.5% each).  Right of middle area is free.
     "sticker": [
-        {"id": "right_center", "rect": (0.58, 0.14, 0.96, 0.86), "weight": "featured"},
-        {"id": "top_right",    "rect": (0.70, 0.02, 0.96, 0.12), "weight": "subtle"},
+        {"id": "lower_right",  "rect": (0.62, 0.54, 0.96, 0.92), "weight": "featured"},
+        {"id": "right_center", "rect": (0.66, 0.24, 0.96, 0.50), "weight": "balanced"},
     ],
     # lateral: content fills 14%-85% of width.  Only far-right strip (85%+) and
     # lower-right region (past the short time text) are genuinely free.
     "lateral": [
-        {"id": "lower_right", "rect": (0.65, 0.55, 0.97, 0.93), "weight": "featured"},
-        {"id": "top_corner",  "rect": (0.85, 0.04, 0.97, 0.22), "weight": "subtle"},
+        {"id": "lower_right", "rect": (0.72, 0.56, 0.97, 0.93), "weight": "featured"},
+        {"id": "right_zone",  "rect": (0.76, 0.18, 0.97, 0.42), "weight": "balanced"},
     ],
     # sketch_note: icons on far-right (~82%) at top and mid.
     # Free zone: between text end (~52%) and icon column (~78%).
@@ -106,6 +107,27 @@ LAYOUT_ZONES: dict[str, list[dict]] = {
         {"id": "top_card_right",    "rect": (0.52, 0.07, 0.79, 0.44), "weight": "balanced"},
         {"id": "bottom_card_right", "rect": (0.52, 0.57, 0.79, 0.88), "weight": "balanced"},
         {"id": "top_right",         "rect": (0.65, 0.03, 0.95, 0.10), "weight": "subtle"},
+    ],
+    "hero_banner": [
+        {"id": "lower_right", "rect": (0.60, 0.56, 0.95, 0.93), "weight": "featured"},
+        {"id": "right_center", "rect": (0.72, 0.12, 0.95, 0.42), "weight": "balanced"},
+    ],
+    "editorial": [
+        {"id": "right_zone", "rect": (0.70, 0.28, 0.95, 0.56), "weight": "balanced"},
+        {"id": "bottom_left", "rect": (0.03, 0.72, 0.30, 0.95), "weight": "balanced"},
+    ],
+    "modern_widget": [
+        {"id": "lower_right", "rect": (0.62, 0.56, 0.95, 0.92), "weight": "featured"},
+        {"id": "right_zone", "rect": (0.70, 0.18, 0.95, 0.48), "weight": "balanced"},
+    ],
+    "focus_mode": [
+        {"id": "top_right", "rect": (0.68, 0.06, 0.95, 0.24), "weight": "balanced"},
+        {"id": "bottom_right", "rect": (0.68, 0.76, 0.95, 0.95), "weight": "balanced"},
+        {"id": "top_left", "rect": (0.05, 0.06, 0.30, 0.24), "weight": "subtle"},
+    ],
+    "split_hero": [
+        {"id": "right_zone", "rect": (0.66, 0.34, 0.95, 0.60), "weight": "balanced"},
+        {"id": "top_right", "rect": (0.72, 0.08, 0.95, 0.26), "weight": "subtle"},
     ],
 }
 

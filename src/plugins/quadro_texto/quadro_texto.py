@@ -21,6 +21,7 @@ from PIL import Image, ImageDraw
 from themes       import THEMES, THEME_NAMES
 from fonts        import FONT_PACKS, FONT_PACK_NAMES, load_font
 from layouts      import LAYOUTS, LAYOUT_NAMES
+from contrast     import clamp_theme_brightness
 from illustrations import get_clock_fn, get_door_fn, get_border_fn
 from doodle import (
     get_illustration_clock_fn, get_illustration_door_fn,
@@ -165,7 +166,7 @@ class QuadroTexto(BasePlugin):
             door_fn  = get_door_fn(effective_icon)
             border_fn = get_border_fn(border_style if show_border else "none")
 
-        theme     = THEMES.get(theme_key, THEMES["black_white"])
+        theme     = clamp_theme_brightness(THEMES.get(theme_key, THEMES["black_white"]))
         layout_fn = LAYOUTS.get(layout_key, LAYOUTS["split"])
 
         # font loader bound to chosen pack + canvas height

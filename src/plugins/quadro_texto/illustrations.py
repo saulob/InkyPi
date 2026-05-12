@@ -259,31 +259,58 @@ def draw_sun(draw, cx, cy, r, color):
 # ── Border styles ──────────────────────────────────────────────────────────────
 
 def draw_border_rounded(draw, w, h, color, lw=None):
-    lw = lw or max(3, h // 80)
+    lw = lw or max(3, h // 90)
+    radius = int(h * 0.045)
+    inset = lw
     try:
-        draw.rounded_rectangle([lw, lw, w - lw - 1, h - lw - 1],
-                                radius=int(h * 0.04), outline=color, width=lw)
+        draw.rounded_rectangle([inset, inset, w - inset - 1, h - inset - 1],
+                               radius=radius, outline=color, width=lw)
     except AttributeError:
-        draw.rectangle([lw, lw, w - lw - 1, h - lw - 1], outline=color, width=lw)
+        draw.rectangle([inset, inset, w - inset - 1, h - inset - 1], outline=color, width=lw)
+
+    inner_gap = lw + 8
+    try:
+        draw.rounded_rectangle(
+            [inner_gap, inner_gap, w - inner_gap - 1, h - inner_gap - 1],
+            radius=max(8, radius - 8),
+            outline=color,
+            width=max(1, lw - 1),
+        )
+    except AttributeError:
+        draw.rectangle(
+            [inner_gap, inner_gap, w - inner_gap - 1, h - inner_gap - 1],
+            outline=color,
+            width=max(1, lw - 1),
+        )
+
+    accent = max(28, int(w * 0.16))
+    top_y = inner_gap + max(2, lw)
+    bot_y = h - inner_gap - max(3, lw * 2)
+    draw.line([w - inner_gap - accent, top_y, w - inner_gap - 2, top_y], fill=color, width=max(1, lw - 1))
+    draw.line([inner_gap + 2, bot_y, inner_gap + int(accent * 0.42), bot_y], fill=color, width=max(1, lw - 1))
 
 
 def draw_border_double(draw, w, h, color):
-    outer = max(3, h // 80)
+    outer = max(3, h // 90)
     inner = max(2, outer - 1)
-    gap   = outer + 6
-    draw.rectangle([outer, outer, w - outer - 1, h - outer - 1],
-                   outline=color, width=outer)
-    draw.rectangle([gap, gap, w - gap - 1, h - gap - 1],
-                   outline=color, width=inner)
+    gap = outer + 8
+    draw.rectangle([outer, outer, w - outer - 1, h - outer - 1], outline=color, width=outer)
+    draw.rectangle([gap, gap, w - gap - 1, h - gap - 1], outline=color, width=inner)
+    corner = max(18, int(min(w, h) * 0.06))
+    draw_all_corner_brackets(draw, gap + 6, gap + 6, w - gap - 7, h - gap - 7, corner, color, lw=max(1, inner))
 
 
 def draw_border_blueprint(draw, w, h, color):
     lw = max(2, h // 100)
-    draw.rectangle([lw, lw, w - lw - 1, h - lw - 1], outline=color, width=lw)
-    dash = 8
-    # top dashes
-    for x in range(20, w - 20, dash * 2):
-        draw.line([x, 0, min(x + dash, w), 0], fill=color, width=lw)
+    inset = lw + 2
+    draw.rectangle([inset, inset, w - inset - 1, h - inset - 1], outline=color, width=lw)
+    guide = inset + 10
+    draw.rectangle([guide, guide, w - guide - 1, h - guide - 1], outline=color, width=1)
+    corner = max(16, int(min(w, h) * 0.055))
+    draw_all_corner_brackets(draw, guide, guide, w - guide - 1, h - guide - 1, corner, color, lw=lw)
+    dash = max(10, int(w * 0.015))
+    for x in range(int(w * 0.18), int(w * 0.82), dash * 2):
+        draw.line([x, guide // 2, min(x + dash, w - guide // 2), guide // 2], fill=color, width=lw)
 
 
 # ── Icon dispatch ──────────────────────────────────────────────────────────────
