@@ -150,6 +150,253 @@ _POSITION_TO_ZONE_IDS: dict[str, list[str]] = {
 
 _WEIGHT_RANK: dict[str, int] = {"subtle": 0, "balanced": 1, "featured": 2}
 
+_ICON_MIN_SIZE = 56
+_PANEL_ICON_MIN_SIZE = 80
+_PREMIUM_ICON_MIN_SIZE = 72
+
+_SUPPRESS_LAYOUT_ICONS: dict[str, set[str]] = {
+    "minimal": {"clock", "door"},
+    "focus_mode": {"clock", "door"},
+    "editorial": {"clock"},
+    "poster": {"clock"},
+}
+
+_LAYOUT_ICON_MIN: dict[str, dict[str, int]] = {
+    "dashboard": {"clock": _PANEL_ICON_MIN_SIZE, "door": _PANEL_ICON_MIN_SIZE},
+    "lateral": {"clock": _PANEL_ICON_MIN_SIZE, "door": _PANEL_ICON_MIN_SIZE},
+    "modern_widget": {"clock": _PANEL_ICON_MIN_SIZE, "door": 72},
+    "framed": {"clock": 72, "door": 72},
+    "split": {"clock": 72, "door": 72},
+    "badge": {"clock": 72},
+    "sticker": {"clock": 72},
+    "hero_banner": {"clock": 72, "door": 72},
+    "split_hero": {"clock": 72, "door": 72},
+    "poster": {"door": 72},
+    "blueprint": {"clock": _PREMIUM_ICON_MIN_SIZE},
+}
+
+
+def _normalise_box(box: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    x0, y0, x1, y1 = [int(v) for v in box]
+    return min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)
+
+
+def _flatten_occupied_boxes(occupied_boxes: dict | None) -> list[tuple[int, int, int, int]]:
+    if not occupied_boxes:
+        return []
+    result: list[tuple[int, int, int, int]] = []
+    for value in occupied_boxes.values():
+        if not value:
+            continue
+        if isinstance(value, tuple) and len(value) == 4:
+            result.append(_normalise_box(value))
+            continue
+        for box in value:
+            if isinstance(box, tuple) and len(box) == 4:
+                result.append(_normalise_box(box))
+    return result
+
+
+def add_occupied_box(
+    occupied_boxes: dict | None,
+    name: str,
+    box: tuple[int, int, int, int] | None,
+) -> dict | None:
+    """Append *box* under *name* in the occupied-box registry."""
+    if occupied_boxes is None or box is None:
+        return occupied_boxes
+    norm = _normalise_box(box)
+    if norm[2] <= norm[0] or norm[3] <= norm[1]:
+        return occupied_boxes
+    occupied_boxes.setdefault(name, []).append(norm)
+    return occupied_boxes
+
+
+def boxes_overlap(
+    box1: tuple[int, int, int, int],
+    box2: tuple[int, int, int, int],
+    padding: int = 0,
+) -> bool:
+    """Return True when two boxes intersect, expanded by *padding* pixels."""
+    ax0, ay0, ax1, ay1 = _normalise_box(box1)
+    bx0, by0, bx1, by1 = _normalise_box(box2)
+    pad = max(0, int(padding))
+    return not (
+        ax1 + pad <= bx0 or
+        bx1 + pad <= ax0 or
+        ay1 + pad <= by0 or
+        by1 + pad <= ay0
+    )
+
+
+def register_border_safe_area(
+    occupied_boxes: dict | None,
+    w: int,
+    h: int,
+    show_border: bool = True,
+) -> None:
+    """Reserve thin strips near the outer frame so emoji never hugs the border."""
+    margin = int(min(w, h) * (0.040 if show_border else 0.022))
+    if margin <= 0 or occupied_boxes is None:
+        return
+    add_occupied_box(occupied_boxes, "border_safe_area", (0, 0, w, margin))
+    add_occupied_box(occupied_boxes, "border_safe_area", (0, h - margin, w, h))
+    add_occupied_box(occupied_boxes, "border_safe_area", (0, 0, margin, h))
+    add_occupied_box(occupied_boxes, "border_safe_area", (w - margin, 0, w, h))
+
+
+def should_show_icon(layout_name: str, icon_name: str, available_size: int) -> bool:
+    """Return True when the icon has enough space and adds value in this layout."""
+    layout = str(layout_name or "").strip().lower()
+    icon = str(icon_name or "").strip().lower()
+    if available_size < _ICON_MIN_SIZE:
+        return False
+    if icon in _SUPPRESS_LAYOUT_ICONS.get(layout, set()):
+        return False
+    min_size = _LAYOUT_ICON_MIN.get(layout, {}).get(icon, _ICON_MIN_SIZE)
+    return available_size >= min_size
+
+
+def _ordered_zones(layout_key: str, requested_position: str, w: int, h: int) -> list[dict]:
+    zones = get_layout_free_areas(layout_key, w, h)
+    if not zones:
+        return []
+
+    pos = str(requested_position or "random").strip().lower()
+
+    if pos == "adaptive":
+        return sorted(zones, key=lambda z: z["area"], reverse=True)
+
+    if pos == "random":
+        shuffled = list(zones)
+        random.shuffle(shuffled)
+        return sorted(
+            shuffled,
+            key=lambda z: (_WEIGHT_RANK.get(z["weight"], 0), z["area"]),
+            reverse=True,
+        )
+
+    candidate_ids = _POSITION_TO_ZONE_IDS.get(pos, [pos])
+    matched: list[dict] = []
+    seen_ids: set[str] = set()
+    for cid in candidate_ids:
+        for zone in zones:
+            if zone["id"] == cid and zone["id"] not in seen_ids:
+                matched.append(zone)
+                seen_ids.add(zone["id"])
+    if "right" in pos:
+        for zone in zones:
+            if "right" in zone["id"] and zone["id"] not in seen_ids:
+                matched.append(zone)
+                seen_ids.add(zone["id"])
+    elif "left" in pos:
+        for zone in zones:
+            if "left" in zone["id"] and zone["id"] not in seen_ids:
+                matched.append(zone)
+                seen_ids.add(zone["id"])
+
+    for zone in zones:
+        if zone["id"] not in seen_ids:
+            matched.append(zone)
+    return matched
+
+
+def _zone_anchor_candidates(
+    zone: dict,
+    emoji_size_px: int,
+) -> list[tuple[int, int]]:
+    x0, y0, x1, y1 = zone["px"]
+    half = emoji_size_px // 2
+    inset = max(8, int(emoji_size_px * 0.10))
+    left = x0 + half + inset
+    right = x1 - half - inset
+    top = y0 + half + inset
+    bottom = y1 - half - inset
+    if left > right or top > bottom:
+        return []
+
+    mid_x = (left + right) // 2
+    mid_y = (top + bottom) // 2
+    third_x = (left * 2 + right) // 3
+    third_y = (top * 2 + bottom) // 3
+    two_third_x = (left + right * 2) // 3
+    two_third_y = (top + bottom * 2) // 3
+    candidates = [
+        (mid_x, mid_y),
+        (left, top),
+        (right, top),
+        (left, bottom),
+        (right, bottom),
+        (mid_x, top),
+        (mid_x, bottom),
+        (third_x, mid_y),
+        (two_third_x, mid_y),
+        (mid_x, third_y),
+        (mid_x, two_third_y),
+    ]
+    result: list[tuple[int, int]] = []
+    seen: set[tuple[int, int]] = set()
+    for item in candidates:
+        if item not in seen:
+            result.append(item)
+            seen.add(item)
+    return result
+
+
+def find_free_emoji_anchor(
+    layout_name: str,
+    occupied_boxes: dict | None,
+    w: int,
+    h: int,
+    emoji_size_px: int,
+    requested_position: str = "random",
+    padding: int = 12,
+) -> tuple[int, int, str] | None:
+    """Find the best non-overlapping emoji anchor inside this layout's free zones."""
+    occupied = _flatten_occupied_boxes(occupied_boxes)
+    half = emoji_size_px // 2
+
+    for zone in _ordered_zones(layout_name, requested_position, w, h):
+        for cx, cy in _zone_anchor_candidates(zone, emoji_size_px):
+            emoji_box = (cx - half, cy - half, cx + half, cy + half)
+            if emoji_box[0] < 0 or emoji_box[1] < 0 or emoji_box[2] > w or emoji_box[3] > h:
+                continue
+            if any(boxes_overlap(emoji_box, other, padding=padding) for other in occupied):
+                continue
+            return cx, cy, zone["id"]
+    return None
+
+
+def place_emoji_safely(
+    layout_name: str,
+    occupied_boxes: dict | None,
+    w: int,
+    h: int,
+    preferred_size_px: int,
+    requested_position: str = "random",
+    min_size_px: int = 44,
+) -> tuple[int, int, str, int] | None:
+    """Try progressively smaller emoji sizes until one fits or return None."""
+    tried: list[int] = []
+    for factor in (1.00, 0.88, 0.76, 0.64):
+        size_px = max(min_size_px, int(preferred_size_px * factor))
+        if size_px in tried:
+            continue
+        tried.append(size_px)
+        placed = find_free_emoji_anchor(
+            layout_name,
+            occupied_boxes,
+            w,
+            h,
+            size_px,
+            requested_position=requested_position,
+            padding=max(10, int(size_px * 0.10)),
+        )
+        if placed is not None:
+            cx, cy, zone_id = placed
+            return cx, cy, zone_id, size_px
+    return None
+
 
 # ── Public helpers ────────────────────────────────────────────────────────────
 

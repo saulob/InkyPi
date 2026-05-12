@@ -22,7 +22,11 @@ from dependencies import HAS_CAIROSVG
 from utils.http_client import get_http_session
 from utils.app_utils import resolve_path
 import state as state_mod
-from emoji_layout import choose_best_emoji_position, calculate_adaptive_emoji_size
+from emoji_layout import (
+    choose_best_emoji_position,
+    calculate_adaptive_emoji_size,
+    place_emoji_safely,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +248,7 @@ def draw_emoji(
     emoji_position: str = "random",
     show_icons: bool = True,
     show_border: bool = True,
+    occupied_boxes: dict | None = None,
 ) -> bool:
     """Render a decorative emoji centred within the layout's best free zone.
 
@@ -271,9 +276,19 @@ def draw_emoji(
         effective_position = emoji_position
 
     # ── Resolve centre point ──────────────────────────────────────────────────
-    cx, cy, zone_id = choose_best_emoji_position(
-        layout_key, effective_position, w, h, size_px, opts
+    placed = place_emoji_safely(
+        layout_key,
+        occupied_boxes,
+        w,
+        h,
+        size_px,
+        effective_position,
+        min_size_px=max(42, int(min(w, h) * 0.09)),
     )
+    if placed is None:
+        return False
+
+    cx, cy, zone_id, size_px = placed
 
     # ── Attempt Twemoji render ────────────────────────────────────────────────
     twemoji = _render_twemoji_rgba(emoji, size_px)

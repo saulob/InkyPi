@@ -22,6 +22,7 @@ from themes       import THEMES, THEME_NAMES
 from fonts        import FONT_PACKS, FONT_PACK_NAMES, load_font
 from layouts      import LAYOUTS, LAYOUT_NAMES
 from contrast     import clamp_theme_brightness
+from emoji_layout import register_border_safe_area
 from illustrations import get_clock_fn, get_door_fn, get_border_fn
 from doodle import (
     get_illustration_clock_fn, get_illustration_door_fn,
@@ -185,7 +186,10 @@ class QuadroTexto(BasePlugin):
             "show_border":  show_border,
             "show_icons":   show_icons,
             "show_divider": show_divider,
+            "layout_key":   layout_key,
+            "occupied_boxes": {},
         }
+        register_border_safe_area(opts["occupied_boxes"], w, h, show_border=show_border)
 
         img  = Image.new("RGB", (w, h), theme.get("bg", theme.get("top_bg", (255, 255, 255))))
         draw = ImageDraw.Draw(img)
@@ -215,6 +219,7 @@ class QuadroTexto(BasePlugin):
                     emoji_position=emoji_position,
                     show_icons=show_icons,
                     show_border=show_border,
+                    occupied_boxes=opts["occupied_boxes"],
                 )
             except Exception as exc:
                 logger.warning("quadro_texto: emoji rendering disabled for this render: %s", exc)
