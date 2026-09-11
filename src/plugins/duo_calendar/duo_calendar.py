@@ -1,5 +1,5 @@
 import calendar as calendar_module
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytz
 from PIL import Image, ImageColor, ImageDraw
@@ -127,6 +127,11 @@ class DuoCalendar(BasePlugin):
         month_grid = calendar_module.Calendar(firstweekday=6).monthdatescalendar(
             selected_date.year, selected_date.month
         )
+        while len(month_grid) < 6:
+            next_week_start = month_grid[-1][-1] + timedelta(days=1)
+            month_grid.append(
+                [next_week_start + timedelta(days=day_offset) for day_offset in range(7)]
+            )
         row_height = (grid_bottom - grid_top) / len(month_grid)
 
         if show_highlight_day:
