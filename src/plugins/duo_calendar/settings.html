@@ -13,17 +13,18 @@
 </div>
 
 <div class="form-group">
-    <label for="primaryColor" class="form-label">Primary Color:</label>
-    <input type="color" id="primaryColor" name="primaryColor" class="color-picker" value="{{ primary_color }}">
+    <div class="form-group">
+        <label for="primaryColor" class="form-label">Primary Color:</label>
+        <input type="color" id="primaryColor" name="primaryColor" class="color-picker" value="{{ primary_color }}">
+    </div>
+    <div class="form-group">
+        <label for="highlightColor" class="form-label">Highlight Color:</label>
+        <input type="color" id="highlightColor" name="highlightColor" class="color-picker" value="{{ highlight_color }}">
+    </div>
 </div>
 
 <div class="form-group">
-    <label for="highlightColor" class="form-label">Highlight Color:</label>
-    <input type="color" id="highlightColor" name="highlightColor" class="color-picker" value="{{ highlight_color }}">
-</div>
-
-<div class="form-group">
-    <label for="showHighlightDay" class="form-label">Show highlight day:</label>
+    <label for="showHighlightDay" class="form-label">Show Highlight Day:</label>
     <div class="toggle-container">
         <input type="hidden" id="showHighlightDayValue" name="showHighlightDay" value="true">
         <input type="checkbox" id="showHighlightDay" class="toggle-checkbox" checked>
