@@ -1,8 +1,9 @@
 import calendar as calendar_module
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pytz
-from PIL import Image, ImageColor, ImageDraw
+from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 from plugins.base_plugin.base_plugin import BasePlugin
 from plugins.simple_calendar.simple_calendar import LOCALE_DATA
@@ -25,6 +26,7 @@ HIGHLIGHT_COLOR_HEX = "#e61a1a"
 PRIMARY_COLOR = ImageColor.getrgb(PRIMARY_COLOR_HEX)
 HIGHLIGHT_COLOR = ImageColor.getrgb(HIGHLIGHT_COLOR_HEX)
 MUTED_COLOR = (185, 203, 226)
+HIGHLIGHT_DAY_FONT_PATH = Path(__file__).resolve().parent / "fonts" / "SF-Pro-Display-Semibold.otf"
 
 
 class DuoCalendar(BasePlugin):
@@ -135,8 +137,9 @@ class DuoCalendar(BasePlugin):
         row_height = (grid_bottom - grid_top) / len(month_grid)
 
         if show_highlight_day:
-            background_day_font = get_font(
-                "Jost", max(int((grid_bottom - grid_top) * 1.3), 80)
+            background_day_font = ImageFont.truetype(
+                str(HIGHLIGHT_DAY_FONT_PATH),
+                max(int((grid_bottom - grid_top) * 1.22), 80),
             )
             draw.text(
                 (
@@ -168,7 +171,7 @@ class DuoCalendar(BasePlugin):
                 day_color = MUTED_COLOR if is_outside_month else primary_color
 
                 if is_selected:
-                    circle_radius = int(min(column_width, row_height) * 0.34)
+                    circle_radius = int(min(column_width, row_height) * 0.45)
                     draw.ellipse(
                         (
                             center_x - circle_radius,
