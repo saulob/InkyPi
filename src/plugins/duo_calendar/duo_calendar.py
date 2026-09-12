@@ -109,6 +109,7 @@ class DuoCalendar(BasePlugin):
         timezone_name = device_config.get_config(
             "timezone", default="America/New_York"
         )
+        time_format = device_config.get_config("time_format", default="12h")
         try:
             timezone = pytz.timezone(timezone_name)
         except (pytz.UnknownTimeZoneError, AttributeError):
@@ -132,6 +133,7 @@ class DuoCalendar(BasePlugin):
             dimensions,
             selected_date,
             current_datetime,
+            time_format,
             LOCALE_DATA[language],
             primary_color,
             highlight_color,
@@ -143,6 +145,7 @@ class DuoCalendar(BasePlugin):
         dimensions,
         selected_date,
         current_datetime,
+        time_format,
         locale_data,
         primary_color,
         highlight_color,
@@ -176,7 +179,7 @@ class DuoCalendar(BasePlugin):
             anchor="la",
         )
 
-        time_text = f"{current_datetime.hour % 12 or 12}:{current_datetime.minute:02d}"
+        time_text = current_datetime.strftime("%H:%M" if time_format == "24h" else "%I:%M %p")
         draw.text(
             (width - side_padding, top_padding),
             time_text,
