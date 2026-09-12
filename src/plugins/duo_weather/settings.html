@@ -151,6 +151,8 @@
         let weatherProvider = 'OpenMeteo';
         let map;
         let marker;
+        let markerMoved = false;
+        let hadValidCoords = false;
 
         document.querySelectorAll('input[name="titleSelection"]').forEach((radio) => {
             radio.addEventListener('change', updateCustomTitleState);
@@ -166,14 +168,17 @@
             const longInput = document.getElementById('longitude').value;
             const parsedLat = Number(latInput);
             const parsedLong = Number(longInput);
+            hadValidCoords = latInput.trim() !== '' && longInput.trim() !== ''
+                && Number.isFinite(parsedLat) && Number.isFinite(parsedLong);
+            markerMoved = false;
 
-            if (Number.isFinite(parsedLat) && Number.isFinite(parsedLong)) {
+            if (hadValidCoords) {
                 latitude = parsedLat;
                 longitude = parsedLong;
             }
 
             // Recompute zoom based on whether coordinates are present
-            zoom = (document.getElementById('latitude').value && document.getElementById('longitude').value) ? 4.5 : 2.5;
+            zoom = hadValidCoords ? 4.5 : 2.5;
 
             openModal('mapModal');
             setTimeout(() => {
@@ -184,6 +189,10 @@
 
                     map.on('click', (event) => {
                         marker.setLatLng(event.latlng);
+                        markerMoved = true;
+                    });
+                    marker.on('dragend', () => {
+                        markerMoved = true;
                     });
                 } else {
                     map.invalidateSize();
@@ -194,11 +203,13 @@
         });
 
         $closeMap.addEventListener('click', () => {
-            const position = marker.getLatLng().wrap();
-            latitude = position.lat;
-            longitude = position.lng;
-            $latitude.value = latitude;
-            $longitude.value = longitude;
+            if (markerMoved || hadValidCoords) {
+                const position = marker.getLatLng().wrap();
+                latitude = position.lat;
+                longitude = position.lng;
+                $latitude.value = latitude;
+                $longitude.value = longitude;
+            }
 
             // Clear the quick location selection so it doesn't conflict
             // with manually-entered coordinates (selects the empty "Select a city..." option).
