@@ -34,5 +34,7 @@ Duo Weather keeps the same configuration and weather providers as Mini Weather, 
 
 - Uses Open-Meteo free API (no key required) or OpenWeatherMap (API key required)
 - Hourly points are selected from provider hourly forecasts, not from daily forecasts
-- Sky background is a CSS gradient that changes with current conditions
+- Sky background is rendered locally with PIL from condition-specific presets
+- Presets add local glow, soft clouds, haze, precipitation, stars, and subtle lightning effects
+- Unknown conditions use the `default` atmospheric preset
 - Designed for e-paper contrast and different screen sizes

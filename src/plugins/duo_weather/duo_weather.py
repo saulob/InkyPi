@@ -1,6 +1,7 @@
 import base64
 import logging
 import os
+import random
 import re
 import unicodedata
 from io import BytesIO
@@ -8,7 +9,7 @@ from io import BytesIO
 import pytz
 import requests
 import datetime
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 from plugins.weather.weather import UNITS, Weather
 
@@ -387,39 +388,216 @@ ICON_CONDITION_KEYS = {
 
 SKY_BY_CONDITION = {
     "clear": "clear",
-    "mostly_sunny": "clear",
-    "mostly_clear": "clear",
+    "mostly_sunny": "mostly-sunny",
+    "mostly_clear": "mostly-clear",
     "partly_cloudy": "partly-cloudy",
     "cloudy": "cloudy",
-    "overcast": "cloudy",
+    "overcast": "overcast",
     "fog": "fog",
     "icy_fog": "fog",
-    "drizzle": "rain",
+    "drizzle": "drizzle",
     "rain": "rain",
-    "heavy_rain": "rain",
-    "freezing_rain": "rain",
+    "heavy_rain": "heavy-rain",
+    "freezing_rain": "freezing-rain",
     "snow": "snow",
-    "thunderstorm": "storm",
+    "thunderstorm": "thunderstorm",
 }
 
-# Vertical gradient stops (position 0..1, RGB) per sky theme, generated with PIL
-# so the widget never depends on external background images.
-SKY_GRADIENTS = {
-    "clear": [(0.0, (25, 89, 168)), (0.55, (69, 148, 205)), (1.0, (168, 210, 232))],
-    "clear-night": [(0.0, (8, 16, 42)), (0.55, (27, 42, 78)), (1.0, (63, 79, 112))],
-    "partly-cloudy": [(0.0, (46, 98, 152)), (0.55, (104, 145, 180)), (1.0, (183, 208, 224))],
-    "partly-cloudy-night": [(0.0, (14, 22, 48)), (0.55, (38, 51, 82)), (1.0, (76, 88, 116))],
-    "cloudy": [(0.0, (100, 113, 126)), (0.55, (143, 154, 163)), (1.0, (192, 198, 203))],
-    "cloudy-night": [(0.0, (24, 29, 38)), (0.55, (52, 59, 70)), (1.0, (92, 99, 110))],
-    "fog": [(0.0, (140, 148, 154)), (0.55, (178, 184, 188)), (1.0, (214, 217, 219))],
-    "fog-night": [(0.0, (30, 34, 40)), (0.55, (58, 64, 71)), (1.0, (98, 104, 111))],
-    "rain": [(0.0, (48, 63, 84)), (0.55, (83, 99, 117)), (1.0, (134, 149, 163))],
-    "rain-night": [(0.0, (12, 17, 30)), (0.55, (33, 42, 58)), (1.0, (66, 76, 92))],
-    "snow": [(0.0, (120, 147, 173)), (0.55, (173, 194, 211)), (1.0, (219, 229, 237))],
-    "snow-night": [(0.0, (28, 38, 56)), (0.55, (61, 74, 96)), (1.0, (108, 121, 140))],
-    "storm": [(0.0, (32, 38, 50)), (0.55, (57, 65, 80)), (1.0, (96, 105, 118))],
-    "storm-night": [(0.0, (6, 8, 16)), (0.55, (22, 26, 38)), (1.0, (52, 58, 72))],
+def _background_preset(
+    gradient,
+    glow=None,
+    clouds=None,
+    haze=None,
+    precipitation=None,
+    effects=None,
+    text_shadow=0.4,
+    text_opacity=1.0,
+):
+    return {
+        "gradient": gradient,
+        "glow": glow,
+        "clouds": clouds,
+        "haze": haze,
+        "precipitation": precipitation,
+        "effects": effects,
+        "text_shadow": text_shadow,
+        "text_opacity": text_opacity,
+    }
+
+
+BACKGROUND_PRESETS = {
+    "clear": _background_preset(
+        [(0.0, (24, 104, 204)), (0.52, (61, 154, 222)), (1.0, (166, 218, 237))],
+        glow={"kind": "sun", "x": 0.78, "y": 0.18, "radius": 0.36, "color": (255, 220, 112), "alpha": 110},
+        effects={"stars": 0},
+        text_shadow=0.32,
+    ),
+    "clear-night": _background_preset(
+        [(0.0, (7, 17, 52)), (0.52, (18, 39, 87)), (1.0, (65, 84, 130))],
+        glow={"kind": "moon", "x": 0.78, "y": 0.18, "radius": 0.29, "color": (184, 218, 255), "alpha": 92},
+        effects={"stars": 15, "seed": 11},
+        text_shadow=0.48,
+    ),
+    "mostly-sunny": _background_preset(
+        [(0.0, (43, 125, 208)), (0.52, (103, 180, 226)), (1.0, (194, 224, 237))],
+        glow={"kind": "sun", "x": 0.78, "y": 0.19, "radius": 0.34, "color": (255, 218, 108), "alpha": 105},
+        clouds={"count": 1, "y": (0.40, 0.60), "scale": 0.28, "color": (231, 242, 246), "alpha": 52, "blur": 0.025, "seed": 21},
+        text_shadow=0.34,
+    ),
+    "mostly-clear-night": _background_preset(
+        [(0.0, (9, 26, 66)), (0.52, (24, 52, 101)), (1.0, (84, 105, 143))],
+        glow={"kind": "moon", "x": 0.77, "y": 0.19, "radius": 0.27, "color": (187, 220, 255), "alpha": 88},
+        clouds={"count": 1, "y": (0.45, 0.63), "scale": 0.24, "color": (161, 183, 204), "alpha": 36, "blur": 0.03, "seed": 22},
+        effects={"stars": 10, "seed": 12},
+        text_shadow=0.5,
+    ),
+    "partly-cloudy": _background_preset(
+        [(0.0, (65, 133, 193)), (0.52, (122, 180, 212)), (1.0, (191, 216, 227))],
+        glow={"kind": "sun", "x": 0.75, "y": 0.24, "radius": 0.25, "color": (255, 218, 125), "alpha": 70},
+        clouds={"count": 2, "y": (0.25, 0.62), "scale": 0.31, "color": (224, 237, 243), "alpha": 76, "blur": 0.02, "seed": 31},
+        text_shadow=0.38,
+    ),
+    "partly-cloudy-night": _background_preset(
+        [(0.0, (16, 38, 74)), (0.52, (37, 68, 103)), (1.0, (98, 119, 145))],
+        glow={"kind": "moon", "x": 0.76, "y": 0.25, "radius": 0.23, "color": (182, 215, 248), "alpha": 52},
+        clouds={"count": 2, "y": (0.26, 0.64), "scale": 0.29, "color": (135, 161, 183), "alpha": 58, "blur": 0.025, "seed": 32},
+        effects={"stars": 5, "seed": 13},
+        text_shadow=0.5,
+    ),
+    "cloudy": _background_preset(
+        [(0.0, (91, 117, 143)), (0.52, (136, 157, 173)), (1.0, (191, 202, 209))],
+        glow={"kind": "sun", "x": 0.72, "y": 0.22, "radius": 0.22, "color": (226, 225, 194), "alpha": 28},
+        clouds={"count": 3, "y": (0.18, 0.66), "scale": 0.34, "color": (175, 191, 199), "alpha": 88, "blur": 0.025, "seed": 41},
+        text_shadow=0.42,
+    ),
+    "cloudy-night": _background_preset(
+        [(0.0, (21, 35, 57)), (0.52, (43, 64, 86)), (1.0, (87, 104, 119))],
+        clouds={"count": 4, "y": (0.18, 0.68), "scale": 0.34, "color": (57, 75, 91), "alpha": 112, "blur": 0.025, "seed": 42},
+        effects={"stars": 2, "seed": 14},
+        text_shadow=0.56,
+    ),
+    "overcast": _background_preset(
+        [(0.0, (106, 128, 143)), (0.52, (149, 164, 173)), (1.0, (194, 201, 204))],
+        clouds={"count": 5, "y": (0.16, 0.70), "scale": 0.39, "color": (152, 168, 176), "alpha": 96, "blur": 0.035, "seed": 51},
+        haze=[{"y": 0.57, "height": 0.28, "color": (217, 224, 225), "alpha": 38, "blur": 0.04}],
+        text_shadow=0.43,
+        text_opacity=0.98,
+    ),
+    "overcast-night": _background_preset(
+        [(0.0, (35, 45, 57)), (0.52, (56, 68, 80)), (1.0, (94, 102, 109))],
+        clouds={"count": 5, "y": (0.16, 0.72), "scale": 0.39, "color": (48, 61, 73), "alpha": 125, "blur": 0.035, "seed": 52},
+        haze=[{"y": 0.63, "height": 0.26, "color": (117, 127, 132), "alpha": 32, "blur": 0.04}],
+        text_shadow=0.58,
+    ),
+    "drizzle": _background_preset(
+        [(0.0, (68, 103, 131)), (0.52, (105, 138, 157)), (1.0, (168, 188, 198))],
+        clouds={"count": 3, "y": (0.20, 0.58), "scale": 0.32, "color": (128, 151, 163), "alpha": 96, "blur": 0.03, "seed": 61},
+        haze=[{"y": 0.62, "height": 0.21, "color": (201, 215, 218), "alpha": 28, "blur": 0.035}],
+        precipitation={"kind": "rain", "count": 34, "length": (0.025, 0.055), "alpha": 62, "color": (221, 239, 246), "seed": 61},
+        text_shadow=0.46,
+    ),
+    "drizzle-night": _background_preset(
+        [(0.0, (19, 43, 64)), (0.52, (37, 66, 82)), (1.0, (82, 103, 116))],
+        clouds={"count": 3, "y": (0.18, 0.62), "scale": 0.33, "color": (48, 71, 84), "alpha": 116, "blur": 0.03, "seed": 62},
+        haze=[{"y": 0.64, "height": 0.22, "color": (113, 133, 141), "alpha": 30, "blur": 0.04}],
+        precipitation={"kind": "rain", "count": 38, "length": (0.025, 0.06), "alpha": 75, "color": (187, 220, 235), "seed": 62},
+        text_shadow=0.57,
+    ),
+    "rain": _background_preset(
+        [(0.0, (42, 61, 85)), (0.52, (76, 99, 119)), (1.0, (132, 151, 164))],
+        clouds={"count": 4, "y": (0.14, 0.62), "scale": 0.36, "color": (72, 91, 106), "alpha": 118, "blur": 0.025, "seed": 71},
+        precipitation={"kind": "rain", "count": 68, "length": (0.045, 0.11), "alpha": 74, "color": (204, 229, 240), "seed": 71},
+        text_shadow=0.5,
+    ),
+    "rain-night": _background_preset(
+        [(0.0, (10, 25, 43)), (0.52, (25, 48, 67)), (1.0, (62, 83, 100))],
+        clouds={"count": 4, "y": (0.14, 0.64), "scale": 0.36, "color": (28, 47, 61), "alpha": 136, "blur": 0.025, "seed": 72},
+        precipitation={"kind": "rain", "count": 58, "length": (0.035, 0.09), "alpha": 66, "color": (147, 192, 214), "seed": 72},
+        text_shadow=0.6,
+    ),
+    "heavy-rain": _background_preset(
+        [(0.0, (28, 47, 73)), (0.52, (52, 77, 101)), (1.0, (104, 130, 148))],
+        clouds={"count": 5, "y": (0.10, 0.64), "scale": 0.39, "color": (45, 64, 84), "alpha": 145, "blur": 0.02, "seed": 81},
+        precipitation={"kind": "rain", "count": 104, "length": (0.07, 0.16), "alpha": 88, "color": (190, 221, 237), "seed": 81},
+        text_shadow=0.57,
+    ),
+    "heavy-rain-night": _background_preset(
+        [(0.0, (7, 16, 30)), (0.52, (17, 35, 53)), (1.0, (52, 73, 91))],
+        clouds={"count": 5, "y": (0.10, 0.66), "scale": 0.39, "color": (20, 35, 49), "alpha": 158, "blur": 0.02, "seed": 82},
+        precipitation={"kind": "rain", "count": 96, "length": (0.06, 0.14), "alpha": 82, "color": (126, 175, 201), "seed": 82},
+        text_shadow=0.64,
+    ),
+    "freezing-rain": _background_preset(
+        [(0.0, (116, 157, 184)), (0.52, (157, 193, 209)), (1.0, (211, 229, 235))],
+        glow={"kind": "ice", "x": 0.76, "y": 0.22, "radius": 0.28, "color": (213, 246, 255), "alpha": 54},
+        clouds={"count": 3, "y": (0.18, 0.62), "scale": 0.33, "color": (163, 190, 204), "alpha": 88, "blur": 0.03, "seed": 91},
+        precipitation={"kind": "sleet", "count": 58, "length": (0.035, 0.08), "alpha": 86, "color": (225, 249, 255), "seed": 91},
+        text_shadow=0.43,
+    ),
+    "freezing-rain-night": _background_preset(
+        [(0.0, (23, 52, 77)), (0.52, (47, 82, 103)), (1.0, (105, 135, 150))],
+        glow={"kind": "ice", "x": 0.76, "y": 0.23, "radius": 0.25, "color": (175, 230, 248), "alpha": 42},
+        clouds={"count": 3, "y": (0.18, 0.64), "scale": 0.34, "color": (48, 73, 90), "alpha": 116, "blur": 0.03, "seed": 92},
+        precipitation={"kind": "sleet", "count": 54, "length": (0.03, 0.07), "alpha": 78, "color": (174, 224, 241), "seed": 92},
+        text_shadow=0.58,
+    ),
+    "fog": _background_preset(
+        [(0.0, (140, 163, 175)), (0.52, (180, 195, 200)), (1.0, (218, 224, 224))],
+        clouds={"count": 3, "y": (0.20, 0.66), "scale": 0.42, "color": (218, 225, 225), "alpha": 78, "blur": 0.06, "seed": 101},
+        haze=[
+            {"y": 0.28, "height": 0.20, "color": (235, 240, 239), "alpha": 56, "blur": 0.06},
+            {"y": 0.68, "height": 0.25, "color": (239, 242, 239), "alpha": 68, "blur": 0.07},
+        ],
+        text_shadow=0.52,
+        text_opacity=0.98,
+    ),
+    "fog-night": _background_preset(
+        [(0.0, (40, 57, 69)), (0.52, (67, 85, 95)), (1.0, (119, 132, 137))],
+        clouds={"count": 3, "y": (0.18, 0.68), "scale": 0.42, "color": (129, 143, 148), "alpha": 80, "blur": 0.07, "seed": 102},
+        haze=[
+            {"y": 0.30, "height": 0.22, "color": (168, 179, 180), "alpha": 38, "blur": 0.07},
+            {"y": 0.70, "height": 0.28, "color": (176, 185, 184), "alpha": 48, "blur": 0.08},
+        ],
+        text_shadow=0.62,
+    ),
+    "snow": _background_preset(
+        [(0.0, (142, 181, 205)), (0.52, (190, 216, 228)), (1.0, (235, 242, 241))],
+        glow={"kind": "ice", "x": 0.76, "y": 0.20, "radius": 0.27, "color": (237, 251, 255), "alpha": 66},
+        clouds={"count": 2, "y": (0.25, 0.60), "scale": 0.30, "color": (218, 234, 240), "alpha": 58, "blur": 0.035, "seed": 111},
+        precipitation={"kind": "snow", "count": 48, "alpha": 105, "color": (250, 255, 255), "seed": 111},
+        text_shadow=0.48,
+        text_opacity=0.98,
+    ),
+    "snow-night": _background_preset(
+        [(0.0, (32, 61, 87)), (0.52, (59, 95, 119)), (1.0, (130, 153, 165))],
+        glow={"kind": "ice", "x": 0.76, "y": 0.21, "radius": 0.23, "color": (191, 231, 248), "alpha": 45},
+        clouds={"count": 2, "y": (0.24, 0.62), "scale": 0.31, "color": (101, 130, 148), "alpha": 72, "blur": 0.04, "seed": 112},
+        precipitation={"kind": "snow", "count": 42, "alpha": 88, "color": (218, 243, 250), "seed": 112},
+        text_shadow=0.59,
+    ),
+    "thunderstorm": _background_preset(
+        [(0.0, (17, 27, 48)), (0.52, (32, 47, 67)), (1.0, (72, 89, 106))],
+        clouds={"count": 5, "y": (0.08, 0.68), "scale": 0.40, "color": (36, 49, 67), "alpha": 154, "blur": 0.018, "seed": 121},
+        precipitation={"kind": "rain", "count": 84, "length": (0.055, 0.13), "alpha": 76, "color": (158, 195, 216), "seed": 121},
+        effects={"lightning": True, "seed": 121},
+        text_shadow=0.61,
+    ),
+    "thunderstorm-night": _background_preset(
+        [(0.0, (4, 8, 20)), (0.52, (12, 22, 39)), (1.0, (43, 59, 75))],
+        clouds={"count": 5, "y": (0.08, 0.70), "scale": 0.40, "color": (14, 24, 39), "alpha": 170, "blur": 0.018, "seed": 122},
+        precipitation={"kind": "rain", "count": 112, "length": (0.06, 0.15), "alpha": 90, "color": (118, 165, 193), "seed": 122},
+        effects={"lightning": True, "seed": 122},
+        text_shadow=0.7,
+    ),
+    "default": _background_preset(
+        [(0.0, (52, 103, 157)), (0.52, (103, 154, 192)), (1.0, (177, 209, 221))],
+        glow={"kind": "sun", "x": 0.77, "y": 0.23, "radius": 0.25, "color": (224, 230, 194), "alpha": 42},
+        clouds={"count": 2, "y": (0.30, 0.64), "scale": 0.30, "color": (204, 224, 233), "alpha": 46, "blur": 0.035, "seed": 131},
+        text_shadow=0.42,
+    ),
 }
+
+SKY_GRADIENTS = {name: preset["gradient"] for name, preset in BACKGROUND_PRESETS.items()}
 
 
 def format_localized_date(language, dt):
@@ -601,6 +779,7 @@ class DuoWeather(Weather):
             condition_key = "mostly_clear"
         condition_label = labels.get("conditions", {}).get(condition_key, labels.get("conditions", {}).get("cloudy", "Cloudy"))
         sky_theme = self._sky_theme(condition_key, is_night)
+        background_preset = BACKGROUND_PRESETS.get(sky_theme, BACKGROUND_PRESETS["default"])
         hourly_points = self._select_hourly_points(
             template_params.get("hourly_forecast", []),
             now,
@@ -624,6 +803,8 @@ class DuoWeather(Weather):
                 "hourly_points": hourly_points,
                 "sky_theme": sky_theme,
                 "sky_background": self._sky_background_data_uri(dimensions, sky_theme),
+                "background_text_shadow": background_preset["text_shadow"],
+                "background_text_opacity": background_preset["text_opacity"],
                 "is_night": is_night,
                 "provider_timezone": provider_tz.zone,
                 "plugin_settings": settings,
@@ -828,27 +1009,222 @@ class DuoWeather(Weather):
         return condition_key, is_night
 
     def _sky_theme(self, condition_key, is_night):
-        sky = SKY_BY_CONDITION.get(condition_key, "cloudy")
+        sky = SKY_BY_CONDITION.get(condition_key, "default")
+        if sky == "mostly-sunny" and is_night:
+            sky = "mostly-clear"
         if is_night:
-            return f"{sky}-night"
-        return sky
+            candidate = f"{sky}-night"
+        elif sky == "mostly-clear":
+            candidate = "mostly-sunny"
+        else:
+            candidate = sky
+        return candidate if candidate in BACKGROUND_PRESETS else "default"
 
     def _sky_background_data_uri(self, dimensions, sky_theme):
-        """Render a vertical gradient sky with PIL and return it as a base64
-        PNG data URI, avoiding any dependency on external background images."""
+        """Render a local, deterministic atmospheric background as a data URI."""
         width, height = max(1, int(dimensions[0])), max(1, int(dimensions[1]))
-        stops = SKY_GRADIENTS.get(sky_theme, SKY_GRADIENTS["cloudy"])
+        preset = BACKGROUND_PRESETS.get(sky_theme, BACKGROUND_PRESETS["default"])
+        image = self._gradient_background(width, height, preset["gradient"])
+        self._draw_glow(image, preset.get("glow"))
+        self._draw_clouds(image, preset.get("clouds"))
+        self._draw_haze(image, preset.get("haze"))
+        self._draw_precipitation(image, preset.get("precipitation"))
+        self._draw_effects(image, preset.get("effects"))
 
-        image = Image.new("RGB", (width, height))
+        buffer = BytesIO()
+        image.convert("RGB").save(buffer, format="PNG")
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+        return f"data:image/png;base64,{encoded}"
+
+    def _gradient_background(self, width, height, stops):
+        image = Image.new("RGBA", (width, height))
         draw = ImageDraw.Draw(image)
         for y in range(height):
             t = y / max(height - 1, 1)
-            draw.line([(0, y), (width, y)], fill=self._interpolate_gradient(stops, t))
+            color = self._interpolate_gradient(stops, t) + (255,)
+            draw.line([(0, y), (width, y)], fill=color)
+        return image
 
-        buffer = BytesIO()
-        image.save(buffer, format="PNG")
-        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
-        return f"data:image/png;base64,{encoded}"
+    def _draw_glow(self, image, glow):
+        if not glow:
+            return
+
+        width, height = image.size
+        radius = min(width, height) * glow.get("radius", 0.25)
+        center_x = width * glow.get("x", 0.75)
+        center_y = height * glow.get("y", 0.22)
+        color = tuple(glow.get("color", (255, 230, 160)))
+        alpha = glow.get("alpha", 70)
+
+        for scale, opacity, blur_scale in ((1.0, 0.28, 0.22), (0.72, 0.38, 0.13), (0.42, 0.62, 0.06)):
+            layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(layer)
+            current_radius = radius * scale
+            box = (
+                center_x - current_radius,
+                center_y - current_radius,
+                center_x + current_radius,
+                center_y + current_radius,
+            )
+            draw.ellipse(box, fill=color + (int(alpha * opacity),))
+            layer = layer.filter(ImageFilter.GaussianBlur(max(1, radius * blur_scale)))
+            image.alpha_composite(layer)
+
+    def _draw_clouds(self, image, clouds):
+        if not clouds:
+            return
+
+        width, height = image.size
+        minimum_dimension = min(width, height)
+        rng = random.Random(clouds.get("seed", 0))
+        layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(layer)
+        color = tuple(clouds.get("color", (220, 232, 238)))
+        alpha = int(clouds.get("alpha", 70))
+        y_min, y_max = clouds.get("y", (0.2, 0.7))
+
+        for _ in range(clouds.get("count", 1)):
+            cloud_width = minimum_dimension * clouds.get("scale", 0.3) * rng.uniform(0.82, 1.24)
+            cloud_height = cloud_width * rng.uniform(0.32, 0.52)
+            center_x = width * rng.uniform(-0.08, 1.08)
+            center_y = height * rng.uniform(y_min, y_max)
+            fill = color + (alpha,)
+            base_box = (
+                center_x - cloud_width * 0.52,
+                center_y - cloud_height * 0.05,
+                center_x + cloud_width * 0.52,
+                center_y + cloud_height * 0.43,
+            )
+            draw.ellipse(base_box, fill=fill)
+
+            for offset in (-0.33, -0.12, 0.12, 0.33):
+                puff_width = cloud_width * rng.uniform(0.25, 0.38)
+                puff_height = cloud_height * rng.uniform(0.72, 1.22)
+                puff_x = center_x + cloud_width * offset + rng.uniform(-0.025, 0.025) * cloud_width
+                puff_y = center_y - cloud_height * rng.uniform(0.12, 0.28)
+                puff_box = (
+                    puff_x - puff_width / 2,
+                    puff_y - puff_height / 2,
+                    puff_x + puff_width / 2,
+                    puff_y + puff_height / 2,
+                )
+                draw.ellipse(puff_box, fill=fill)
+
+        blur = minimum_dimension * clouds.get("blur", 0.03)
+        if blur > 0:
+            layer = layer.filter(ImageFilter.GaussianBlur(max(1, blur)))
+        image.alpha_composite(layer)
+
+    def _draw_haze(self, image, haze):
+        if not haze:
+            return
+
+        width, height = image.size
+        for band in haze:
+            layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(layer)
+            band_height = height * band.get("height", 0.2)
+            center_y = height * band.get("y", 0.6)
+            color = tuple(band.get("color", (235, 240, 240)))
+            alpha = int(band.get("alpha", 40))
+            draw.rectangle(
+                (0, center_y - band_height / 2, width, center_y + band_height / 2),
+                fill=color + (alpha,),
+            )
+            blur = min(width, height) * band.get("blur", 0.05)
+            layer = layer.filter(ImageFilter.GaussianBlur(max(1, blur)))
+            image.alpha_composite(layer)
+
+    def _draw_precipitation(self, image, precipitation):
+        if not precipitation:
+            return
+
+        width, height = image.size
+        minimum_dimension = min(width, height)
+        rng = random.Random(precipitation.get("seed", 0))
+        layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(layer)
+        kind = precipitation.get("kind", "rain")
+        color = tuple(precipitation.get("color", (220, 240, 248)))
+        alpha = int(precipitation.get("alpha", 70))
+        count = precipitation.get("count", 40)
+
+        if kind in ("rain", "sleet"):
+            length_min, length_max = precipitation.get("length", (0.04, 0.1))
+            line_width = max(1, round(minimum_dimension * 0.002))
+            for _ in range(count):
+                start_x = rng.uniform(-0.08, 1.08) * width
+                start_y = rng.uniform(-0.1, 1.0) * height
+                length = rng.uniform(length_min, length_max) * height
+                drift = rng.uniform(-0.012, 0.012) * width
+                draw.line(
+                    (start_x, start_y, start_x + drift, start_y + length),
+                    fill=color + (alpha,),
+                    width=line_width,
+                )
+                if kind == "sleet":
+                    dot_radius = max(1, line_width * 0.8)
+                    draw.ellipse(
+                        (
+                            start_x - dot_radius,
+                            start_y + length - dot_radius,
+                            start_x + dot_radius,
+                            start_y + length + dot_radius,
+                        ),
+                        fill=color + (alpha,),
+                    )
+        elif kind == "snow":
+            for _ in range(count):
+                center_x = rng.uniform(-0.04, 1.04) * width
+                center_y = rng.uniform(-0.04, 1.04) * height
+                radius = rng.uniform(0.002, 0.007) * minimum_dimension
+                draw.ellipse(
+                    (center_x - radius, center_y - radius, center_x + radius, center_y + radius),
+                    fill=color + (alpha,),
+                )
+
+        image.alpha_composite(layer)
+
+    def _draw_effects(self, image, effects):
+        if not effects:
+            return
+
+        width, height = image.size
+        rng = random.Random(effects.get("seed", 0))
+        stars = effects.get("stars", 0)
+        if stars:
+            layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            draw = ImageDraw.Draw(layer)
+            for _ in range(stars):
+                center_x = rng.uniform(0.04, 0.96) * width
+                center_y = rng.uniform(0.05, 0.55) * height
+                radius = rng.uniform(0.5, 1.5)
+                alpha = rng.randint(45, 105)
+                draw.ellipse(
+                    (center_x - radius, center_y - radius, center_x + radius, center_y + radius),
+                    fill=(225, 240, 255, alpha),
+                )
+            image.alpha_composite(layer)
+
+        if effects.get("lightning"):
+            center_x = width * rng.uniform(0.58, 0.78)
+            start_y = height * rng.uniform(0.12, 0.22)
+            points = [(center_x, start_y)]
+            for index in range(5):
+                center_x += width * rng.uniform(-0.045, 0.045)
+                start_y += height * rng.uniform(0.055, 0.09)
+                points.append((center_x, start_y))
+
+            glow_layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            glow_draw = ImageDraw.Draw(glow_layer)
+            glow_draw.line(points, fill=(214, 235, 255, 58), width=max(4, round(min(width, height) * 0.018)))
+            glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(max(2, min(width, height) * 0.025)))
+            image.alpha_composite(glow_layer)
+
+            crisp_layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            crisp_draw = ImageDraw.Draw(crisp_layer)
+            crisp_draw.line(points, fill=(230, 244, 255, 118), width=max(1, round(min(width, height) * 0.004)))
+            image.alpha_composite(crisp_layer)
 
     def _interpolate_gradient(self, stops, t):
         for (pos_a, color_a), (pos_b, color_b) in zip(stops, stops[1:]):

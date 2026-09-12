@@ -14,7 +14,7 @@
     {% set temp_class = temp_digits %}
 {% endif %}
 
-<div class="duo-weather-shell sky-{{ sky_theme }}{% if not show_icons %} no-icons{% endif %}{% if color_icons %} color-icons{% endif %}{% if is_night %} is-night{% endif %}" data-forecast-days="{{ forecast_days }}" style="background-image: url('{{ sky_background }}');">
+<div class="duo-weather-shell sky-{{ sky_theme }}{% if not show_icons %} no-icons{% endif %}{% if color_icons %} color-icons{% endif %}{% if is_night %} is-night{% endif %}" data-forecast-days="{{ forecast_days }}" style="background-image: url('{{ sky_background }}'); --duo-text-shadow-opacity: {{ background_text_shadow|default(0.4) }}; --duo-text-opacity: {{ background_text_opacity|default(1) }};">
     <div class="duo-location">{{ title }}</div>
 
     <header class="duo-top">

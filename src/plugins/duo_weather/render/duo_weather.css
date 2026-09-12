@@ -29,8 +29,8 @@ body {
   background-color: #6a9fd0;
   background-size: cover;
   background-position: center;
-  color: #ffffff;
-  text-shadow: 0 0.15dvh 0.5dvh rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, var(--duo-text-opacity, 1));
+  text-shadow: 0 0.15dvh 0.5dvh rgba(0, 0, 0, var(--duo-text-shadow-opacity, 0.4));
 }
 
 .duo-location {
