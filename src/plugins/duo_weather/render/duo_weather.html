@@ -14,7 +14,9 @@
     {% set temp_class = temp_digits %}
 {% endif %}
 
-<div class="duo-weather-shell sky-{{ sky_theme }}{% if not show_icons %} no-icons{% endif %}{% if color_icons %} color-icons{% endif %}{% if is_night %} is-night{% endif %}" data-forecast-days="{{ forecast_days }}">
+<div class="duo-weather-shell sky-{{ sky_theme }}{% if not show_icons %} no-icons{% endif %}{% if color_icons %} color-icons{% endif %}{% if is_night %} is-night{% endif %}" data-forecast-days="{{ forecast_days }}" style="background-image: url('{{ sky_background }}');">
+    <div class="duo-location">{{ title }}</div>
+
     <header class="duo-top">
         <div class="duo-condition">
             {% if show_icons %}
@@ -35,7 +37,7 @@
     <section class="duo-hourly">
         {% for hour in hourly_points %}
         <div class="duo-hour">
-            <div class="duo-hour-time">{{ hour.time }}</div>
+            <div class="duo-hour-time"><span class="hour-value">{{ hour.hour_value }}</span>{% if hour.hour_suffix %}<span class="hour-suffix">{{ hour.hour_suffix }}</span>{% endif %}</div>
             {% if show_icons %}
             <img class="duo-hour-icon" src="{{ hour.icon }}" alt="{{ hour.time }}">
             {% endif %}
@@ -45,3 +47,4 @@
     </section>
 </div>
 {% endblock %}
+

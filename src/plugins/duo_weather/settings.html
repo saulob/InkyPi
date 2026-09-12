@@ -92,8 +92,8 @@
     </div>
     <label for="colorIcons" class="form-label" style="margin-left: 1.5rem;">Colorful icons:</label>
     <div class="toggle-container">
-        <input type="hidden" id="colorIconsValue" name="colorIcons" value="false">
-        <input type="checkbox" id="colorIcons" class="toggle-checkbox" onclick="document.getElementById('colorIconsValue').value = this.checked ? 'true' : 'false';">
+        <input type="hidden" id="colorIconsValue" name="colorIcons" value="true">
+        <input type="checkbox" id="colorIcons" class="toggle-checkbox" checked onclick="document.getElementById('colorIconsValue').value = this.checked ? 'true' : 'false';">
         <label for="colorIcons" class="toggle-label"></label>
     </div>
 </div>
@@ -265,7 +265,7 @@
             document.getElementById('showIconsValue').value = showIconsChecked ? 'true' : 'false';
 
             const colorIconsVal = pluginSettings.colorIcons;
-            const colorIconsChecked = colorIconsVal === 'true' || colorIconsVal === true;
+            const colorIconsChecked = colorIconsVal === undefined || colorIconsVal === null || colorIconsVal === 'true' || colorIconsVal === true;
             document.getElementById('colorIcons').checked = colorIconsChecked;
             document.getElementById('colorIconsValue').value = colorIconsChecked ? 'true' : 'false';
 

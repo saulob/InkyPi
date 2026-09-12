@@ -1,11 +1,14 @@
+import base64
 import logging
 import os
 import re
 import unicodedata
+from io import BytesIO
 
 import pytz
 import requests
 import datetime
+from PIL import Image, ImageDraw
 
 from plugins.weather.weather import UNITS, Weather
 
@@ -399,6 +402,25 @@ SKY_BY_CONDITION = {
     "thunderstorm": "storm",
 }
 
+# Vertical gradient stops (position 0..1, RGB) per sky theme, generated with PIL
+# so the widget never depends on external background images.
+SKY_GRADIENTS = {
+    "clear": [(0.0, (25, 89, 168)), (0.55, (69, 148, 205)), (1.0, (168, 210, 232))],
+    "clear-night": [(0.0, (8, 16, 42)), (0.55, (27, 42, 78)), (1.0, (63, 79, 112))],
+    "partly-cloudy": [(0.0, (46, 98, 152)), (0.55, (104, 145, 180)), (1.0, (183, 208, 224))],
+    "partly-cloudy-night": [(0.0, (14, 22, 48)), (0.55, (38, 51, 82)), (1.0, (76, 88, 116))],
+    "cloudy": [(0.0, (100, 113, 126)), (0.55, (143, 154, 163)), (1.0, (192, 198, 203))],
+    "cloudy-night": [(0.0, (24, 29, 38)), (0.55, (52, 59, 70)), (1.0, (92, 99, 110))],
+    "fog": [(0.0, (140, 148, 154)), (0.55, (178, 184, 188)), (1.0, (214, 217, 219))],
+    "fog-night": [(0.0, (30, 34, 40)), (0.55, (58, 64, 71)), (1.0, (98, 104, 111))],
+    "rain": [(0.0, (48, 63, 84)), (0.55, (83, 99, 117)), (1.0, (134, 149, 163))],
+    "rain-night": [(0.0, (12, 17, 30)), (0.55, (33, 42, 58)), (1.0, (66, 76, 92))],
+    "snow": [(0.0, (120, 147, 173)), (0.55, (173, 194, 211)), (1.0, (219, 229, 237))],
+    "snow-night": [(0.0, (28, 38, 56)), (0.55, (61, 74, 96)), (1.0, (108, 121, 140))],
+    "storm": [(0.0, (32, 38, 50)), (0.55, (57, 65, 80)), (1.0, (96, 105, 118))],
+    "storm-night": [(0.0, (6, 8, 16)), (0.55, (22, 26, 38)), (1.0, (52, 58, 72))],
+}
+
 
 def format_localized_date(language, dt):
     """Return a short localized date string for the given language and datetime.
@@ -527,6 +549,10 @@ class DuoWeather(Weather):
         time_format = device_config.get_config("time_format", default="12h")
         local_tz = pytz.timezone(timezone_name)
 
+        dimensions = device_config.get_resolution()
+        if device_config.get_config("orientation") == "vertical":
+            dimensions = dimensions[::-1]
+
         try:
             template_params, provider_tz, api_key = self._get_template_params(
                 weather_provider,
@@ -574,9 +600,11 @@ class DuoWeather(Weather):
         if condition_key == "mostly_sunny" and is_night:
             condition_key = "mostly_clear"
         condition_label = labels.get("conditions", {}).get(condition_key, labels.get("conditions", {}).get("cloudy", "Cloudy"))
+        sky_theme = self._sky_theme(condition_key, is_night)
         hourly_points = self._select_hourly_points(
             template_params.get("hourly_forecast", []),
             now,
+            time_format=time_format,
             count=HOURLY_POINT_COUNT,
         )
 
@@ -594,18 +622,15 @@ class DuoWeather(Weather):
                 "forecast_rows": self._localize_forecast_rows(forecast_rows, labels),
                 "forecast_days": len(forecast_rows),
                 "hourly_points": hourly_points,
-                "sky_theme": self._sky_theme(condition_key, is_night),
+                "sky_theme": sky_theme,
+                "sky_background": self._sky_background_data_uri(dimensions, sky_theme),
                 "is_night": is_night,
                 "provider_timezone": provider_tz.zone,
                 "plugin_settings": settings,
                 "show_icons": settings.get("showIcons", "true") != "false",
-                "color_icons": settings.get("colorIcons", "false") == "true",
+                "color_icons": settings.get("colorIcons", "true") in ("true", True),
             }
         )
-
-        dimensions = device_config.get_resolution()
-        if device_config.get_config("orientation") == "vertical":
-            dimensions = dimensions[::-1]
 
         image = self.render_image(dimensions, "duo_weather.html", "duo_weather.css", template_params)
         if not image:
@@ -808,6 +833,34 @@ class DuoWeather(Weather):
             return f"{sky}-night"
         return sky
 
+    def _sky_background_data_uri(self, dimensions, sky_theme):
+        """Render a vertical gradient sky with PIL and return it as a base64
+        PNG data URI, avoiding any dependency on external background images."""
+        width, height = max(1, int(dimensions[0])), max(1, int(dimensions[1]))
+        stops = SKY_GRADIENTS.get(sky_theme, SKY_GRADIENTS["cloudy"])
+
+        image = Image.new("RGB", (width, height))
+        draw = ImageDraw.Draw(image)
+        for y in range(height):
+            t = y / max(height - 1, 1)
+            draw.line([(0, y), (width, y)], fill=self._interpolate_gradient(stops, t))
+
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+        return f"data:image/png;base64,{encoded}"
+
+    def _interpolate_gradient(self, stops, t):
+        for (pos_a, color_a), (pos_b, color_b) in zip(stops, stops[1:]):
+            if pos_a <= t <= pos_b:
+                span = pos_b - pos_a
+                local_t = (t - pos_a) / span if span else 0
+                return tuple(
+                    round(color_a[i] + (color_b[i] - color_a[i]) * local_t)
+                    for i in range(3)
+                )
+        return stops[-1][1]
+
     def _format_clock(self, dt, time_format):
         if time_format == "24h":
             return dt.strftime("%H:%M")
@@ -823,7 +876,24 @@ class DuoWeather(Weather):
         compact = compact.replace("am", "AM").replace("pm", "PM")
         return compact
 
-    def _select_hourly_points(self, hourly_forecast, now, count=HOURLY_POINT_COUNT):
+    def _split_hour_label(self, compact_label):
+        """Split an hour label so its suffix can be rendered smaller."""
+        match = re.match(r"^(-?\d{1,2}(?::\d{2})?)([AP]M|h)?$", compact_label or "")
+        if not match:
+            return compact_label or "", ""
+        value, suffix = match.groups()
+        return value, suffix or ""
+
+    def _format_hourly_label(self, time_label, time_format):
+        if time_format != "24h":
+            return self._compact_hour_label(time_label)
+
+        match = re.match(r"^(\d{1,2})(?::\d{2})?$", str(time_label or "").strip())
+        if match:
+            return f"{int(match.group(1))}h"
+        return str(time_label or "").strip()
+
+    def _select_hourly_points(self, hourly_forecast, now, time_format="12h", count=HOURLY_POINT_COUNT):
         # Provider parsers already start hourly data at the current hour.
         # Prefer remaining hours of the same day, then sample ~2-hour steps.
         if not hourly_forecast:
@@ -832,7 +902,9 @@ class DuoWeather(Weather):
         points = []
         for hour in hourly_forecast:
             point = dict(hour)
-            point["time"] = self._compact_hour_label(point.get("time"))
+            compact_label = self._format_hourly_label(point.get("time"), time_format)
+            point["time"] = compact_label
+            point["hour_value"], point["hour_suffix"] = self._split_hour_label(compact_label)
             try:
                 point["temperature"] = int(round(float(point.get("temperature", 0))))
             except (TypeError, ValueError):
