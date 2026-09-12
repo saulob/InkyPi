@@ -69,6 +69,7 @@ HIGHLIGHT_COLOR_HEX = "#e61a1a"
 PRIMARY_COLOR = ImageColor.getrgb(PRIMARY_COLOR_HEX)
 HIGHLIGHT_COLOR = ImageColor.getrgb(HIGHLIGHT_COLOR_HEX)
 MUTED_COLOR = (185, 203, 226)
+# Bundled plugin asset: src/plugins/duo_calendar/fonts/SF-Pro-Display-Semibold.otf
 HIGHLIGHT_DAY_FONT_PATH = Path(__file__).resolve().parent / "fonts" / "SF-Pro-Display-Semibold.otf"
 
 LANDSCAPE_LAYOUT = {
@@ -229,8 +230,7 @@ class DuoCalendar(BasePlugin):
                 )
                 background_day_anchor = "la"
             else:
-                background_day_font = ImageFont.truetype(
-                    str(HIGHLIGHT_DAY_FONT_PATH),
+                background_day_font = self._get_highlight_day_font(
                     max(int((grid_bottom - grid_top) * 1.22), 80),
                 )
                 background_day_position = (
@@ -289,16 +289,21 @@ class DuoCalendar(BasePlugin):
     @staticmethod
     def _get_portrait_background_font(max_width):
         reference_size = 100
-        reference_font = ImageFont.truetype(
-            str(HIGHLIGHT_DAY_FONT_PATH), reference_size
-        )
+        reference_font = DuoCalendar._get_highlight_day_font(reference_size)
         widest_day_width = max(
             reference_font.getbbox(str(day), anchor="mm")[2]
             - reference_font.getbbox(str(day), anchor="mm")[0]
             for day in range(1, 32)
         )
         font_size = max(int(reference_size * max_width / widest_day_width), 1)
-        return ImageFont.truetype(str(HIGHLIGHT_DAY_FONT_PATH), font_size)
+        return DuoCalendar._get_highlight_day_font(font_size)
+
+    @staticmethod
+    def _get_highlight_day_font(font_size):
+        try:
+            return ImageFont.truetype(str(HIGHLIGHT_DAY_FONT_PATH), font_size)
+        except OSError:
+            return get_font("Jost", font_size, "bold") or ImageFont.load_default()
 
     @staticmethod
     def _get_selected_date(settings, current_datetime):
