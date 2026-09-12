@@ -6,8 +6,51 @@ import pytz
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 from plugins.base_plugin.base_plugin import BasePlugin
-from plugins.simple_calendar.simple_calendar import LOCALE_DATA
 from utils.app_utils import get_font
+
+
+LOCALE_DATA = {
+    "de": {
+        "weekday_abbrev": ["MO", "DI", "MI", "DO", "FR", "SA", "SO"],
+        "headers": ["S", "M", "D", "M", "D", "F", "S"],
+        "months": ["JANUAR", "FEBRUAR", "MÄRZ", "APRIL", "MAI", "JUNI", "JULI", "AUGUST", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DEZEMBER"],
+    },
+    "en": {
+        "weekday_abbrev": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+        "headers": ["S", "M", "T", "W", "T", "F", "S"],
+        "months": ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"],
+    },
+    "es": {
+        "weekday_abbrev": ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"],
+        "headers": ["D", "L", "M", "M", "J", "V", "S"],
+        "months": ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"],
+    },
+    "fr": {
+        "weekday_abbrev": ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"],
+        "headers": ["D", "L", "M", "M", "J", "V", "S"],
+        "months": ["JANVIER", "FÉVRIER", "MARS", "AVRIL", "MAI", "JUIN", "JUILLET", "AOÛT", "SEPTEMBRE", "OCTOBRE", "NOVEMBRE", "DÉCEMBRE"],
+    },
+    "id": {
+        "weekday_abbrev": ["SEN", "SEL", "RAB", "KAM", "JUM", "SAB", "MIN"],
+        "headers": ["M", "S", "S", "R", "K", "J", "S"],
+        "months": ["JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"],
+    },
+    "it": {
+        "weekday_abbrev": ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"],
+        "headers": ["D", "L", "M", "M", "G", "V", "S"],
+        "months": ["GENNAIO", "FEBBRAIO", "MARZO", "APRILE", "MAGGIO", "GIUGNO", "LUGLIO", "AGOSTO", "SETTEMBRE", "OTTOBRE", "NOVEMBRE", "DICEMBRE"],
+    },
+    "nl": {
+        "weekday_abbrev": ["MAA", "DIN", "WOE", "DON", "VRI", "ZAT", "ZON"],
+        "headers": ["Z", "M", "D", "W", "D", "V", "Z"],
+        "months": ["JANUARI", "FEBRUARI", "MAART", "APRIL", "MEI", "JUNI", "JULI", "AUGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DECEMBER"],
+    },
+    "pt": {
+        "weekday_abbrev": ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"],
+        "headers": ["D", "S", "T", "Q", "Q", "S", "S"],
+        "months": ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"],
+    },
+}
 
 
 LANGUAGE_OPTIONS = (
