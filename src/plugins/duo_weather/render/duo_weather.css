@@ -1,0 +1,252 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.duo-weather-shell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3.4dvh 4.2dvw 3dvh;
+  font-family: "Jost";
+  background: linear-gradient(180deg, #8bbbe6 0%, #b7d6f2 52%, #d4e6f6 100%);
+  color: inherit;
+}
+
+.sky-clear {
+  background: linear-gradient(180deg, #6eafdf 0%, #9dceef 48%, #c5e0f4 100%);
+}
+
+.sky-clear-night {
+  background: linear-gradient(180deg, #5b6f86 0%, #7f90a3 55%, #a9b6c3 100%);
+}
+
+.sky-partly-cloudy {
+  background: linear-gradient(180deg, #7eabc8 0%, #adc6d8 52%, #cddbe6 100%);
+}
+
+.sky-partly-cloudy-night {
+  background: linear-gradient(180deg, #5d6d7c 0%, #84919d 55%, #acb6be 100%);
+}
+
+.sky-cloudy,
+.sky-cloudy-night {
+  background: linear-gradient(180deg, #8a96a1 0%, #b0b8bf 55%, #c9cfd4 100%);
+}
+
+.sky-fog,
+.sky-fog-night {
+  background: linear-gradient(180deg, #9aa3ab 0%, #c0c6cb 60%, #d7dbde 100%);
+}
+
+.sky-rain {
+  background: linear-gradient(180deg, #6d7e8c 0%, #8fa0ae 50%, #b3c0ca 100%);
+}
+
+.sky-rain-night {
+  background: linear-gradient(180deg, #5a6a77 0%, #7d8c98 55%, #a7b3bc 100%);
+}
+
+.sky-snow,
+.sky-snow-night {
+  background: linear-gradient(180deg, #b7c3ce 0%, #d5dde4 55%, #e8edf1 100%);
+}
+
+.sky-storm,
+.sky-storm-night {
+  background: linear-gradient(180deg, #5f6c78 0%, #84919b 52%, #aeb8c0 100%);
+}
+
+.duo-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 3dvw;
+  min-height: 18dvh;
+}
+
+.duo-condition {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.6dvw;
+  min-width: 0;
+  flex: 1;
+}
+
+.duo-condition-icon {
+  width: min(9.5dvh, 8dvw);
+  height: min(9.5dvh, 8dvw);
+  object-fit: contain;
+  flex: 0 0 auto;
+  margin-top: 0.4dvh;
+  filter: grayscale(1) brightness(0.55) contrast(1.15);
+  opacity: 0.95;
+}
+
+.color-icons .duo-condition-icon,
+.color-icons .duo-hour-icon {
+  filter: none;
+  opacity: 1;
+}
+
+.duo-condition-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4dvh;
+}
+
+.duo-condition-label {
+  font-size: min(6.4dvh, 4.6dvw);
+  font-weight: 500;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.duo-range {
+  font-size: min(5.2dvh, 3.8dvw);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+
+.duo-clock {
+  font-size: min(6.6dvh, 5dvw);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  flex: 0 0 auto;
+  padding-top: 0.3dvh;
+}
+
+.duo-current {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1;
+  min-height: 0;
+  padding: 1dvh 0 2dvh;
+}
+
+.duo-temp {
+  display: inline-flex;
+  align-items: flex-start;
+  font-size: min(38dvh, 32dvw);
+  font-weight: 400;
+  line-height: 0.82;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+
+.duo-temp .unit {
+  font-size: 0.42em;
+  font-weight: 400;
+  line-height: 1;
+  margin-left: 0.02em;
+}
+
+.duo-temp.digits-3 {
+  font-size: min(30dvh, 24dvw);
+}
+
+.duo-hourly {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1dvw;
+  width: 100%;
+  min-height: 24dvh;
+}
+
+.duo-hour {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.1dvh;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.duo-hour-time,
+.duo-hour-temp {
+  font-size: min(4.6dvh, 3.5dvw);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.duo-hour-icon {
+  width: min(8.8dvh, 7.2dvw);
+  height: min(8.8dvh, 7.2dvw);
+  object-fit: contain;
+  filter: grayscale(1) brightness(0.55) contrast(1.15);
+  opacity: 0.95;
+}
+
+.no-icons .duo-hourly {
+  min-height: 16dvh;
+}
+
+.no-icons .duo-hour {
+  gap: 1.8dvh;
+}
+
+.no-icons .duo-temp {
+  font-size: min(42dvh, 34dvw);
+}
+
+.no-icons .duo-temp.digits-3 {
+  font-size: min(32dvh, 26dvw);
+}
+
+@media (max-aspect-ratio: 1) {
+  .duo-weather-shell {
+    padding: 3.8dvh 5dvw 3.4dvh;
+  }
+
+  .duo-condition-label {
+    font-size: min(4.6dvh, 6.4dvw);
+  }
+
+  .duo-range,
+  .duo-clock,
+  .duo-hour-time,
+  .duo-hour-temp {
+    font-size: min(3.6dvh, 5.2dvw);
+  }
+
+  .duo-temp {
+    font-size: min(28dvh, 42dvw);
+  }
+
+  .duo-temp.digits-3 {
+    font-size: min(22dvh, 32dvw);
+  }
+
+  .duo-condition-icon {
+    width: min(8dvh, 11dvw);
+    height: min(8dvh, 11dvw);
+  }
+
+  .duo-hour-icon {
+    width: min(7.2dvh, 10dvw);
+    height: min(7.2dvh, 10dvw);
+  }
+}
+
+@media (max-width: 250px) {
+  .duo-weather-shell {
+    font-family: "Dogica";
+  }
+
+  .duo-temp {
+    letter-spacing: 0;
+  }
+}
