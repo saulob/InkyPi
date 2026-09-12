@@ -1,0 +1,75 @@
+.duo-calendar {
+    --duo-blue: #2457a6;
+    --duo-red: #e65b61;
+    --duo-muted: #b9cbe2;
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    color: var(--duo-blue);
+    font-family: "Jost", sans-serif;
+    overflow: hidden;
+}
+
+.calendar-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 1.5vh 2vw 0.5vh;
+    color: var(--duo-red);
+}
+
+.calendar-header h1,
+.calendar-header time {
+    font-size: clamp(22px, 7vh, 42px);
+    font-weight: 600;
+    line-height: 1;
+}
+
+.weekday-row,
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekday-row {
+    padding: 1.2vh 2vw 0.4vh;
+    font-size: clamp(16px, 4.4vh, 28px);
+    font-weight: 600;
+    text-align: center;
+}
+
+.calendar-grid {
+    grid-template-rows: repeat(var(--week-count), minmax(0, 1fr));
+    min-height: 0;
+    padding: 0 2vw 1.4vh;
+}
+
+.day-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+    font-size: clamp(18px, 5.6vh, 34px);
+    font-weight: 500;
+}
+
+.day-cell span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: min(7vh, 8vw);
+    aspect-ratio: 1;
+    line-height: 1;
+}
+
+.day-cell.outside {
+    color: var(--duo-muted);
+}
+
+.day-cell.today span {
+    color: #ffffff;
+    background: var(--duo-red);
+    border-radius: 50%;
+}

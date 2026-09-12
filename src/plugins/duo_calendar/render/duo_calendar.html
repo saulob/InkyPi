@@ -1,0 +1,26 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+<div class="duo-calendar" style="--week-count: {{ weeks|length }};">
+    <header class="calendar-header">
+        <h1>{{ month_name }}</h1>
+        <time>{{ time }}</time>
+    </header>
+
+    <div class="weekday-row" aria-hidden="true">
+        {% for weekday in weekdays %}
+        <div>{{ weekday }}</div>
+        {% endfor %}
+    </div>
+
+    <div class="calendar-grid">
+        {% for week in weeks %}
+            {% for day in week %}
+            <div class="day-cell{% if day.outside %} outside{% endif %}{% if day.today %} today{% endif %}">
+                <span>{{ day.number }}</span>
+            </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
