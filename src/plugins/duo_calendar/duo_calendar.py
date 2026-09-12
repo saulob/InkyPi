@@ -28,6 +28,24 @@ HIGHLIGHT_COLOR = ImageColor.getrgb(HIGHLIGHT_COLOR_HEX)
 MUTED_COLOR = (185, 203, 226)
 HIGHLIGHT_DAY_FONT_PATH = Path(__file__).resolve().parent / "fonts" / "SF-Pro-Display-Semibold.otf"
 
+LANDSCAPE_LAYOUT = {
+    "side_padding_ratio": 0.055,
+    "top_padding_ratio": 0.055,
+    "header_font_ratio": 0.09,
+    "day_font_ratio": 0.065,
+    "grid_bottom_ratio": 0.045,
+}
+
+PORTRAIT_LAYOUT = {
+    "side_padding_ratio": 0.07,
+    "top_padding_ratio": 0.035,
+    "header_font_ratio": 0.085,
+    "day_font_ratio": 0.065,
+    "grid_bottom_ratio": 0.045,
+    "background_width_ratio": 1.12,
+    "body_offset_ratio": 0.025,
+}
+
 
 class DuoCalendar(BasePlugin):
     def generate_settings_template(self):
@@ -92,10 +110,13 @@ class DuoCalendar(BasePlugin):
         draw = ImageDraw.Draw(image)
 
         minimum_dimension = min(width, height)
-        side_padding = max(int(width * 0.055), 12)
-        top_padding = max(int(height * 0.055), 12)
-        month_font_size = max(int(minimum_dimension * 0.09), 22)
-        day_font_size = max(int(minimum_dimension * 0.065), 18)
+        is_portrait = width < height
+        layout = PORTRAIT_LAYOUT if is_portrait else LANDSCAPE_LAYOUT
+        font_dimension = width if is_portrait else minimum_dimension
+        side_padding = max(int(width * layout["side_padding_ratio"]), 12)
+        top_padding = max(int(height * layout["top_padding_ratio"]), 12)
+        month_font_size = max(int(font_dimension * layout["header_font_ratio"]), 22)
+        day_font_size = max(int(font_dimension * layout["day_font_ratio"]), 18)
         weekday_font_size = day_font_size
 
         month_font = get_font("Jost", month_font_size)
@@ -121,9 +142,12 @@ class DuoCalendar(BasePlugin):
             anchor="ra",
         )
 
-        header_y = top_padding + month_font_size * 1.7
+        body_offset = int(height * layout.get("body_offset_ratio", 0))
+        header_y = top_padding + month_font_size * 1.7 + body_offset
         grid_top = header_y + weekday_font_size * 1.4
-        grid_bottom = height - max(int(height * 0.045), 10)
+        grid_bottom = (
+            height - max(int(height * layout["grid_bottom_ratio"]), 10) + body_offset
+        )
         grid_width = width - 2 * side_padding
         column_width = grid_width / 7
         month_grid = calendar_module.Calendar(firstweekday=6).monthdatescalendar(
@@ -137,19 +161,42 @@ class DuoCalendar(BasePlugin):
         row_height = (grid_bottom - grid_top) / len(month_grid)
 
         if show_highlight_day:
-            background_day_font = ImageFont.truetype(
-                str(HIGHLIGHT_DAY_FONT_PATH),
-                max(int((grid_bottom - grid_top) * 1.22), 80),
-            )
-            draw.text(
-                (
+            background_day_text = str(selected_date.day)
+            background_day_anchor = "mm"
+            if is_portrait:
+                background_day_font = self._get_portrait_background_font(
+                    grid_width * PORTRAIT_LAYOUT["background_width_ratio"]
+                )
+                calendar_center_x = width / 2
+                calendar_center_y = (header_y + grid_bottom) / 2
+                text_bbox = draw.textbbox(
+                    (0, 0),
+                    background_day_text,
+                    font=background_day_font,
+                    anchor="la",
+                )
+                text_center_x = (text_bbox[0] + text_bbox[2]) / 2
+                text_center_y = (text_bbox[1] + text_bbox[3]) / 2
+                background_day_position = (
+                    calendar_center_x - text_center_x,
+                    calendar_center_y - text_center_y,
+                )
+                background_day_anchor = "la"
+            else:
+                background_day_font = ImageFont.truetype(
+                    str(HIGHLIGHT_DAY_FONT_PATH),
+                    max(int((grid_bottom - grid_top) * 1.22), 80),
+                )
+                background_day_position = (
                     width / 2,
                     grid_top + (grid_bottom - grid_top) / 2 - row_height * 0.28,
-                ),
-                str(selected_date.day),
+                )
+            draw.text(
+                background_day_position,
+                background_day_text,
                 fill=highlight_color,
                 font=background_day_font,
-                anchor="mm",
+                anchor=background_day_anchor,
             )
 
         for index, label in enumerate(locale_data["headers"]):
@@ -192,6 +239,20 @@ class DuoCalendar(BasePlugin):
                 )
 
         return image
+
+    @staticmethod
+    def _get_portrait_background_font(max_width):
+        reference_size = 100
+        reference_font = ImageFont.truetype(
+            str(HIGHLIGHT_DAY_FONT_PATH), reference_size
+        )
+        widest_day_width = max(
+            reference_font.getbbox(str(day), anchor="mm")[2]
+            - reference_font.getbbox(str(day), anchor="mm")[0]
+            for day in range(1, 32)
+        )
+        font_size = max(int(reference_size * max_width / widest_day_width), 1)
+        return ImageFont.truetype(str(HIGHLIGHT_DAY_FONT_PATH), font_size)
 
     @staticmethod
     def _get_selected_date(settings, current_datetime):
