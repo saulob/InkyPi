@@ -883,7 +883,8 @@ class DuoWeather(Weather):
         localized_date = format_localized_date(language, now)
 
         current_icon = template_params.get("current_day_icon", "")
-        condition_key, is_night = self._condition_from_icon(current_icon)
+        condition_key, icon_is_night = self._condition_from_icon(current_icon)
+        is_night = template_params.get("current_is_night", icon_is_night)
         if condition_key == "mostly_sunny" and is_night:
             condition_key = "mostly_clear"
         condition_label = labels.get("conditions", {}).get(condition_key, labels.get("conditions", {}).get("cloudy", "Cloudy"))
@@ -948,6 +949,9 @@ class DuoWeather(Weather):
             aqi_data = self.get_air_quality(api_key, lat, long)
             tz = self.parse_timezone(weather_data) if timezone_selection == "locationTimeZone" else local_tz
             template_params = self.parse_weather_data(weather_data, aqi_data, tz, units, time_format, lat)
+            current_weather = weather_data.get("current", {}).get("weather", [])
+            current_icon = current_weather[0].get("icon", "") if current_weather else ""
+            template_params["current_is_night"] = current_icon.endswith("n")
             return template_params, tz, api_key
 
         if weather_provider == "OpenMeteo":
@@ -955,6 +959,7 @@ class DuoWeather(Weather):
             aqi_data = self.get_open_meteo_air_quality(lat, long)
             tz = self.parse_open_meteo_timezone(weather_data) if timezone_selection == "locationTimeZone" else local_tz
             template_params = self.parse_open_meteo_data(weather_data, aqi_data, tz, units, time_format, lat)
+            template_params["current_is_night"] = weather_data.get("current", {}).get("is_day", 1) == 0
             return template_params, tz, api_key
 
         raise RuntimeError(f"Unknown weather provider: {weather_provider}")
