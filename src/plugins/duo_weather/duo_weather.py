@@ -916,7 +916,7 @@ class DuoWeather(Weather):
                 "is_night": is_night,
                 "provider_timezone": provider_tz.zone,
                 "plugin_settings": settings,
-                "show_icons": settings.get("showIcons", "true") != "false",
+                "show_icons": settings.get("showIcons", "true") not in ("false", False),
                 "color_icons": settings.get("colorIcons", "true") in ("true", True),
             }
         )
