@@ -102,6 +102,13 @@ body {
   white-space: nowrap;
 }
 
+.range-unit,
+.hour-temp-unit {
+  font-size: 0.72em;
+  font-weight: 500;
+  margin-left: 0.02em;
+}
+
 .duo-clock {
   font-size: min(6.8dvh, 5dvw);
   font-weight: 500;
@@ -136,6 +143,28 @@ body {
   margin-left: 0.02em;
 }
 
+.duo-temp-degree,
+.duo-temp-letter {
+  display: inline-block;
+  font-weight: 300;
+  letter-spacing: 0;
+}
+
+.duo-temp-degree {
+  font-size: 0.25em;
+  line-height: 0.8;
+  margin-left: 0.08em;
+  position: relative;
+  top: -0.04em;
+}
+
+.duo-temp-letter {
+  font-size: 0.31em;
+  line-height: 1;
+  margin-left: 0.13em;
+  margin-top: 0.08em;
+}
+
 .duo-temp.digits-3 {
   font-size: min(34dvh, 25dvw);
 }
@@ -166,6 +195,12 @@ body {
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
+}
+
+.hour-temp-unit {
+  font-size: 0.88em;
+  line-height: 0.9;
+  margin-left: 0.04em;
 }
 
 .hour-suffix {

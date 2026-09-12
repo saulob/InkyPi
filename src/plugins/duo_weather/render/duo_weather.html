@@ -1,10 +1,21 @@
 {% extends "plugin.html" %}
 
 {% block content %}
-{% if units == 'standard' %}
-    {% set unit_symbol = 'K' %}
+{% if units == 'metric' %}
+    {% set unit_symbol_current = '°C' %}
+    {% set unit_degree_current = '°' %}
+    {% set unit_letter_current = 'C' %}
+    {% set unit_symbol_range = '°' %}
+{% elif units == 'imperial' %}
+    {% set unit_symbol_current = '°F' %}
+    {% set unit_degree_current = '°' %}
+    {% set unit_letter_current = 'F' %}
+    {% set unit_symbol_range = '°' %}
 {% else %}
-    {% set unit_symbol = '°' %}
+    {% set unit_symbol_current = 'K' %}
+    {% set unit_degree_current = '' %}
+    {% set unit_letter_current = 'K' %}
+    {% set unit_symbol_range = 'K' %}
 {% endif %}
 {% set temp_str = current_temperature|string %}
 {% set temp_digits = (temp_str|replace('-', ''))|length %}
@@ -24,14 +35,21 @@
             {% endif %}
             <div class="duo-condition-text">
                 <div class="duo-condition-label">{{ current_condition }}</div>
-                <div class="duo-range">{{ high_label }}:{{ current_high }}{{ unit_symbol }} {{ low_label }}:{{ current_low }}{{ unit_symbol }}</div>
+                <div class="duo-range">{{ high_label }}:{{ current_high }}<span class="range-unit">{{ unit_symbol_range }}</span> {{ low_label }}:{{ current_low }}<span class="range-unit">{{ unit_symbol_range }}</span></div>
             </div>
         </div>
         <div class="duo-clock">{{ current_time }}</div>
     </header>
 
     <section class="duo-current">
-        <div class="duo-temp digits-{{ temp_class }}">{{ current_temperature }}<span class="unit">{{ unit_symbol }}</span></div>
+        <div class="duo-temp digits-{{ temp_class }}">
+            <span class="duo-temp-number">{{ current_temperature }}</span>
+            {% if unit_degree_current %}
+            <span class="duo-temp-degree">{{ unit_degree_current }}</span><span class="duo-temp-letter">{{ unit_letter_current }}</span>
+            {% else %}
+            <span class="unit">{{ unit_letter_current }}</span>
+            {% endif %}
+        </div>
     </section>
 
     <section class="duo-hourly">
@@ -41,7 +59,7 @@
             {% if show_icons %}
             <img class="duo-hour-icon" src="{{ hour.icon }}" alt="{{ hour.time }}">
             {% endif %}
-            <div class="duo-hour-temp">{{ hour.temperature }}{{ unit_symbol }}</div>
+            <div class="duo-hour-temp">{{ hour.temperature }}<span class="hour-temp-unit">{{ unit_symbol_range }}</span></div>
         </div>
         {% endfor %}
     </section>
