@@ -52,6 +52,67 @@
         border-color: var(--accent-primary);
     }
 
+    .inky-message-align-icon {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        width: 18px;
+        height: 16px;
+    }
+
+    .inky-message-align-icon span {
+        display: block;
+        height: 3px;
+        background: currentColor;
+        border-radius: 1px;
+    }
+
+    .inky-message-align-icon.align-left {
+        align-items: flex-start;
+    }
+
+    .inky-message-align-icon.align-center {
+        align-items: center;
+    }
+
+    .inky-message-align-icon.align-right {
+        align-items: flex-end;
+    }
+
+    .inky-message-align-icon.align-justify {
+        align-items: stretch;
+    }
+
+    .inky-message-align-icon span:nth-child(1) {
+        width: 100%;
+    }
+
+    .inky-message-align-icon span:nth-child(2) {
+        width: 72%;
+    }
+
+    .inky-message-align-icon span:nth-child(3) {
+        width: 88%;
+    }
+
+    .inky-message-align-icon span:nth-child(4) {
+        width: 62%;
+    }
+
+    .inky-message-align-icon.align-center span:nth-child(2),
+    .inky-message-align-icon.align-center span:nth-child(4) {
+        width: 82%;
+    }
+
+    .inky-message-align-icon.align-right span:nth-child(2),
+    .inky-message-align-icon.align-right span:nth-child(4) {
+        width: 72%;
+    }
+
+    .inky-message-align-icon.align-justify span {
+        width: 100%;
+    }
+
     .inky-message-editor {
         --inky-editor-base-size: 22px;
         width: 100%;
@@ -138,6 +199,18 @@
         <button type="button" class="inky-message-tool" data-command="bold" aria-label="Bold" aria-pressed="false"><strong>B</strong></button>
         <button type="button" class="inky-message-tool" data-command="italic" aria-label="Italic" aria-pressed="false"><em>I</em></button>
         <button type="button" class="inky-message-tool" data-command="underline" aria-label="Underline" aria-pressed="false"><u>U</u></button>
+        <button type="button" class="inky-message-tool" data-command="justifyLeft" aria-label="Align Left" title="Align Left" aria-pressed="false">
+            <span class="inky-message-align-icon align-left" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        </button>
+        <button type="button" class="inky-message-tool" data-command="justifyCenter" aria-label="Align Center" title="Align Center" aria-pressed="false">
+            <span class="inky-message-align-icon align-center" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        </button>
+        <button type="button" class="inky-message-tool" data-command="justifyRight" aria-label="Align Right" title="Align Right" aria-pressed="false">
+            <span class="inky-message-align-icon align-right" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        </button>
+        <button type="button" class="inky-message-tool" data-command="justifyFull" aria-label="Justify" title="Justify" aria-pressed="false">
+            <span class="inky-message-align-icon align-justify" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        </button>
     </div>
     <div
         id="inky-message-editor"
@@ -171,6 +244,13 @@
         const showTimestampValue = document.getElementById('showTimestampValue');
         const settings = typeof pluginSettings === 'object' && pluginSettings !== null ? pluginSettings : {};
         const defaultFontSize = 'medium';
+        const alignmentCommands = {
+            justifyLeft: 'left',
+            justifyCenter: 'center',
+            justifyRight: 'right',
+            justifyFull: 'justify'
+        };
+        const alignmentValues = new Set(['left', 'center', 'right', 'justify']);
         const commandFontSizes = {
             small: '2',
             medium: '4',
@@ -217,6 +297,14 @@
             if (['p', 'div', 'strong', 'b', 'em', 'i', 'u'].includes(tag)) {
                 const outputTag = tag === 'b' ? 'strong' : tag === 'i' ? 'em' : tag;
                 output = document.createElement(outputTag);
+                if (tag === 'p' || tag === 'div') {
+                    const alignment = node.getAttribute('data-inky-align')
+                        || node.getAttribute('align')
+                        || node.style.textAlign;
+                    if (alignmentValues.has(alignment)) {
+                        output.dataset.inkyAlign = alignment;
+                    }
+                }
             } else if (tag === 'span') {
                 const size = node.getAttribute('data-inky-size');
                 if (Object.prototype.hasOwnProperty.call(commandFontSizes, size)) {
@@ -310,6 +398,23 @@
             return defaultFontSize;
         }
 
+        function currentAlignment() {
+            const selection = window.getSelection();
+            if (!selectionIsInEditor(selection)) return 'left';
+            let node = selection.anchorNode;
+            if (node && node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement;
+
+            while (node && node !== editor) {
+                const explicitAlignment = node.dataset && node.dataset.inkyAlign;
+                const styleAlignment = node.style && node.style.textAlign;
+                const computedAlignment = window.getComputedStyle(node).textAlign;
+                const alignment = explicitAlignment || styleAlignment || computedAlignment;
+                if (alignmentValues.has(alignment)) return alignment;
+                node = node.parentElement;
+            }
+            return 'left';
+        }
+
         function updateToolbarState() {
             ['bold', 'italic', 'underline'].forEach(command => {
                 const button = toolbar.querySelector(`[data-command="${command}"]`);
@@ -319,6 +424,13 @@
                 } catch (error) {
                     active = false;
                 }
+                button.classList.toggle('is-active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
+            const activeAlignment = currentAlignment();
+            Object.entries(alignmentCommands).forEach(([command, alignment]) => {
+                const button = toolbar.querySelector(`[data-command="${command}"]`);
+                const active = alignment === activeAlignment;
                 button.classList.toggle('is-active', active);
                 button.setAttribute('aria-pressed', String(active));
             });

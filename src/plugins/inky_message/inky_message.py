@@ -29,6 +29,7 @@ FONT_TAG_SIZES = {
     "7": "extra-large",
 }
 
+TEXT_ALIGNMENTS = {"left", "center", "right", "justify"}
 DEFAULT_TIME_FORMAT = "12h"
 UNSAFE_TAGS = {"base", "embed", "iframe", "link", "meta", "object", "script", "style"}
 MARKUP_PATTERN = re.compile(r"<\s*/?\s*[a-z][^>]*>", re.IGNORECASE)
@@ -54,7 +55,9 @@ class _MessageHTMLSanitizer(HTMLParser):
         emitted_tag = None
         if tag in {"p", "div", "strong", "b", "em", "i", "u"}:
             emitted_tag = "strong" if tag == "b" else "em" if tag == "i" else tag
-            self.output.append(f"<{emitted_tag}>")
+            alignment = self._alignment(attrs) if tag in {"p", "div"} else None
+            alignment_attribute = f' data-inky-align="{alignment}"' if alignment else ""
+            self.output.append(f"<{emitted_tag}{alignment_attribute}>")
         elif tag == "br":
             self.output.append("<br>")
         elif tag == "span":
@@ -103,6 +106,18 @@ class _MessageHTMLSanitizer(HTMLParser):
             if attribute_name.lower() == name:
                 return value
         return None
+
+    def _alignment(self, attrs):
+        alignment = self._attribute(attrs, "data-inky-align") or self._attribute(attrs, "align")
+        if not alignment:
+            style = self._attribute(attrs, "style") or ""
+            for declaration in style.split(";"):
+                property_name, separator, property_value = declaration.partition(":")
+                if separator and property_name.strip().lower() == "text-align":
+                    alignment = property_value.strip().lower()
+                    break
+        alignment = str(alignment).strip().lower() if alignment else None
+        return alignment if alignment in TEXT_ALIGNMENTS else None
 
     def get_html(self):
         for _, emitted_tag in reversed(self.stack):

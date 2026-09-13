@@ -63,6 +63,22 @@ body {
     margin: 0;
 }
 
+.inky-message-text [data-inky-align="left"] {
+    text-align: left;
+}
+
+.inky-message-text [data-inky-align="center"] {
+    text-align: center;
+}
+
+.inky-message-text [data-inky-align="right"] {
+    text-align: right;
+}
+
+.inky-message-text [data-inky-align="justify"] {
+    text-align: justify;
+}
+
 .inky-message-text [data-inky-size="small"] {
     font-size: calc(var(--base-font-size) * 0.55 * var(--fit-scale));
 }
