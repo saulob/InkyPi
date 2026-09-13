@@ -1,7 +1,10 @@
 import html
 import logging
 import re
+from datetime import datetime
 from html.parser import HTMLParser
+
+import pytz
 
 from plugins.base_plugin.base_plugin import BasePlugin
 
@@ -26,6 +29,7 @@ FONT_TAG_SIZES = {
     "7": "extra-large",
 }
 
+DEFAULT_TIME_FORMAT = "12h"
 UNSAFE_TAGS = {"base", "embed", "iframe", "link", "meta", "object", "script", "style"}
 MARKUP_PATTERN = re.compile(r"<\s*/?\s*[a-z][^>]*>", re.IGNORECASE)
 
@@ -125,6 +129,37 @@ def sanitize_message_html(value):
     return parser.get_html()
 
 
+def _as_bool(value, default=False):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def format_timestamp(current_datetime, time_format=DEFAULT_TIME_FORMAT, today=None):
+    if time_format == "24h":
+        time_text = current_datetime.strftime("%H:%M")
+    else:
+        time_text = current_datetime.strftime("%I:%M %p").lstrip("0")
+
+    reference_date = today or current_datetime.date()
+    if current_datetime.date() == reference_date:
+        date_text = "Today"
+    else:
+        date_text = f"{current_datetime.strftime('%b')} {current_datetime.day},"
+    return f"{date_text} {time_text}"
+
+
+def _get_local_datetime(device_config):
+    timezone_name = device_config.get_config("timezone") or "UTC"
+    try:
+        timezone = pytz.timezone(str(timezone_name))
+    except (AttributeError, ValueError, pytz.UnknownTimeZoneError):
+        timezone = pytz.UTC
+    return datetime.now(timezone)
+
+
 class InkyMessage(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
@@ -138,6 +173,13 @@ class InkyMessage(BasePlugin):
             dimensions = dimensions[::-1]
 
         message_html = sanitize_message_html(settings.get("message"))
+        show_timestamp = _as_bool(settings.get("showTimestamp"), default=True)
+        timestamp = ""
+        if show_timestamp:
+            current_datetime = _get_local_datetime(device_config)
+            time_format = device_config.get_config("time_format") or DEFAULT_TIME_FORMAT
+            timestamp = format_timestamp(current_datetime, time_format)
+
         base_font_size = max(1, round(min(dimensions) * BASE_FONT_SIZE_RATIO))
         render_settings = {
             "selectedFrame": "None",
@@ -153,6 +195,8 @@ class InkyMessage(BasePlugin):
         template_params = {
             "message_html": message_html,
             "base_font_size": base_font_size,
+            "show_timestamp": show_timestamp,
+            "timestamp": timestamp,
             "plugin_settings": render_settings,
         }
 

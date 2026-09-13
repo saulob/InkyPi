@@ -3,17 +3,21 @@
 {% block content %}
 <main class="inky-message-shell">
     <div
-        class="inky-message-text"
-        data-base-font-size="{{ base_font_size }}"
+        class="inky-message-block"
         style="--base-font-size: {{ base_font_size }}px;"
-    >{{ message_html | safe }}</div>
+    >
+        {% if show_timestamp %}
+        <div class="inky-message-timestamp">{{ timestamp }}</div>
+        {% endif %}
+        <div class="inky-message-text">{{ message_html | safe }}</div>
+    </div>
 </main>
 
 <script>
     (function () {
         const shell = document.querySelector('.inky-message-shell');
-        const message = document.querySelector('.inky-message-text');
-        if (!shell || !message) return;
+        const block = document.querySelector('.inky-message-block');
+        if (!shell || !block) return;
 
         const baseScale = 1;
         const minimumScale = 0.01;
@@ -28,12 +32,14 @@
 
         function fits() {
             const available = availableSize();
-            const bounds = message.getBoundingClientRect();
-            return bounds.width <= available.width + 1 && bounds.height <= available.height + 1;
+            const bounds = block.getBoundingClientRect();
+            return block.scrollWidth <= available.width + 1
+                && block.scrollHeight <= available.height + 1
+                && bounds.height <= available.height + 1;
         }
 
         function setScale(scale) {
-            message.style.setProperty('--fit-scale', scale);
+            block.style.setProperty('--fit-scale', scale);
         }
 
         function fitMessage() {

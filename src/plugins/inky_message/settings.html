@@ -152,12 +152,23 @@
     <input type="hidden" id="inky-message-value" name="message" value="">
 </div>
 
+<div class="form-group">
+    <label for="showTimestamp" class="form-label">Show Timestamp:</label>
+    <div class="toggle-container">
+        <input type="hidden" id="showTimestampValue" name="showTimestamp" value="true">
+        <input type="checkbox" id="showTimestamp" class="toggle-checkbox" checked>
+        <label for="showTimestamp" class="toggle-label"></label>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const editor = document.getElementById('inky-message-editor');
         const hiddenMessage = document.getElementById('inky-message-value');
         const fontSizeSelect = document.getElementById('inky-message-font-size');
         const toolbar = document.querySelector('.inky-message-toolbar');
+        const showTimestampCheckbox = document.getElementById('showTimestamp');
+        const showTimestampValue = document.getElementById('showTimestampValue');
         const settings = typeof pluginSettings === 'object' && pluginSettings !== null ? pluginSettings : {};
         const defaultFontSize = 'medium';
         const commandFontSizes = {
@@ -177,6 +188,16 @@
         };
         const dangerousTags = new Set(['base', 'embed', 'iframe', 'link', 'meta', 'object', 'script', 'style']);
         let savedRange = null;
+
+        const rawShowTimestamp = settings.showTimestamp;
+        const showTimestampEnabled = rawShowTimestamp === undefined
+            ? true
+            : rawShowTimestamp === true || ['true', '1', 'yes', 'on'].includes(String(rawShowTimestamp).toLowerCase());
+        showTimestampCheckbox.checked = showTimestampEnabled;
+        showTimestampValue.value = showTimestampEnabled ? 'true' : 'false';
+        showTimestampCheckbox.addEventListener('change', () => {
+            showTimestampValue.value = showTimestampCheckbox.checked ? 'true' : 'false';
+        });
 
         function sanitizeNode(node, target) {
             if (node.nodeType === Node.TEXT_NODE) {
