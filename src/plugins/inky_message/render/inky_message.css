@@ -15,7 +15,8 @@ body {
     overflow: hidden;
     border: 0;
     border-radius: 0;
-    background: #ffffff;
+    background: transparent;
+    color: inherit;
 }
 
 .inky-message-block {
@@ -30,7 +31,7 @@ body {
 .inky-message-timestamp {
     width: 100%;
     margin-bottom: 0.55em;
-    color: #000000;
+    color: inherit;
     font-family: "Jost", Arial, sans-serif;
     font-size: calc(var(--base-font-size) * 0.50 * var(--fit-scale));
     font-weight: 500;
@@ -43,7 +44,7 @@ body {
     width: 100%;
     min-width: 0;
     max-width: 100%;
-    color: #000000;
+    color: inherit;
     font-family: "Jost", Arial, sans-serif;
     font-size: calc(var(--base-font-size) * 0.75 * var(--fit-scale));
     line-height: 1.15;
