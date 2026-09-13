@@ -181,16 +181,26 @@ class InkyMessage(BasePlugin):
             timestamp = format_timestamp(current_datetime, time_format)
 
         base_font_size = max(1, round(min(dimensions) * BASE_FONT_SIZE_RATIO))
+        style_margins = {
+            "top": settings.get("topMargin") or "0",
+            "bottom": settings.get("bottomMargin") or "0",
+            "left": settings.get("leftMargin") or "0",
+            "right": settings.get("rightMargin") or "0",
+        }
         render_settings = {
             "selectedFrame": settings.get("selectedFrame") or "None",
             "backgroundOption": settings.get("backgroundOption") or "color",
             "backgroundColor": settings.get("backgroundColor") or "#ffffff",
             "backgroundImageFile": settings.get("backgroundImageFile") or "",
             "textColor": settings.get("textColor") or "#000000",
-            "topMargin": settings.get("topMargin") or "0",
-            "bottomMargin": settings.get("bottomMargin") or "0",
-            "leftMargin": settings.get("leftMargin") or "0",
-            "rightMargin": settings.get("rightMargin") or "0",
+            "topMargin": "0",
+            "bottomMargin": "0",
+            "leftMargin": "0",
+            "rightMargin": "0",
+            "messageTopMargin": style_margins["top"],
+            "messageBottomMargin": style_margins["bottom"],
+            "messageLeftMargin": style_margins["left"],
+            "messageRightMargin": style_margins["right"],
         }
 
         template_params = {

@@ -12,6 +12,10 @@ body {
     height: calc(100% + 3vw);
     margin: -1.5vw;
     padding: max(8px, 1.25%);
+    padding-top: calc(max(8px, 1.25%) + var(--message-top-margin, 0px));
+    padding-bottom: calc(max(8px, 1.25%) + var(--message-bottom-margin, 0px));
+    padding-left: calc(max(8px, 1.25%) + var(--message-left-margin, 0px));
+    padding-right: calc(max(8px, 1.25%) + var(--message-right-margin, 0px));
     overflow: hidden;
     border: 0;
     border-radius: 0;

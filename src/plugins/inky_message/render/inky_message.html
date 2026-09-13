@@ -1,7 +1,15 @@
 {% extends "plugin.html" %}
 
 {% block content %}
-<main class="inky-message-shell">
+<main
+    class="inky-message-shell"
+    style="
+        --message-top-margin: {{ plugin_settings.messageTopMargin or 0 }}px;
+        --message-bottom-margin: {{ plugin_settings.messageBottomMargin or 0 }}px;
+        --message-left-margin: {{ plugin_settings.messageLeftMargin or 0 }}px;
+        --message-right-margin: {{ plugin_settings.messageRightMargin or 0 }}px;
+    "
+>
     <div
         class="inky-message-block"
         style="--base-font-size: {{ base_font_size }}px;"
