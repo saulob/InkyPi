@@ -46,8 +46,7 @@ body {
     min-width: 0;
     max-width: 100%;
     padding: 18px 24px 12px;
-    color: #000000;
-    background: #e5e5ea;
+    background: var(--inky-message-bubble-color, #e5e5ea);
     border-radius: 24px 24px 24px 8px;
 }
 
@@ -57,7 +56,7 @@ body {
     left: 18px;
     width: 54px;
     height: 44px;
-    background: #e5e5ea;
+    background: var(--inky-message-bubble-color, #e5e5ea);
     clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 

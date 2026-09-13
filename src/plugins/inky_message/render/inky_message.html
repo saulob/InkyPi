@@ -8,16 +8,19 @@
         --message-bottom-margin: {{ plugin_settings.messageBottomMargin or 0 }}px;
         --message-left-margin: {{ plugin_settings.messageLeftMargin or 0 }}px;
         --message-right-margin: {{ plugin_settings.messageRightMargin or 0 }}px;
+        {% if bubble_style %}
+        --inky-message-bubble-color: {{ bubble_color }};
+        {% endif %}
     "
 >
     <div
-        class="inky-message-block{% if message_style == 'bubble' %} message-bubble-layout{% endif %}{% if vertical_orientation %} is-vertical{% endif %}"
+        class="inky-message-block{% if bubble_style %} message-bubble-layout{% endif %}{% if vertical_orientation %} is-vertical{% endif %}"
         style="--base-font-size: {{ base_font_size }}px;"
     >
         {% if show_timestamp %}
         <div class="inky-message-timestamp">{{ timestamp }}</div>
         {% endif %}
-        {% if message_style == 'bubble' %}
+        {% if bubble_style %}
         <div class="inky-message-bubble">
             <div class="inky-message-text">{{ message_html | safe }}</div>
             <span class="inky-message-bubble-tail" aria-hidden="true"></span>

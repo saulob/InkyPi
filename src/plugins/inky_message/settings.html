@@ -263,11 +263,17 @@
 </div>
 
 <div class="form-group">
-    <label for="messageStyle" class="form-label">Message Style:</label>
-    <select id="messageStyle" name="messageStyle" class="form-input">
-        <option value="bubble" selected>Message Bubble</option>
-        <option value="plain">Plain</option>
-    </select>
+    <label for="bubbleStyle" class="form-label">Bubble Style:</label>
+    <div class="toggle-container">
+        <input type="hidden" id="bubbleStyleValue" name="bubbleStyle" value="true">
+        <input type="checkbox" id="bubbleStyle" class="toggle-checkbox" checked>
+        <label for="bubbleStyle" class="toggle-label"></label>
+    </div>
+</div>
+
+<div class="form-group" id="bubbleColorGroup">
+    <label for="bubbleColor" class="form-label">Bubble Color:</label>
+    <input type="color" id="bubbleColor" name="bubbleColor" class="color-picker" value="#e5e5ea">
 </div>
 
 <script>
@@ -275,12 +281,16 @@
         const editor = document.getElementById('inky-message-editor');
         const hiddenMessage = document.getElementById('inky-message-value');
         const fontSizeSelect = document.getElementById('inky-message-font-size');
-        const messageStyleSelect = document.getElementById('messageStyle');
         const toolbar = document.querySelector('.inky-message-toolbar');
         const showTimestampCheckbox = document.getElementById('showTimestamp');
         const showTimestampValue = document.getElementById('showTimestampValue');
+        const bubbleStyleCheckbox = document.getElementById('bubbleStyle');
+        const bubbleStyleValue = document.getElementById('bubbleStyleValue');
+        const bubbleColor = document.getElementById('bubbleColor');
+        const bubbleColorGroup = document.getElementById('bubbleColorGroup');
         const settings = typeof pluginSettings === 'object' && pluginSettings !== null ? pluginSettings : {};
         const defaultFontSize = 'medium';
+        const defaultBubbleColor = '#e5e5ea';
         const alignmentCommands = {
             justifyLeft: 'left',
             justifyCenter: 'center',
@@ -315,6 +325,28 @@
         showTimestampCheckbox.addEventListener('change', () => {
             showTimestampValue.value = showTimestampCheckbox.checked ? 'true' : 'false';
         });
+
+        function settingIsEnabled(value, defaultValue) {
+            return value === undefined
+                ? defaultValue
+                : value === true || ['true', '1', 'yes', 'on'].includes(String(value).toLowerCase());
+        }
+
+        function updateBubbleStyleVisibility() {
+            const isEnabled = bubbleStyleCheckbox.checked;
+            bubbleStyleValue.value = isEnabled ? 'true' : 'false';
+            bubbleColorGroup.hidden = !isEnabled;
+            bubbleColorGroup.setAttribute('aria-hidden', String(!isEnabled));
+        }
+
+        const bubbleStyleEnabled = settings.bubbleStyle === undefined
+            ? settings.messageStyle === undefined || String(settings.messageStyle).toLowerCase() !== 'plain'
+            : settingIsEnabled(settings.bubbleStyle, true);
+        const savedBubbleColor = settings.bubbleColor == null ? '' : String(settings.bubbleColor);
+        bubbleStyleCheckbox.checked = bubbleStyleEnabled;
+        bubbleColor.value = /^#[0-9a-f]{6}$/i.test(savedBubbleColor) ? savedBubbleColor : defaultBubbleColor;
+        bubbleStyleCheckbox.addEventListener('change', updateBubbleStyleVisibility);
+        updateBubbleStyleVisibility();
 
         function sanitizeNode(node, target) {
             if (node.nodeType === Node.TEXT_NODE) {
@@ -526,9 +558,6 @@
         });
 
         loadMessage(settings.message || '');
-        if (messageStyleSelect) {
-            messageStyleSelect.value = settings.messageStyle || 'bubble';
-        }
         syncHiddenMessage();
         fontSizeSelect.value = defaultFontSize;
         updateToolbarState();

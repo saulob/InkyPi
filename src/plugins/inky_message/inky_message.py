@@ -31,8 +31,10 @@ FONT_TAG_SIZES = {
 
 TEXT_ALIGNMENTS = {"left", "center", "right", "justify"}
 DEFAULT_TIME_FORMAT = "12h"
+BUBBLE_COLOR_DEFAULT = "#e5e5ea"
 UNSAFE_TAGS = {"base", "embed", "iframe", "link", "meta", "object", "script", "style"}
 MARKUP_PATTERN = re.compile(r"<\s*/?\s*[a-z][^>]*>", re.IGNORECASE)
+HEX_COLOR_PATTERN = re.compile(r"#[0-9a-fA-F]{6}\Z")
 
 
 class _MessageHTMLSanitizer(HTMLParser):
@@ -152,6 +154,19 @@ def _as_bool(value, default=False):
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _get_bubble_style(settings):
+    if "bubbleStyle" in settings:
+        return _as_bool(settings.get("bubbleStyle"), default=True)
+
+    legacy_style = settings.get("messageStyle")
+    return legacy_style is None or str(legacy_style).strip().lower() != "plain"
+
+
+def _get_bubble_color(value):
+    color = str(value).strip() if value is not None else ""
+    return color if HEX_COLOR_PATTERN.fullmatch(color) else BUBBLE_COLOR_DEFAULT
+
+
 def format_timestamp(current_datetime, time_format=DEFAULT_TIME_FORMAT, today=None):
     if time_format == "24h":
         time_text = current_datetime.strftime("%H:%M")
@@ -196,9 +211,8 @@ class InkyMessage(BasePlugin):
             timestamp = format_timestamp(current_datetime, time_format)
 
         base_font_size = max(1, round(min(dimensions) * BASE_FONT_SIZE_RATIO))
-        message_style = settings.get("messageStyle") or "bubble"
-        if message_style not in {"bubble", "plain"}:
-            message_style = "bubble"
+        bubble_style = _get_bubble_style(settings)
+        bubble_color = _get_bubble_color(settings.get("bubbleColor"))
         style_margins = {
             "top": settings.get("topMargin") or "0",
             "bottom": settings.get("bottomMargin") or "0",
@@ -226,7 +240,8 @@ class InkyMessage(BasePlugin):
             "base_font_size": base_font_size,
             "show_timestamp": show_timestamp,
             "timestamp": timestamp,
-            "message_style": message_style,
+            "bubble_style": bubble_style,
+            "bubble_color": bubble_color,
             "vertical_orientation": device_config.get_config("orientation") == "vertical",
             "plugin_settings": render_settings,
         }
