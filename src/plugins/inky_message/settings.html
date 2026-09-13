@@ -1,0 +1,363 @@
+<style>
+    .inky-message-editor-group {
+        display: block;
+        margin: 5px 0;
+    }
+
+    .inky-message-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 6px;
+        background: var(--input-bg);
+        border: 1px solid var(--border-subtle);
+        border-bottom: 0;
+        border-radius: 6px 6px 0 0;
+    }
+
+    .inky-message-toolbar-label {
+        margin-right: 2px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .inky-message-font-size {
+        flex: 0 0 auto;
+        width: auto;
+        min-width: 118px;
+        padding: 0.3rem;
+        font-size: 0.9rem;
+    }
+
+    .inky-message-tool {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 30px;
+        padding: 0;
+        color: var(--text-primary);
+        background: var(--button-bg);
+        border: 1px solid var(--border-subtle);
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+    }
+
+    .inky-message-tool:hover,
+    .inky-message-tool.is-active {
+        color: var(--button-text);
+        background: var(--accent-primary);
+        border-color: var(--accent-primary);
+    }
+
+    .inky-message-editor {
+        --inky-editor-base-size: 22px;
+        width: 100%;
+        height: 10rem;
+        min-height: 10rem;
+        overflow-y: auto;
+        padding: 0.65rem;
+        color: var(--text-primary);
+        background: var(--input-bg);
+        border: 1px solid var(--border-subtle);
+        border-radius: 0 0 6px 6px;
+        font-family: "Jost", "Poppins", sans-serif;
+        font-size: calc(var(--inky-editor-base-size) * 0.75);
+        line-height: 1.15;
+        text-align: left;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .inky-message-editor:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px var(--input-focus);
+    }
+
+    .inky-message-editor:empty::before {
+        color: var(--text-secondary);
+        content: attr(data-placeholder);
+        font-size: 1rem;
+        line-height: 1.2;
+        pointer-events: none;
+    }
+
+    .inky-message-editor p,
+    .inky-message-editor div {
+        margin: 0;
+    }
+
+    .inky-message-editor [data-inky-size="small"],
+    .inky-message-editor font[size="1"],
+    .inky-message-editor font[size="2"] {
+        font-size: calc(var(--inky-editor-base-size) * 0.55);
+    }
+
+    .inky-message-editor [data-inky-size="medium"],
+    .inky-message-editor font[size="3"],
+    .inky-message-editor font[size="4"] {
+        font-size: calc(var(--inky-editor-base-size) * 0.75);
+    }
+
+    .inky-message-editor [data-inky-size="large"],
+    .inky-message-editor font[size="5"],
+    .inky-message-editor font[size="6"] {
+        font-size: var(--inky-editor-base-size);
+    }
+
+    .inky-message-editor [data-inky-size="extra-large"],
+    .inky-message-editor font[size="7"] {
+        font-size: calc(var(--inky-editor-base-size) * 1.35);
+    }
+
+    @media (max-width: 520px) {
+        .inky-message-toolbar {
+            flex-wrap: wrap;
+        }
+
+        .inky-message-editor {
+            --inky-editor-base-size: 19px;
+        }
+    }
+</style>
+
+<div class="inky-message-editor-group">
+    <label for="inky-message-editor" class="form-label">Message:</label>
+    <div class="inky-message-toolbar" role="toolbar" aria-label="Message formatting">
+        <label for="inky-message-font-size" class="inky-message-toolbar-label">Font Size</label>
+        <select id="inky-message-font-size" class="form-input inky-message-font-size" aria-label="Font Size">
+            <option value="small">Small</option>
+            <option value="medium" selected>Medium</option>
+            <option value="large">Large</option>
+            <option value="extra-large">Extra Large</option>
+        </select>
+        <button type="button" class="inky-message-tool" data-command="bold" aria-label="Bold" aria-pressed="false"><strong>B</strong></button>
+        <button type="button" class="inky-message-tool" data-command="italic" aria-label="Italic" aria-pressed="false"><em>I</em></button>
+        <button type="button" class="inky-message-tool" data-command="underline" aria-label="Underline" aria-pressed="false"><u>U</u></button>
+    </div>
+    <div
+        id="inky-message-editor"
+        class="inky-message-editor"
+        contenteditable="true"
+        role="textbox"
+        aria-multiline="true"
+        aria-label="Message"
+        data-placeholder="Enter your message..."
+        spellcheck="true"
+    ></div>
+    <input type="hidden" id="inky-message-value" name="message" value="">
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const editor = document.getElementById('inky-message-editor');
+        const hiddenMessage = document.getElementById('inky-message-value');
+        const fontSizeSelect = document.getElementById('inky-message-font-size');
+        const toolbar = document.querySelector('.inky-message-toolbar');
+        const settings = typeof pluginSettings === 'object' && pluginSettings !== null ? pluginSettings : {};
+        const defaultFontSize = 'medium';
+        const commandFontSizes = {
+            small: '2',
+            medium: '4',
+            large: '6',
+            'extra-large': '7'
+        };
+        const fontTagSizes = {
+            '1': 'small',
+            '2': 'small',
+            '3': 'medium',
+            '4': 'medium',
+            '5': 'large',
+            '6': 'large',
+            '7': 'extra-large'
+        };
+        const dangerousTags = new Set(['base', 'embed', 'iframe', 'link', 'meta', 'object', 'script', 'style']);
+        let savedRange = null;
+
+        function sanitizeNode(node, target) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                target.appendChild(document.createTextNode(node.nodeValue));
+                return;
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+            const tag = node.tagName.toLowerCase();
+            if (dangerousTags.has(tag)) return;
+            if (tag === 'br') {
+                target.appendChild(document.createElement('br'));
+                return;
+            }
+
+            let output = null;
+            if (['p', 'div', 'strong', 'b', 'em', 'i', 'u'].includes(tag)) {
+                const outputTag = tag === 'b' ? 'strong' : tag === 'i' ? 'em' : tag;
+                output = document.createElement(outputTag);
+            } else if (tag === 'span') {
+                const size = node.getAttribute('data-inky-size');
+                if (Object.prototype.hasOwnProperty.call(commandFontSizes, size)) {
+                    output = document.createElement('span');
+                    output.dataset.inkySize = size;
+                }
+            } else if (tag === 'font') {
+                const size = fontTagSizes[node.getAttribute('size')];
+                if (size) {
+                    output = document.createElement('span');
+                    output.dataset.inkySize = size;
+                }
+            }
+
+            if (!output) {
+                node.childNodes.forEach(child => sanitizeNode(child, target));
+                return;
+            }
+
+            target.appendChild(output);
+            node.childNodes.forEach(child => sanitizeNode(child, output));
+        }
+
+        function sanitizeEditorHtml(source) {
+            const output = document.createElement('div');
+            source.childNodes.forEach(node => sanitizeNode(node, output));
+            return output.innerHTML;
+        }
+
+        function looksLikeMarkup(value) {
+            return /<\s*\/?\s*[a-z][^>]*>/i.test(value);
+        }
+
+        function loadMessage(value) {
+            const source = document.createElement('div');
+            const rawValue = value == null ? '' : String(value);
+            if (looksLikeMarkup(rawValue)) {
+                source.innerHTML = rawValue;
+            } else {
+                source.textContent = rawValue.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            }
+            editor.innerHTML = sanitizeEditorHtml(source);
+        }
+
+        function syncHiddenMessage() {
+            hiddenMessage.value = sanitizeEditorHtml(editor);
+        }
+
+        function selectionIsInEditor(selection) {
+            return selection && selection.rangeCount > 0 && editor.contains(selection.anchorNode) && editor.contains(selection.focusNode);
+        }
+
+        function saveSelection() {
+            const selection = window.getSelection();
+            if (selectionIsInEditor(selection)) {
+                savedRange = selection.getRangeAt(0).cloneRange();
+            }
+        }
+
+        function restoreSelection() {
+            editor.focus();
+            if (!savedRange) return;
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(savedRange);
+        }
+
+        function currentFormattingElement() {
+            const selection = window.getSelection();
+            if (!selectionIsInEditor(selection)) return null;
+            let node = selection.anchorNode;
+            if (node && node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement;
+            return node && node.closest ? node.closest('strong, b, em, i, u, span[data-inky-size], font[size]') : null;
+        }
+
+        function currentFontSize() {
+            const selection = window.getSelection();
+            if (!selectionIsInEditor(selection)) return defaultFontSize;
+            let node = selection.anchorNode;
+            if (node && node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement;
+
+            while (node && node !== editor) {
+                if (node.dataset && commandFontSizes[node.dataset.inkySize]) {
+                    return node.dataset.inkySize;
+                }
+                if (node.tagName && node.tagName.toLowerCase() === 'font') {
+                    return fontTagSizes[node.getAttribute('size')] || defaultFontSize;
+                }
+                node = node.parentElement;
+            }
+            return defaultFontSize;
+        }
+
+        function updateToolbarState() {
+            ['bold', 'italic', 'underline'].forEach(command => {
+                const button = toolbar.querySelector(`[data-command="${command}"]`);
+                let active = false;
+                try {
+                    active = document.queryCommandState(command);
+                } catch (error) {
+                    active = false;
+                }
+                button.classList.toggle('is-active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
+            fontSizeSelect.value = currentFontSize();
+        }
+
+        function applyCommand(command, value = null) {
+            restoreSelection();
+            document.execCommand(command, false, value);
+            syncHiddenMessage();
+            saveSelection();
+            updateToolbarState();
+        }
+
+        toolbar.querySelectorAll('[data-command]').forEach(button => {
+            button.addEventListener('mousedown', event => {
+                event.preventDefault();
+                saveSelection();
+            });
+            button.addEventListener('click', () => applyCommand(button.dataset.command));
+        });
+
+        fontSizeSelect.addEventListener('mousedown', saveSelection);
+        fontSizeSelect.addEventListener('change', () => {
+            applyCommand('fontSize', commandFontSizes[fontSizeSelect.value]);
+        });
+
+        editor.addEventListener('input', () => {
+            syncHiddenMessage();
+            saveSelection();
+            updateToolbarState();
+        });
+        editor.addEventListener('mouseup', () => {
+            saveSelection();
+            updateToolbarState();
+        });
+        editor.addEventListener('keyup', () => {
+            saveSelection();
+            updateToolbarState();
+        });
+        editor.addEventListener('paste', event => {
+            event.preventDefault();
+            restoreSelection();
+            document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
+            syncHiddenMessage();
+            saveSelection();
+            updateToolbarState();
+        });
+        editor.addEventListener('drop', event => event.preventDefault());
+        document.addEventListener('selectionchange', () => {
+            const selection = window.getSelection();
+            if (selectionIsInEditor(selection)) {
+                saveSelection();
+                updateToolbarState();
+            }
+        });
+
+        loadMessage(settings.message || '');
+        syncHiddenMessage();
+        fontSizeSelect.value = defaultFontSize;
+        updateToolbarState();
+    });
+</script>

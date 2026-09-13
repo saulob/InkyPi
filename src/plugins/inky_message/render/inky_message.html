@@ -1,0 +1,65 @@
+{% extends "plugin.html" %}
+
+{% block content %}
+<main class="inky-message-shell">
+    <div
+        class="inky-message-text"
+        data-base-font-size="{{ base_font_size }}"
+        style="--base-font-size: {{ base_font_size }}px;"
+    >{{ message_html | safe }}</div>
+</main>
+
+<script>
+    (function () {
+        const shell = document.querySelector('.inky-message-shell');
+        const message = document.querySelector('.inky-message-text');
+        if (!shell || !message) return;
+
+        const baseScale = 1;
+        const minimumScale = 0.01;
+
+        function availableSize() {
+            const style = window.getComputedStyle(shell);
+            return {
+                width: shell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+                height: shell.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)
+            };
+        }
+
+        function fits() {
+            const available = availableSize();
+            const bounds = message.getBoundingClientRect();
+            return bounds.width <= available.width + 1 && bounds.height <= available.height + 1;
+        }
+
+        function setScale(scale) {
+            message.style.setProperty('--fit-scale', scale);
+        }
+
+        function fitMessage() {
+            setScale(baseScale);
+            if (fits()) return;
+
+            let low = minimumScale;
+            let high = baseScale;
+            for (let step = 0; step < 24; step += 1) {
+                const middle = (low + high) / 2;
+                setScale(middle);
+                if (fits()) {
+                    low = middle;
+                } else {
+                    high = middle;
+                }
+            }
+            setScale(low);
+        }
+
+        fitMessage();
+        window.addEventListener('load', fitMessage, { once: true });
+        window.addEventListener('resize', fitMessage);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(fitMessage);
+        }
+    }());
+</script>
+{% endblock %}

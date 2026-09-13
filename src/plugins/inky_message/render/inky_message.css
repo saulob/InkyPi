@@ -1,0 +1,51 @@
+html,
+body {
+    width: 100%;
+    height: 100%;
+}
+
+.inky-message-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 5%;
+    overflow: visible;
+}
+
+.inky-message-text {
+    --fit-scale: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    color: #000000;
+    font-family: "Jost", Arial, sans-serif;
+    font-size: calc(var(--base-font-size) * 0.75 * var(--fit-scale));
+    line-height: 1.15;
+    text-align: left;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.inky-message-text p,
+.inky-message-text div {
+    margin: 0;
+}
+
+.inky-message-text [data-inky-size="small"] {
+    font-size: calc(var(--base-font-size) * 0.55 * var(--fit-scale));
+}
+
+.inky-message-text [data-inky-size="medium"] {
+    font-size: calc(var(--base-font-size) * 0.75 * var(--fit-scale));
+}
+
+.inky-message-text [data-inky-size="large"] {
+    font-size: calc(var(--base-font-size) * var(--fit-scale));
+}
+
+.inky-message-text [data-inky-size="extra-large"] {
+    font-size: calc(var(--base-font-size) * 1.35 * var(--fit-scale));
+}
