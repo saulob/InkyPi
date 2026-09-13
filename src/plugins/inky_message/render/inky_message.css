@@ -33,7 +33,7 @@ body {
 }
 
 .inky-message-block.message-bubble-layout {
-    padding-bottom: 26px;
+    padding-bottom: 29px;
     transform: translateY(-10px);
 }
 
@@ -45,6 +45,8 @@ body {
     width: 100%;
     min-width: 0;
     max-width: 100%;
+    z-index: 0;
+    isolation: isolate;
     padding: 18px 24px 12px;
     background: var(--inky-message-bubble-color, #e5e5ea);
     border-radius: 24px 24px 24px 8px;
@@ -52,10 +54,11 @@ body {
 
 .inky-message-bubble-tail {
     position: absolute;
-    bottom: -22px;
+    bottom: -24px;
     left: 18px;
-    width: 54px;
-    height: 44px;
+    width: 60px;
+    height: 48px;
+    z-index: -1;
     background: var(--inky-message-bubble-color, #e5e5ea);
     clip-path: polygon(0 0, 100% 0, 0 100%);
 }
@@ -63,6 +66,11 @@ body {
 .inky-message-bubble .inky-message-text {
     width: 100%;
     max-width: 100%;
+}
+
+.inky-message-bubble .inky-message-text > :last-child:empty,
+.inky-message-bubble .inky-message-text > :last-child:has(> br:only-child) {
+    display: none;
 }
 
 .inky-message-block.message-bubble-layout.is-vertical .inky-message-bubble {
@@ -99,6 +107,14 @@ body {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     word-break: break-word;
+}
+
+.inky-message-text:has([data-inky-size]) {
+    line-height: 0;
+}
+
+.inky-message-text:has([data-inky-size]) > * {
+    line-height: 1.15;
 }
 
 .inky-message-text p,

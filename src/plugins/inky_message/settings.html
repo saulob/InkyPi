@@ -10,6 +10,37 @@
         margin: 5px 0;
     }
 
+    .inky-message-style-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px 28px;
+        flex-wrap: wrap;
+        margin: 5px 0;
+    }
+
+    .inky-message-style-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        margin: 0;
+    }
+
+    .inky-message-style-group .form-label {
+        margin-bottom: 0;
+        white-space: nowrap;
+    }
+
+    .inky-message-style-group .toggle-container,
+    .inky-message-style-group .color-picker {
+        flex: 0 0 auto;
+    }
+
+    .inky-message-style-group[hidden] {
+        display: none;
+    }
+
     .inky-message-toolbar {
         display: flex;
         align-items: center;
@@ -204,6 +235,10 @@
             flex-wrap: wrap;
         }
 
+        .inky-message-style-row {
+            gap: 10px 18px;
+        }
+
         .inky-message-editor {
             --inky-editor-base-size: 19px;
         }
@@ -262,18 +297,20 @@
     </div>
 </div>
 
-<div class="form-group">
-    <label for="bubbleStyle" class="form-label">Bubble Style:</label>
-    <div class="toggle-container">
-        <input type="hidden" id="bubbleStyleValue" name="bubbleStyle" value="true">
-        <input type="checkbox" id="bubbleStyle" class="toggle-checkbox" checked>
-        <label for="bubbleStyle" class="toggle-label"></label>
+<div class="inky-message-style-row">
+    <div class="form-group inky-message-style-group">
+        <label for="bubbleStyle" class="form-label">Bubble Style:</label>
+        <div class="toggle-container">
+            <input type="hidden" id="bubbleStyleValue" name="bubbleStyle" value="true">
+            <input type="checkbox" id="bubbleStyle" class="toggle-checkbox" checked>
+            <label for="bubbleStyle" class="toggle-label"></label>
+        </div>
     </div>
-</div>
 
-<div class="form-group" id="bubbleColorGroup">
-    <label for="bubbleColor" class="form-label">Bubble Color:</label>
-    <input type="color" id="bubbleColor" name="bubbleColor" class="color-picker" value="#e5e5ea">
+    <div class="form-group inky-message-style-group" id="bubbleColorGroup">
+        <label for="bubbleColor" class="form-label">Bubble Color:</label>
+        <input type="color" id="bubbleColor" name="bubbleColor" class="color-picker" value="#e5e5ea">
+    </div>
 </div>
 
 <script>
