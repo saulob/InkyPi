@@ -136,7 +136,7 @@ def sanitize_message_html(value):
         return ""
 
     if not MARKUP_PATTERN.search(value):
-        return html.escape(value, quote=False).replace("\n", "<br>")
+        return html.escape(html.unescape(value), quote=False).replace("\n", "<br>")
 
     parser = _MessageHTMLSanitizer()
     parser.feed(value)
