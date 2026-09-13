@@ -163,7 +163,7 @@ def _get_local_datetime(device_config):
 class InkyMessage(BasePlugin):
     def generate_settings_template(self):
         template_params = super().generate_settings_template()
-        template_params["style_settings"] = False
+        template_params["style_settings"] = True
         return template_params
 
     def generate_image(self, settings, device_config):
@@ -182,14 +182,15 @@ class InkyMessage(BasePlugin):
 
         base_font_size = max(1, round(min(dimensions) * BASE_FONT_SIZE_RATIO))
         render_settings = {
-            "selectedFrame": "None",
-            "backgroundOption": "color",
-            "backgroundColor": "#ffffff",
-            "textColor": "#000000",
-            "topMargin": "0",
-            "bottomMargin": "0",
-            "leftMargin": "0",
-            "rightMargin": "0",
+            "selectedFrame": settings.get("selectedFrame") or "None",
+            "backgroundOption": settings.get("backgroundOption") or "color",
+            "backgroundColor": settings.get("backgroundColor") or "#ffffff",
+            "backgroundImageFile": settings.get("backgroundImageFile") or "",
+            "textColor": settings.get("textColor") or "#000000",
+            "topMargin": settings.get("topMargin") or "0",
+            "bottomMargin": settings.get("bottomMargin") or "0",
+            "leftMargin": settings.get("leftMargin") or "0",
+            "rightMargin": settings.get("rightMargin") or "0",
         }
 
         template_params = {
