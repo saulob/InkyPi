@@ -262,11 +262,20 @@
     </div>
 </div>
 
+<div class="form-group">
+    <label for="messageStyle" class="form-label">Message Style:</label>
+    <select id="messageStyle" name="messageStyle" class="form-input">
+        <option value="bubble" selected>Message Bubble</option>
+        <option value="plain">Plain</option>
+    </select>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const editor = document.getElementById('inky-message-editor');
         const hiddenMessage = document.getElementById('inky-message-value');
         const fontSizeSelect = document.getElementById('inky-message-font-size');
+        const messageStyleSelect = document.getElementById('messageStyle');
         const toolbar = document.querySelector('.inky-message-toolbar');
         const showTimestampCheckbox = document.getElementById('showTimestamp');
         const showTimestampValue = document.getElementById('showTimestampValue');
@@ -517,6 +526,9 @@
         });
 
         loadMessage(settings.message || '');
+        if (messageStyleSelect) {
+            messageStyleSelect.value = settings.messageStyle || 'bubble';
+        }
         syncHiddenMessage();
         fontSizeSelect.value = defaultFontSize;
         updateToolbarState();

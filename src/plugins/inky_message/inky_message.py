@@ -196,6 +196,9 @@ class InkyMessage(BasePlugin):
             timestamp = format_timestamp(current_datetime, time_format)
 
         base_font_size = max(1, round(min(dimensions) * BASE_FONT_SIZE_RATIO))
+        message_style = settings.get("messageStyle") or "bubble"
+        if message_style not in {"bubble", "plain"}:
+            message_style = "bubble"
         style_margins = {
             "top": settings.get("topMargin") or "0",
             "bottom": settings.get("bottomMargin") or "0",
@@ -223,6 +226,8 @@ class InkyMessage(BasePlugin):
             "base_font_size": base_font_size,
             "show_timestamp": show_timestamp,
             "timestamp": timestamp,
+            "message_style": message_style,
+            "vertical_orientation": device_config.get_config("orientation") == "vertical",
             "plugin_settings": render_settings,
         }
 

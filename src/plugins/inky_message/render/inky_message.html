@@ -11,13 +11,20 @@
     "
 >
     <div
-        class="inky-message-block"
+        class="inky-message-block{% if message_style == 'bubble' %} message-bubble-layout{% endif %}{% if vertical_orientation %} is-vertical{% endif %}"
         style="--base-font-size: {{ base_font_size }}px;"
     >
         {% if show_timestamp %}
         <div class="inky-message-timestamp">{{ timestamp }}</div>
         {% endif %}
+        {% if message_style == 'bubble' %}
+        <div class="inky-message-bubble">
+            <div class="inky-message-text">{{ message_html | safe }}</div>
+            <span class="inky-message-bubble-tail" aria-hidden="true"></span>
+        </div>
+        {% else %}
         <div class="inky-message-text">{{ message_html | safe }}</div>
+        {% endif %}
     </div>
 </main>
 

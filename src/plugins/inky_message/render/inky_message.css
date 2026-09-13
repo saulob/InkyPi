@@ -32,6 +32,50 @@ body {
     max-width: 100%;
 }
 
+.inky-message-block.message-bubble-layout {
+    padding-bottom: 26px;
+    transform: translateY(-10px);
+}
+
+.inky-message-bubble {
+    position: relative;
+    align-self: center;
+    height: fit-content;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 18px 24px 12px;
+    color: #000000;
+    background: #e5e5ea;
+    border-radius: 24px 24px 24px 8px;
+}
+
+.inky-message-bubble-tail {
+    position: absolute;
+    bottom: -22px;
+    left: 18px;
+    width: 54px;
+    height: 44px;
+    background: #e5e5ea;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.inky-message-bubble .inky-message-text {
+    width: 100%;
+    max-width: 100%;
+}
+
+.inky-message-block.message-bubble-layout.is-vertical .inky-message-bubble {
+    width: fit-content;
+    max-width: 92%;
+}
+
+.inky-message-block.message-bubble-layout.is-vertical .inky-message-bubble .inky-message-text {
+    width: auto;
+    max-width: 100%;
+}
+
 .inky-message-timestamp {
     width: 100%;
     margin-bottom: 0.55em;
