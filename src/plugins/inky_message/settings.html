@@ -45,6 +45,24 @@
         cursor: pointer;
     }
 
+    .inky-message-tool-group {
+        display: inline-flex;
+        gap: 0;
+        overflow: hidden;
+        border: 1px solid var(--border-subtle);
+        border-radius: 4px;
+    }
+
+    .inky-message-tool-group .inky-message-tool {
+        border: 0;
+        border-right: 1px solid var(--border-subtle);
+        border-radius: 0;
+    }
+
+    .inky-message-tool-group .inky-message-tool:last-child {
+        border-right: 0;
+    }
+
     .inky-message-tool:hover,
     .inky-message-tool.is-active {
         color: var(--button-text);
@@ -196,21 +214,25 @@
             <option value="large">Large</option>
             <option value="extra-large">Extra Large</option>
         </select>
-        <button type="button" class="inky-message-tool" data-command="bold" aria-label="Bold" aria-pressed="false"><strong>B</strong></button>
-        <button type="button" class="inky-message-tool" data-command="italic" aria-label="Italic" aria-pressed="false"><em>I</em></button>
-        <button type="button" class="inky-message-tool" data-command="underline" aria-label="Underline" aria-pressed="false"><u>U</u></button>
-        <button type="button" class="inky-message-tool" data-command="justifyLeft" aria-label="Align Left" title="Align Left" aria-pressed="false">
-            <span class="inky-message-align-icon align-left" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-        </button>
-        <button type="button" class="inky-message-tool" data-command="justifyCenter" aria-label="Align Center" title="Align Center" aria-pressed="false">
-            <span class="inky-message-align-icon align-center" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-        </button>
-        <button type="button" class="inky-message-tool" data-command="justifyRight" aria-label="Align Right" title="Align Right" aria-pressed="false">
-            <span class="inky-message-align-icon align-right" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-        </button>
-        <button type="button" class="inky-message-tool" data-command="justifyFull" aria-label="Justify" title="Justify" aria-pressed="false">
-            <span class="inky-message-align-icon align-justify" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-        </button>
+        <span class="inky-message-tool-group" role="group" aria-label="Text formatting">
+            <button type="button" class="inky-message-tool" data-command="bold" aria-label="Bold" title="Bold" aria-pressed="false"><strong>B</strong></button>
+            <button type="button" class="inky-message-tool" data-command="italic" aria-label="Italic" title="Italics" aria-pressed="false"><em>I</em></button>
+            <button type="button" class="inky-message-tool" data-command="underline" aria-label="Underline" title="Underline" aria-pressed="false"><u>U</u></button>
+        </span>
+        <span class="inky-message-tool-group" role="group" aria-label="Text alignment">
+            <button type="button" class="inky-message-tool" data-command="justifyLeft" aria-label="Align Left" title="Align Left" aria-pressed="false">
+                <span class="inky-message-align-icon align-left" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+            </button>
+            <button type="button" class="inky-message-tool" data-command="justifyCenter" aria-label="Align Center" title="Align Center" aria-pressed="false">
+                <span class="inky-message-align-icon align-center" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+            </button>
+            <button type="button" class="inky-message-tool" data-command="justifyRight" aria-label="Align Right" title="Align Right" aria-pressed="false">
+                <span class="inky-message-align-icon align-right" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+            </button>
+            <button type="button" class="inky-message-tool" data-command="justifyFull" aria-label="Justify" title="Justify" aria-pressed="false">
+                <span class="inky-message-align-icon align-justify" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+            </button>
+        </span>
     </div>
     <div
         id="inky-message-editor"
